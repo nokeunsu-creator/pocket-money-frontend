@@ -19,7 +19,7 @@ const CATEGORIES = {
   ]
 }
 
-const QUICK_AMOUNTS = [500, 1000, 5000, 10000]
+const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000]
 const fmt = (n) => n.toLocaleString('ko-KR')
 
 function getToday() {
