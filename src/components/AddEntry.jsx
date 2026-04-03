@@ -114,21 +114,21 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
       </div>
 
       {/* 날짜 + 금액 */}
-      <div className="card" style={{ padding: 14, marginBottom: 10 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 10, overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: '0 0 45%', minWidth: 0 }}>
             <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 4 }}>📅 날짜</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               style={{
-                width: '100%', padding: '8px 10px', borderRadius: 8,
-                border: '2px solid #EEE', fontSize: 14, color: '#333'
+                width: '100%', padding: '8px 6px', borderRadius: 8,
+                border: '2px solid #EEE', fontSize: 13, color: '#333'
               }}
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: '1 1 0%', minWidth: 0 }}>
             <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 4 }}>💲 금액</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <input
@@ -138,12 +138,12 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
                 value={amount}
                 onChange={handleAmountChange}
                 style={{
-                  flex: 1, padding: '8px 10px', borderRadius: 8, minWidth: 0,
-                  border: '2px solid #EEE', fontSize: 18, textAlign: 'right',
+                  width: '100%', flex: '1 1 0%', padding: '8px 8px', borderRadius: 8, minWidth: 0,
+                  border: '2px solid #EEE', fontSize: 16, textAlign: 'right',
                   color: type === 'INCOME' ? 'var(--blue)' : 'var(--pink)',
                 }}
               />
-              <span style={{ fontSize: 15, color: 'var(--brown)', flexShrink: 0 }}>원</span>
+              <span style={{ fontSize: 14, color: 'var(--brown)', flexShrink: 0 }}>원</span>
             </div>
           </div>
         </div>

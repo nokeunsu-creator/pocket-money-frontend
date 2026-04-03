@@ -79,6 +79,11 @@ input, select {
   margin: 0 auto;
   padding: 0 16px 100px;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.card input {
+  box-sizing: border-box;
 }
 
 /* 카드 */
