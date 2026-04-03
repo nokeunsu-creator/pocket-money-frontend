@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createEntry, updateEntry } from '../api/api'
+import { createEntry, updateEntry, deleteEntry } from '../api/api'
 
 const CATEGORIES = {
   INCOME: [
@@ -71,6 +71,18 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
       onDone()
     } catch (err) {
       alert('저장에 실패했어요. 다시 시도해 주세요.')
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('이 기록을 삭제할까요?')) return
+    setSaving(true)
+    try {
+      await deleteEntry(editEntry.id)
+      onDone()
+    } catch {
+      alert('삭제에 실패했어요.')
       setSaving(false)
     }
   }
@@ -228,6 +240,21 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
       >
         {saving ? '저장 중...' : isEdit ? '✏️ 수정 완료!' : (type === 'INCOME' ? '💵 받은 돈 기록!' : '🛒 쓴 돈 기록!')}
       </button>
+
+      {isEdit && (
+        <button
+          onClick={handleDelete}
+          disabled={saving}
+          style={{
+            width: '100%', padding: '14px 0', borderRadius: 12, fontSize: 16,
+            color: '#FF4444', marginTop: 8,
+            background: 'var(--light-gray)',
+            opacity: saving ? 0.5 : 1,
+          }}
+        >
+          🗑️ 삭제
+        </button>
+      )}
     </div>
   )
 }
