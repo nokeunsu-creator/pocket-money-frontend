@@ -78,23 +78,23 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
   const isValid = amount && category && !saving
 
   return (
-    <div className="page pop-in" style={{ paddingTop: 16 }}>
+    <div className="page pop-in" style={{ paddingTop: 10, paddingBottom: 20 }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <button onClick={onCancel}
-          style={{ background: 'none', fontSize: 16, color: 'var(--gray)', padding: '8px 0' }}>
+          style={{ background: 'none', fontSize: 15, color: 'var(--gray)', padding: '6px 0' }}>
           ← 돌아가기
         </button>
-        <h2 style={{ fontSize: 18, color: 'var(--brown)' }}>{isEdit ? '기록 수정' : '새로운 기록'}</h2>
-        <div style={{ width: 80 }} />
+        <h2 style={{ fontSize: 17, color: 'var(--brown)' }}>{isEdit ? '기록 수정' : '새로운 기록'}</h2>
+        <div style={{ width: 70 }} />
       </div>
 
       {/* 수입/지출 토글 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button
           onClick={() => { setType('INCOME'); setCategory(null) }}
           style={{
-            flex: 1, padding: '12px 0', borderRadius: 12, fontSize: 15,
+            flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 14,
             background: type === 'INCOME' ? 'var(--blue)' : 'var(--light-gray)',
             color: type === 'INCOME' ? '#FFF' : 'var(--gray)',
           }}
@@ -104,7 +104,7 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
         <button
           onClick={() => { setType('EXPENSE'); setCategory(null) }}
           style={{
-            flex: 1, padding: '12px 0', borderRadius: 12, fontSize: 15,
+            flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 14,
             background: type === 'EXPENSE' ? 'var(--pink)' : 'var(--light-gray)',
             color: type === 'EXPENSE' ? '#FFF' : 'var(--gray)',
           }}
@@ -113,48 +113,46 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
         </button>
       </div>
 
-      {/* 날짜 */}
-      <div className="card">
-        <label style={{ fontSize: 14, color: 'var(--gray)', display: 'block', marginBottom: 8 }}>
-          📅 날짜
-        </label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={{
-            width: '100%', padding: '10px 12px', borderRadius: 10,
-            border: '2px solid #EEE', fontSize: 16, color: '#333'
-          }}
-        />
-      </div>
-
-      {/* 금액 */}
-      <div className="card">
-        <label style={{ fontSize: 14, color: 'var(--gray)', display: 'block', marginBottom: 8 }}>
-          💲 얼마?
-        </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="0"
-            value={amount}
-            onChange={handleAmountChange}
-            style={{
-              flex: 1, padding: '12px 14px', borderRadius: 10,
-              border: '2px solid #EEE', fontSize: 24, textAlign: 'right',
-              color: type === 'INCOME' ? 'var(--blue)' : 'var(--pink)',
-            }}
-          />
-          <span style={{ fontSize: 20, color: 'var(--brown)' }}>원</span>
+      {/* 날짜 + 금액 */}
+      <div className="card" style={{ padding: 14, marginBottom: 10 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 4 }}>📅 날짜</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8,
+                border: '2px solid #EEE', fontSize: 14, color: '#333'
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 4 }}>💲 금액</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={amount}
+                onChange={handleAmountChange}
+                style={{
+                  flex: 1, padding: '8px 10px', borderRadius: 8, minWidth: 0,
+                  border: '2px solid #EEE', fontSize: 18, textAlign: 'right',
+                  color: type === 'INCOME' ? 'var(--blue)' : 'var(--pink)',
+                }}
+              />
+              <span style={{ fontSize: 15, color: 'var(--brown)', flexShrink: 0 }}>원</span>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           {QUICK_AMOUNTS.map(v => (
             <button key={v} onClick={() => handleQuickAmount(v)}
               style={{
-                flex: 1, padding: '8px 0', borderRadius: 8,
-                background: 'var(--light-gray)', fontSize: 13, color: '#555'
+                flex: 1, padding: '6px 0', borderRadius: 8,
+                background: 'var(--light-gray)', fontSize: 12, color: '#555'
               }}
             >
               +{fmt(v)}
@@ -164,22 +162,22 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
       </div>
 
       {/* 카테고리 */}
-      <div className="card">
-        <label style={{ fontSize: 14, color: 'var(--gray)', display: 'block', marginBottom: 10 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 10 }}>
+        <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 8 }}>
           🏷️ 무엇?
         </label>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 8,
+          gap: 6,
         }}>
           {cats.map(c => {
             const selected = category === c.label
             return (
               <button key={c.label} onClick={() => setCategory(c.label)}
                 style={{
-                  padding: '12px 4px', borderRadius: 12,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  padding: '10px 2px', borderRadius: 10,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                   background: selected
                     ? (type === 'INCOME' ? 'var(--blue)' : 'var(--pink)')
                     : 'var(--light-gray)',
@@ -188,8 +186,8 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
                   boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
                 }}
               >
-                <span style={{ fontSize: 22 }}>{c.emoji}</span>
-                <span style={{ fontSize: 12 }}>{c.label}</span>
+                <span style={{ fontSize: 20 }}>{c.emoji}</span>
+                <span style={{ fontSize: 11 }}>{c.label}</span>
               </button>
             )
           })}
@@ -197,8 +195,8 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
       </div>
 
       {/* 메모 */}
-      <div className="card">
-        <label style={{ fontSize: 14, color: 'var(--gray)', display: 'block', marginBottom: 8 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 10 }}>
+        <label style={{ fontSize: 13, color: 'var(--gray)', display: 'block', marginBottom: 4 }}>
           📝 메모 (선택)
         </label>
         <input
@@ -208,8 +206,8 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
           onChange={(e) => setMemo(e.target.value)}
           maxLength={50}
           style={{
-            width: '100%', padding: '10px 12px', borderRadius: 10,
-            border: '2px solid #EEE', fontSize: 15
+            width: '100%', padding: '8px 10px', borderRadius: 8,
+            border: '2px solid #EEE', fontSize: 14
           }}
         />
       </div>
@@ -219,8 +217,8 @@ export default function AddEntry({ user, onDone, onCancel, editEntry }) {
         onClick={handleSubmit}
         disabled={!isValid}
         style={{
-          width: '100%', padding: '16px 0', borderRadius: 14, fontSize: 17,
-          color: '#FFF', marginTop: 4,
+          width: '100%', padding: '14px 0', borderRadius: 12, fontSize: 16,
+          color: '#FFF', marginTop: 2,
           background: type === 'INCOME'
             ? 'linear-gradient(135deg, #4895EF, #3A86FF)'
             : 'linear-gradient(135deg, #EF476F, #E5383B)',
