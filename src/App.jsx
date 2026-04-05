@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import ProfileSelect from './components/ProfileSelect'
 import Home from './components/Home'
 import AddEntry from './components/AddEntry'
+import AddBankEntry from './components/AddBankEntry'
 import EntryList from './components/EntryList'
 
 export default function App() {
@@ -73,6 +74,12 @@ export default function App() {
     window.history.pushState({ page: 'add', user: currentUser, edit: entry }, '', '')
   }
 
+  const goToBankEdit = (entry) => {
+    setEditEntry(entry)
+    setCurrentPage('addBank')
+    window.history.pushState({ page: 'addBank', user: currentUser, edit: entry }, '', '')
+  }
+
   const goBack = () => {
     window.history.back()
   }
@@ -87,10 +94,19 @@ export default function App() {
           onNavigate={goToPage}
           onSwitchUser={switchUser}
           onEdit={goToEdit}
+          onBankEdit={goToBankEdit}
         />
       )}
       {currentPage === 'add' && (
         <AddEntry
+          user={currentUser}
+          editEntry={editEntry}
+          onDone={() => { refresh(); setEditEntry(null); goBack(); }}
+          onCancel={goBack}
+        />
+      )}
+      {currentPage === 'addBank' && (
+        <AddBankEntry
           user={currentUser}
           editEntry={editEntry}
           onDone={() => { refresh(); setEditEntry(null); goBack(); }}
@@ -105,11 +121,12 @@ export default function App() {
           onNavigate={goToPage}
           onSwitchUser={switchUser}
           onEdit={goToEdit}
+          onBankEdit={goToBankEdit}
         />
       )}
 
       {/* 하단 네비게이션 (add 페이지에서는 숨김) */}
-      {currentPage !== 'add' && (
+      {currentPage !== 'add' && currentPage !== 'addBank' && (
         <nav className="bottom-nav">
           <button
             className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
@@ -132,6 +149,14 @@ export default function App() {
           >
             <span className="nav-icon" style={{ fontSize: 30, lineHeight: '30px' }}>⊕</span>
             <span>기록하기</span>
+          </button>
+          <button
+            className="nav-item"
+            onClick={() => goToPage('addBank')}
+            style={{ color: '#2D6A4F' }}
+          >
+            <span className="nav-icon" style={{ fontSize: 26, lineHeight: '30px' }}>🏦</span>
+            <span>통장기록</span>
           </button>
           <button
             className={`nav-item ${currentPage === 'list' ? 'active' : ''}`}

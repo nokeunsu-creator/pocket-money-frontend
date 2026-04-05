@@ -55,3 +55,42 @@ export function getStats(user, year, month) {
 export function healthCheck() {
   return request('/api/health');
 }
+
+// === 통장 API ===
+
+/** 통장 기록 목록 조회 */
+export function getBankEntries(user, year, month) {
+  const params = new URLSearchParams({ user });
+  if (year && month) {
+    params.set('year', year);
+    params.set('month', month);
+  }
+  return request(`/api/bank/entries?${params}`);
+}
+
+/** 통장 기록 추가 */
+export function createBankEntry(entry) {
+  return request('/api/bank/entries', {
+    method: 'POST',
+    body: JSON.stringify(entry),
+  });
+}
+
+/** 통장 기록 수정 */
+export function updateBankEntry(id, entry) {
+  return request(`/api/bank/entries/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(entry),
+  });
+}
+
+/** 통장 기록 삭제 */
+export function deleteBankEntry(id) {
+  return request(`/api/bank/entries/${id}`, { method: 'DELETE' });
+}
+
+/** 통장 월별 통계 */
+export function getBankStats(user, year, month) {
+  const params = new URLSearchParams({ user, year, month });
+  return request(`/api/bank/stats?${params}`);
+}
