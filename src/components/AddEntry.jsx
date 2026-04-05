@@ -15,6 +15,7 @@ const CATEGORIES = {
     { emoji: '🎪', label: '놀이' },
     { emoji: '🎁', label: '선물' },
     { emoji: '💝', label: '저축' },
+    { emoji: '⛪', label: '헌금' },
     { emoji: '📦', label: '기타' },
   ]
 }
