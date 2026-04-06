@@ -16,8 +16,8 @@ export default function App() {
   const refresh = () => setRefreshKey(k => k + 1)
 
   // 페이지 이동 시 히스토리에 push
-  const navigate = useCallback((page, user, edit) => {
-    const state = { page, user, edit: edit || null }
+  const navigate = useCallback((page, user, edit, tab) => {
+    const state = { page, user, edit: edit || null, tab: tab || null }
     window.history.pushState(state, '', '')
     setCurrentPage(page)
     if (user !== undefined) setCurrentUser(user)
@@ -38,6 +38,7 @@ export default function App() {
         setCurrentUser(state.user)
         setCurrentPage(state.page || 'home')
         setEditEntry(state.edit || null)
+        if (state.tab) setActiveTab(state.tab)
       }
     }
 
@@ -49,7 +50,7 @@ export default function App() {
   const selectUser = (user) => {
     setCurrentUser(user)
     setCurrentPage('home')
-    window.history.pushState({ page: 'home', user, edit: null }, '', '')
+    window.history.pushState({ page: 'home', user, edit: null, tab: 'cash' }, '', '')
   }
 
   if (!currentUser) {
@@ -64,19 +65,19 @@ export default function App() {
   }
 
   const goToPage = (page) => {
-    navigate(page, currentUser)
+    navigate(page, currentUser, null, activeTab)
   }
 
   const goToEdit = (entry) => {
     setEditEntry(entry)
     setCurrentPage('add')
-    window.history.pushState({ page: 'add', user: currentUser, edit: entry }, '', '')
+    window.history.pushState({ page: 'add', user: currentUser, edit: entry, tab: activeTab }, '', '')
   }
 
   const goToBankEdit = (entry) => {
     setEditEntry(entry)
     setCurrentPage('addBank')
-    window.history.pushState({ page: 'addBank', user: currentUser, edit: entry }, '', '')
+    window.history.pushState({ page: 'addBank', user: currentUser, edit: entry, tab: activeTab }, '', '')
   }
 
   const goBack = () => {
