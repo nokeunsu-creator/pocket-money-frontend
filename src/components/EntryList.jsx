@@ -14,7 +14,7 @@ const BANK_EMOJI_MAP = {
   '인출': '💸', '구매': '🛒', '선물': '🎁', '기타': '📦',
 }
 
-export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onSwitchUser, onEdit, onBankEdit }) {
+export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onSwitchUser, onEdit, onBankEdit, onDeleted }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -77,12 +77,20 @@ export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onS
       {/* 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0 12px' }}>
         <h1 style={{ fontSize: 20, color: 'var(--brown)' }}>📋 기록 목록</h1>
-        <button
-          onClick={onSwitchUser}
-          style={{ background: 'var(--light-gray)', padding: '6px 14px', borderRadius: 20, fontSize: 13, color: 'var(--gray)' }}
-        >
-          👤 전환
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={onDeleted}
+            style={{ background: 'var(--light-gray)', padding: '6px 12px', borderRadius: 20, fontSize: 13, color: 'var(--gray)' }}
+          >
+            🗑️ 삭제내역
+          </button>
+          <button
+            onClick={onSwitchUser}
+            style={{ background: 'var(--light-gray)', padding: '6px 12px', borderRadius: 20, fontSize: 13, color: 'var(--gray)' }}
+          >
+            👤 전환
+          </button>
+        </div>
       </div>
 
       {/* 월 선택 */}

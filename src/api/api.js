@@ -94,3 +94,15 @@ export function getBankStats(user, year, month) {
   const params = new URLSearchParams({ user, year, month });
   return request(`/api/bank/stats?${params}`);
 }
+
+// === 삭제 내역 API ===
+
+/** 삭제된 내돈 기록 조회 */
+export function getDeletedEntries(user) {
+  return request(`/api/entries/deleted?user=${encodeURIComponent(user)}`);
+}
+
+/** 삭제된 통장 기록 조회 */
+export function getDeletedBankEntries(user) {
+  return request(`/api/bank/entries/deleted?user=${encodeURIComponent(user)}`);
+}

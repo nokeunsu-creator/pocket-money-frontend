@@ -4,6 +4,7 @@ import Home from './components/Home'
 import AddEntry from './components/AddEntry'
 import AddBankEntry from './components/AddBankEntry'
 import EntryList from './components/EntryList'
+import DeletedList from './components/DeletedList'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -122,11 +123,18 @@ export default function App() {
           onSwitchUser={switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
+          onDeleted={() => goToPage('deleted')}
+        />
+      )}
+      {currentPage === 'deleted' && (
+        <DeletedList
+          user={currentUser}
+          onBack={goBack}
         />
       )}
 
       {/* 하단 네비게이션 (add 페이지에서는 숨김) */}
-      {currentPage !== 'add' && currentPage !== 'addBank' && (
+      {currentPage !== 'add' && currentPage !== 'addBank' && currentPage !== 'deleted' && (
         <nav className="bottom-nav">
           <button
             className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
