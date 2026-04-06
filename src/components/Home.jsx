@@ -23,7 +23,9 @@ function piggyFace(balance) {
   return PIGGY[0]
 }
 
-export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdit, onBankEdit }) {
+export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdit, onBankEdit, activeTab, onTabChange }) {
+  const tab = activeTab
+  const setTab = onTabChange
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -32,7 +34,6 @@ export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdi
   const [bankStats, setBankStats] = useState(null)
   const [bankEntries, setBankEntries] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('cash') // 'cash' | 'bank'
 
   useEffect(() => {
     setLoading(true)

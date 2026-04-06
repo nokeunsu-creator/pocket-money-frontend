@@ -14,7 +14,9 @@ const BANK_EMOJI_MAP = {
   '인출': '💸', '구매': '🛒', '선물': '🎁', '기타': '📦',
 }
 
-export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onSwitchUser, onEdit, onBankEdit, onDeleted }) {
+export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onSwitchUser, onEdit, onBankEdit, onDeleted, activeTab, onTabChange }) {
+  const tab = activeTab
+  const setTab = onTabChange
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -23,7 +25,6 @@ export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onS
   const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteType, setDeleteType] = useState(null) // 'cash' | 'bank'
-  const [tab, setTab] = useState('cash')
 
   useEffect(() => {
     setLoading(true)

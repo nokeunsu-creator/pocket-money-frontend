@@ -11,6 +11,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('home')
   const [refreshKey, setRefreshKey] = useState(0)
   const [editEntry, setEditEntry] = useState(null)
+  const [activeTab, setActiveTab] = useState('cash') // 'cash' | 'bank'
 
   const refresh = () => setRefreshKey(k => k + 1)
 
@@ -25,13 +26,11 @@ export default function App() {
 
   // 브라우저 뒤로가기 처리
   useEffect(() => {
-    // 초기 상태 저장
     window.history.replaceState({ page: 'profile', user: null, edit: null }, '', '')
 
     const handlePopState = (e) => {
       const state = e.state
       if (!state || !state.user) {
-        // 프로필 선택 화면으로
         setCurrentUser(null)
         setCurrentPage('home')
         setEditEntry(null)
@@ -53,7 +52,6 @@ export default function App() {
     window.history.pushState({ page: 'home', user, edit: null }, '', '')
   }
 
-  // 프로필 미선택 시
   if (!currentUser) {
     return <ProfileSelect onSelect={selectUser} />
   }
@@ -85,9 +83,17 @@ export default function App() {
     window.history.back()
   }
 
+  // ⊕ 버튼: 현재 탭에 따라 내돈/통장 기록으로 이동
+  const goToAdd = () => {
+    if (activeTab === 'bank') {
+      goToPage('addBank')
+    } else {
+      goToPage('add')
+    }
+  }
+
   return (
     <div>
-      {/* 페이지 렌더링 */}
       {currentPage === 'home' && (
         <Home
           user={currentUser}
@@ -96,6 +102,8 @@ export default function App() {
           onSwitchUser={switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
       )}
       {currentPage === 'add' && (
@@ -124,6 +132,8 @@ export default function App() {
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
           onDeleted={() => goToPage('deleted')}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
       )}
       {currentPage === 'deleted' && (
@@ -133,7 +143,7 @@ export default function App() {
         />
       )}
 
-      {/* 하단 네비게이션 (add 페이지에서는 숨김) */}
+      {/* 하단 네비게이션 */}
       {currentPage !== 'add' && currentPage !== 'addBank' && currentPage !== 'deleted' && (
         <nav className="bottom-nav">
           <button
@@ -152,19 +162,11 @@ export default function App() {
           </button>
           <button
             className="nav-item"
-            onClick={() => goToPage('add')}
-            style={{ color: 'var(--blue)' }}
+            onClick={goToAdd}
+            style={{ color: activeTab === 'bank' ? '#2D6A4F' : 'var(--blue)' }}
           >
             <span className="nav-icon" style={{ fontSize: 30, lineHeight: '30px' }}>⊕</span>
-            <span>기록하기</span>
-          </button>
-          <button
-            className="nav-item"
-            onClick={() => goToPage('addBank')}
-            style={{ color: '#2D6A4F' }}
-          >
-            <span className="nav-icon" style={{ fontSize: 26, lineHeight: '30px' }}>🏦</span>
-            <span>통장기록</span>
+            <span>{activeTab === 'bank' ? '통장기록' : '기록하기'}</span>
           </button>
           <button
             className={`nav-item ${currentPage === 'list' ? 'active' : ''}`}
