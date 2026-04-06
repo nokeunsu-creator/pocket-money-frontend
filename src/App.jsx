@@ -54,11 +54,14 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
+  const HUB_USERS = ['노건우', '노승우']
+
   // 프로필 선택
   const selectUser = (user) => {
     setCurrentUser(user)
-    setCurrentPage('hub')
-    window.history.pushState({ page: 'hub', user, edit: null, tab: 'cash', tripId: null }, '', '')
+    const startPage = HUB_USERS.includes(user) ? 'hub' : 'home'
+    setCurrentPage(startPage)
+    window.history.pushState({ page: startPage, user, edit: null, tab: 'cash', tripId: null }, '', '')
   }
 
   if (!currentUser) {
@@ -149,7 +152,7 @@ export default function App() {
         <Home
           user={currentUser}
           refreshKey={refreshKey}
-          onSwitchUser={() => goToPage('hub')}
+          onSwitchUser={HUB_USERS.includes(currentUser) ? () => goToPage('hub') : switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
           activeTab={activeTab}
@@ -177,7 +180,7 @@ export default function App() {
           user={currentUser}
           refreshKey={refreshKey}
           onRefresh={refresh}
-          onSwitchUser={() => goToPage('hub')}
+          onSwitchUser={HUB_USERS.includes(currentUser) ? () => goToPage('hub') : switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
           onDeleted={() => goToPage('deleted')}
