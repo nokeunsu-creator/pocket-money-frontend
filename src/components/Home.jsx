@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getStats, getEntries, getBankStats, getBankEntries } from '../api/api'
+import { generatePdf } from '../utils/generatePdf'
 
 const fmt = (n) => n.toLocaleString('ko-KR')
 
@@ -68,6 +69,19 @@ export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdi
   const deposit = bankStats?.monthDeposit ?? 0
   const withdraw = bankStats?.monthWithdraw ?? 0
 
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const handlePdf = async () => {
+    if (pdfLoading || loading) return
+    setPdfLoading(true)
+    try {
+      await generatePdf(user, year, month, stats, entries, bankStats, bankEntries)
+    } catch {
+      alert('PDF 생성에 실패했어요.')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   return (
     <div className="page fade-in">
       {/* 헤더 */}
@@ -124,7 +138,7 @@ export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdi
       {/* 월 선택 */}
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
-        gap: 20, margin: '12px 0'
+        gap: 12, margin: '12px 0'
       }}>
         <button onClick={prevMonth}
           style={{ background: 'var(--light-gray)', width: 36, height: 36, borderRadius: '50%', fontSize: 16 }}>
@@ -136,6 +150,13 @@ export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdi
         <button onClick={nextMonth}
           style={{ background: 'var(--light-gray)', width: 36, height: 36, borderRadius: '50%', fontSize: 16 }}>
           ▶
+        </button>
+        <button onClick={handlePdf} disabled={pdfLoading || loading}
+          style={{
+            background: 'var(--light-gray)', width: 36, height: 36, borderRadius: '50%',
+            fontSize: 16, opacity: (pdfLoading || loading) ? 0.4 : 1,
+          }}>
+          {pdfLoading ? '⏳' : '📥'}
         </button>
       </div>
 
