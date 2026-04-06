@@ -1,18 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDeletedEntries, getDeletedBankEntries } from '../api/api'
-
-const fmt = (n) => n.toLocaleString('ko-KR')
-
-const EMOJI_MAP = {
-  '용돈': '🎁', '상금': '⭐', '세뱃돈': '🧧',
-  '간식': '🍭', '학용품': '📖', '장난감': '🎮',
-  '놀이': '🎪', '선물': '🎁', '저축': '💝', '헌금': '⛪', '기타': '📦',
-}
-
-const BANK_EMOJI_MAP = {
-  '저축': '💰', '용돈입금': '🎁', '이자': '⭐',
-  '인출': '💸', '구매': '🛒', '선물': '🎁', '기타': '📦',
-}
+import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
 
 function formatDateTime(dt) {
   if (!dt) return ''

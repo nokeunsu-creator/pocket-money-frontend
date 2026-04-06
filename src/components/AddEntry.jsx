@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createEntry, updateEntry, deleteEntry } from '../api/api'
+import { QUICK_AMOUNTS, fmt } from '../constants'
 
 const CATEGORIES = {
   INCOME: [
@@ -20,8 +21,6 @@ const CATEGORIES = {
   ]
 }
 
-const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000]
-const fmt = (n) => n.toLocaleString('ko-KR')
 
 function getToday() {
   const d = new Date()

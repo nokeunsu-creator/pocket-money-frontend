@@ -1,17 +1,6 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-
-const fmt = (n) => n.toLocaleString('ko-KR')
-
-const EMOJI_MAP = {
-  '용돈': '🎁', '상금': '⭐', '세뱃돈': '🧧',
-  '간식': '🍭', '학용품': '📖', '장난감': '🎮',
-  '놀이': '🎪', '선물': '🎁', '저축': '💝', '헌금': '⛪', '기타': '📦',
-}
-const BANK_EMOJI_MAP = {
-  '저축': '💰', '용돈입금': '🎁', '이자': '⭐',
-  '인출': '💸', '구매': '🛒', '선물': '🎁', '기타': '📦',
-}
+import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
 
 function buildEntryRows(entries, type) {
   if (!entries || entries.length === 0) {
