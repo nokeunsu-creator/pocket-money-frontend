@@ -26,7 +26,7 @@ export default function App() {
 
   // 브라우저 뒤로가기 처리
   useEffect(() => {
-    window.history.replaceState({ page: 'profile', user: null, edit: null }, '', '')
+    window.history.replaceState({ page: 'profile', user: null, edit: null, tab: null }, '', '')
 
     const handlePopState = (e) => {
       const state = e.state
@@ -61,7 +61,7 @@ export default function App() {
     setCurrentUser(null)
     setCurrentPage('home')
     setEditEntry(null)
-    window.history.pushState({ page: 'profile', user: null, edit: null }, '', '')
+    window.history.pushState({ page: 'profile', user: null, edit: null, tab: null }, '', '')
   }
 
   const goToPage = (page) => {
@@ -99,7 +99,6 @@ export default function App() {
         <Home
           user={currentUser}
           refreshKey={refreshKey}
-          onNavigate={goToPage}
           onSwitchUser={switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}
@@ -128,7 +127,6 @@ export default function App() {
           user={currentUser}
           refreshKey={refreshKey}
           onRefresh={refresh}
-          onNavigate={goToPage}
           onSwitchUser={switchUser}
           onEdit={goToEdit}
           onBankEdit={goToBankEdit}

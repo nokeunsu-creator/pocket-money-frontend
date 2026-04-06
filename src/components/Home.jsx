@@ -12,7 +12,7 @@ function piggyFace(balance) {
   return PIGGY[0]
 }
 
-export default function Home({ user, refreshKey, onNavigate, onSwitchUser, onEdit, onBankEdit, activeTab, onTabChange }) {
+export default function Home({ user, refreshKey, onSwitchUser, onEdit, onBankEdit, activeTab, onTabChange }) {
   const tab = activeTab
   const setTab = onTabChange
   const now = new Date()

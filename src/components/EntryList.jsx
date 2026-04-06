@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getEntries, deleteEntry, getBankEntries, deleteBankEntry } from '../api/api'
 import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
 
-export default function EntryList({ user, refreshKey, onRefresh, onNavigate, onSwitchUser, onEdit, onBankEdit, onDeleted, activeTab, onTabChange }) {
+export default function EntryList({ user, refreshKey, onRefresh, onSwitchUser, onEdit, onBankEdit, onDeleted, activeTab, onTabChange }) {
   const tab = activeTab
   const setTab = onTabChange
   const now = new Date()
