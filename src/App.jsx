@@ -10,6 +10,10 @@ import TripList from './components/TripList'
 import TripDetail from './components/TripDetail'
 import TripEdit from './components/TripEdit'
 import NumberBaseball from './components/NumberBaseball'
+import GameHub from './components/GameHub'
+import MemoryCard from './components/MemoryCard'
+import MultiplyChallenge from './components/MultiplyChallenge'
+import MathSpeedQuiz from './components/MathSpeedQuiz'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -228,7 +232,19 @@ export default function App() {
         />
       )}
       {currentPage === 'game' && (
-        <NumberBaseball onBack={switchUser} />
+        <GameHub onBack={switchUser} onSelectGame={(g) => goToPage('game-' + g)} />
+      )}
+      {currentPage === 'game-baseball' && (
+        <NumberBaseball onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-memory' && (
+        <MemoryCard onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-multiply' && (
+        <MultiplyChallenge onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-mathquiz' && (
+        <MathSpeedQuiz onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
