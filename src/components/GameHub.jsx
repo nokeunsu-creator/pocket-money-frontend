@@ -6,6 +6,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     { key: 'mathquiz', icon: '🧮', title: '사칙연산 퀴즈', desc: '스피드 연산 대결', color: '#EF476F' },
     { key: 'onecard', icon: '🃏', title: '원카드', desc: '컴퓨터와 1:1 대결', color: '#4A3F8A' },
     { key: 'hula', icon: '🎴', title: '훌라', desc: '카드 조합 맞추기', color: '#2D6A4F' },
+    { key: 'chess', icon: '♟️', title: '체스', desc: '2인용 · 정식 룰', color: '#5D4037' },
     { key: 'omok', icon: '⚫', title: '오목', desc: '2인용 · 15×15', color: '#333' },
     { key: 'baduk', icon: '⚪', title: '바둑', desc: '2인용 · 9×9', color: '#1a1a1a' },
   ]
