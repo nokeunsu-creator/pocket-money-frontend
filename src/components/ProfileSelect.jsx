@@ -77,7 +77,7 @@ export default function ProfileSelect({ onSelect }) {
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #4A3F8A, #6B5FBF)',
+            background: 'linear-gradient(135deg, #2D6A4F, #40916C)',
             color: '#FFF', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 600,
             transition: 'transform 0.1s',
@@ -86,7 +86,7 @@ export default function ProfileSelect({ onSelect }) {
           onPointerUp={e => e.currentTarget.style.transform = ''}
           onPointerLeave={e => e.currentTarget.style.transform = ''}
         >
-          <span style={{ fontSize: 28 }}>✈️</span>
+          <span style={{ fontSize: 28 }}>🚙</span>
           <span>여행</span>
         </button>
         <button
@@ -94,7 +94,7 @@ export default function ProfileSelect({ onSelect }) {
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #E74C3C, #C0392B)',
+            background: 'linear-gradient(135deg, #1565C0, #1976D2)',
             color: '#FFF', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 600,
             transition: 'transform 0.1s',

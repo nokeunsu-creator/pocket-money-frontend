@@ -332,8 +332,8 @@ export default function Hula({ onBack }) {
   }
 
   const handleJoinRoom = async () => {
-    if (joinCode.length !== 4) {
-      setError('4자리 코드를 입력하세요')
+    if (joinCode.length !== 2) {
+      setError('2자리 코드를 입력하세요')
       return
     }
     const ok = await joinRoom(joinCode)
@@ -521,7 +521,7 @@ export default function Hula({ onBack }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="text"
-              placeholder="4자리 코드"
+              placeholder="2자리 코드"
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
               style={{
@@ -533,8 +533,8 @@ export default function Hula({ onBack }) {
             <button onClick={handleJoinRoom}
               style={{
                 padding: '12px 20px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                fontSize: 14, fontWeight: 700, color: '#FFF',
-                background: joinCode.length === 4 ? '#1565C0' : '#CCC',
+                fontSize: 14, fontWeight: 700, color: '#FFF', whiteSpace: 'nowrap', minWidth: 52,
+                background: joinCode.length === 2 ? '#1565C0' : '#CCC',
               }}>
               참가
             </button>

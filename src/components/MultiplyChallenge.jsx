@@ -139,8 +139,8 @@ export default function MultiplyChallenge({ onBack }) {
   }
 
   const joinOnline = async () => {
-    if (joinCode.length !== 4) {
-      room.setError('4자리 코드를 입력하세요')
+    if (joinCode.length !== 2) {
+      room.setError('2자리 코드를 입력하세요')
       return
     }
     const ok = await room.joinRoom(joinCode)
@@ -336,8 +336,8 @@ export default function MultiplyChallenge({ onBack }) {
           <input
             value={joinCode}
             onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
-            maxLength={4}
-            placeholder="방 코드 4자리"
+            maxLength={2}
+            placeholder="방 코드 2자리"
             style={{
               flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid #E0E0E0',
               fontSize: 16, textAlign: 'center', outline: 'none', fontFamily: 'monospace',
@@ -346,7 +346,7 @@ export default function MultiplyChallenge({ onBack }) {
           <button onClick={joinOnline}
             style={{
               padding: '10px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700,
+              background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', minWidth: 52,
             }}>
             참가
           </button>

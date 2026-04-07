@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { db, ref, set, onValue, remove, get } from './firebase'
 
 function generateCode() {
-  return String(Math.floor(1000 + Math.random() * 9000))
+  return String(Math.floor(10 + Math.random() * 90))
 }
 
 export function useGameRoom(gameType) {
