@@ -325,7 +325,7 @@ export default function NumberBaseball({ onBack }) {
               }}
             />
             <button onClick={joinOnline}
-              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', minWidth: 52 }}>
+              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', minWidth: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               참가
             </button>
           </div>
