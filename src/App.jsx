@@ -58,13 +58,16 @@ export default function App() {
 
   // 프로필 선택
   const selectUser = (user, category) => {
+    if (category === 'travel') {
+      // 여행은 공통 — 유저 선택 없이 바로 진입
+      setCurrentUser('__common__')
+      setCurrentPage('trips')
+      window.history.pushState({ page: 'trips', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
     setCurrentUser(user)
-    let startPage = 'home'
-    if (category === 'travel') startPage = 'trips'
-    else if (category === 'money') startPage = 'home'
-    else startPage = HUB_USERS.includes(user) ? 'hub' : 'home'
-    setCurrentPage(startPage)
-    window.history.pushState({ page: startPage, user, edit: null, tab: 'cash', tripId: null }, '', '')
+    setCurrentPage('home')
+    window.history.pushState({ page: 'home', user, edit: null, tab: 'cash', tripId: null }, '', '')
   }
 
   if (!currentUser) {
@@ -199,7 +202,7 @@ export default function App() {
       )}
       {currentPage === 'trips' && (
         <TripList
-          onBack={() => goToPage('hub')}
+          onBack={switchUser}
           onView={goToTripDetail}
           onAdd={() => goToTripEdit(null)}
         />
