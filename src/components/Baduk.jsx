@@ -1,7 +1,17 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useGameRoom } from '../utils/useGameRoom'
 
 function createBoard(size) {
   return Array.from({ length: size }, () => Array(size).fill(null))
+}
+
+function boardToFlat(board) {
+  return board.map(row => row.map(c => c || '').join(',')).join('|')
+}
+
+function flatToBoard(flat, size) {
+  if (!flat) return createBoard(size)
+  return flat.split('|').map(row => row.split(',').map(c => c || null))
 }
 
 function getGroup(board, r, c, size) {
@@ -90,6 +100,7 @@ const STAR_POINTS = {
 }
 
 export default function Baduk({ onBack }) {
+  const [mode, setMode] = useState(null) // null | 'local' | 'online'
   const [size, setSize] = useState(null)
   const [board, setBoard] = useState([])
   const [turn, setTurn] = useState('black')
@@ -101,8 +112,27 @@ export default function Baduk({ onBack }) {
   const [score, setScore] = useState(null)
   const [history, setHistory] = useState([])
   const [message, setMessage] = useState('')
+  const [joinCode, setJoinCode] = useState('')
+
+  const room = useGameRoom('baduk')
 
   const opponent = turn === 'black' ? 'white' : 'black'
+
+  // 온라인: 게임 상태 수신
+  useEffect(() => {
+    if (mode !== 'online' || !room.gameState) return
+    const s = room.gameState
+    const sz = s.size || 9
+    if (!size) setSize(sz)
+    setBoard(flatToBoard(s.board, sz))
+    setTurn(s.turn || 'black')
+    setCaptures(s.captures || { black: 0, white: 0 })
+    setLastMove(s.lastMove || null)
+    setPassCount(s.passCount || 0)
+    setPrevBoardStr(s.prevBoardStr || '')
+    setGameOver(s.gameOver || false)
+    setScore(s.score || null)
+  }, [room.gameState, mode])
 
   const startGame = (s) => {
     setSize(s)
@@ -118,8 +148,49 @@ export default function Baduk({ onBack }) {
     setMessage('')
   }
 
+  const getInitialOnlineState = (s) => ({
+    board: boardToFlat(createBoard(s)),
+    turn: 'black',
+    captures: { black: 0, white: 0 },
+    lastMove: null,
+    passCount: 0,
+    prevBoardStr: '',
+    gameOver: false,
+    score: null,
+    size: s,
+  })
+
+  const createOnlineWithSize = async (s) => {
+    await room.createRoom(getInitialOnlineState(s))
+    setSize(s)
+    setBoard(createBoard(s))
+    setTurn('black')
+    setCaptures({ black: 0, white: 0 })
+    setLastMove(null)
+    setPrevBoardStr('')
+    setPassCount(0)
+    setGameOver(false)
+    setScore(null)
+    setHistory([])
+    setMessage('')
+    setMode('online')
+  }
+
+  const joinOnline = async () => {
+    if (joinCode.length !== 4) { room.setError('4자리 코드를 입력하세요'); return }
+    const ok = await room.joinRoom(joinCode.toUpperCase())
+    if (ok) setMode('online')
+  }
+
   const place = useCallback((r, c) => {
     if (!size || board[r][c] || gameOver) return
+
+    // 온라인: 자기 턴만 가능
+    if (mode === 'online') {
+      if (!room.connected) return
+      if (turn !== room.myColor) return
+    }
+
     const testBoard = board.map(row => [...row])
     testBoard[r][c] = turn
 
@@ -141,32 +212,79 @@ export default function Baduk({ onBack }) {
       return
     }
 
-    setHistory([...history, { board: board.map(r => [...r]), turn, captures: { ...captures }, prevBoardStr }])
-    setPrevBoardStr(boardToString(board))
-    setBoard(newBoard)
-    setLastMove([r, c])
-    setCaptures({ ...captures, [turn]: captures[turn] + newCaptured })
-    setPassCount(0)
-    setTurn(opponent)
-    setMessage('')
-  }, [board, turn, opponent, gameOver, prevBoardStr, captures, history, size])
+    const newCaptures = { ...captures, [turn]: captures[turn] + newCaptured }
+    const newPrevBoardStr = boardToString(board)
+    const newTurn = opponent
+
+    if (mode === 'online') {
+      room.updateState({
+        board: boardToFlat(newBoard),
+        turn: newTurn,
+        captures: newCaptures,
+        lastMove: [r, c],
+        passCount: 0,
+        prevBoardStr: newPrevBoardStr,
+        gameOver: false,
+        score: null,
+        size,
+      })
+    } else {
+      setHistory([...history, { board: board.map(r => [...r]), turn, captures: { ...captures }, prevBoardStr }])
+      setPrevBoardStr(newPrevBoardStr)
+      setBoard(newBoard)
+      setLastMove([r, c])
+      setCaptures(newCaptures)
+      setPassCount(0)
+      setTurn(newTurn)
+      setMessage('')
+    }
+  }, [board, turn, opponent, gameOver, prevBoardStr, captures, history, size, mode, room])
 
   const pass = () => {
     if (gameOver) return
-    setHistory([...history, { board: board.map(r => [...r]), turn, captures: { ...captures }, prevBoardStr }])
+
+    // 온라인: 자기 턴만 가능
+    if (mode === 'online') {
+      if (!room.connected) return
+      if (turn !== room.myColor) return
+    }
+
     const newPassCount = passCount + 1
-    setPassCount(newPassCount)
-    setTurn(opponent)
-    setMessage(`${turn === 'black' ? '⚫ 흑' : '⚪ 백'} 패스`)
+    let newGameOver = false
+    let newScore = null
+
     if (newPassCount >= 2) {
-      const s = countTerritory(board, size)
-      setScore(s)
-      setGameOver(true)
-      setMessage('')
+      newScore = countTerritory(board, size)
+      newGameOver = true
+    }
+
+    if (mode === 'online') {
+      room.updateState({
+        board: boardToFlat(board),
+        turn: opponent,
+        captures,
+        lastMove,
+        passCount: newPassCount,
+        prevBoardStr,
+        gameOver: newGameOver,
+        score: newScore,
+        size,
+      })
+    } else {
+      setHistory([...history, { board: board.map(r => [...r]), turn, captures: { ...captures }, prevBoardStr }])
+      setPassCount(newPassCount)
+      setTurn(opponent)
+      setMessage(`${turn === 'black' ? '⚫ 흑' : '⚪ 백'} 패스`)
+      if (newGameOver) {
+        setScore(newScore)
+        setGameOver(true)
+        setMessage('')
+      }
     }
   }
 
   const undo = () => {
+    if (mode === 'online') return // 온라인은 무르기 불가
     if (history.length === 0 || gameOver) return
     const last = history[history.length - 1]
     setBoard(last.board)
@@ -179,11 +297,102 @@ export default function Baduk({ onBack }) {
     setMessage('')
   }
 
-  // 사이즈 선택 화면
-  if (!size) {
+  const resetGame = () => {
+    if (mode === 'online') {
+      room.updateState(getInitialOnlineState(size))
+    } else {
+      startGame(size)
+    }
+  }
+
+  const handleBack = () => {
+    if (mode === 'online') room.leaveRoom()
+    if (mode) {
+      setMode(null)
+      setSize(null)
+      return
+    }
+    onBack()
+  }
+
+  // 모드 선택 화면
+  if (!mode) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>⚪</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>바둑</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => setMode('local')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #1a1a1a, #444)' }}>
+            📱 같은 기기에서 (2인)
+          </button>
+          <button onClick={() => setMode('online-create')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
+            🌐 온라인 방 만들기
+          </button>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>또는 코드로 참가</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={4}
+              placeholder="방 코드 4자리"
+              inputMode="numeric"
+              style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
+                fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
+                fontFamily: 'monospace',
+              }}
+            />
+            <button onClick={joinOnline}
+              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700 }}>
+              참가
+            </button>
+          </div>
+          {room.error && <div style={{ color: '#E74C3C', fontSize: 13 }}>{room.error}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  // 온라인 방 만들기: 사이즈 선택
+  if (mode === 'online-create') {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={() => setMode(null)}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>🌐</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>온라인 바둑</h2>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 32 }}>판 크기를 선택하세요</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => createOnlineWithSize(9)}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #06D6A0, #05B384)' }}>
+            9×9 <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>입문</span>
+          </button>
+          <button onClick={() => createOnlineWithSize(13)}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
+            13×13 <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>중급</span>
+          </button>
+          <button onClick={() => createOnlineWithSize(19)}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #1a1a1a, #444)' }}>
+            19×19 <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>정식</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // 로컬 모드: 사이즈 선택
+  if (mode === 'local' && !size) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={() => setMode(null)}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
@@ -208,6 +417,44 @@ export default function Baduk({ onBack }) {
     )
   }
 
+  // 온라인: 대기 화면
+  if (mode === 'online' && !room.connected) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={handleBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 24 }}>
+          ← 취소
+        </button>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>상대를 기다리는 중...</h3>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
+          상대방에게 아래 코드를 알려주세요
+        </p>
+        <div style={{
+          fontSize: 36, fontWeight: 700, letterSpacing: 8,
+          padding: '16px 24px', background: '#F7F6F3', borderRadius: 14,
+          display: 'inline-block', fontFamily: 'monospace',
+        }}>
+          {room.roomCode}
+        </div>
+        <p style={{ fontSize: 12, color: '#AAA', marginTop: 16 }}>
+          나는 ⚫ 흑 (선공) · {size}×{size}
+        </p>
+      </div>
+    )
+  }
+
+  // 사이즈가 아직 없으면 (온라인 게스트가 아직 상태를 받지 못한 경우)
+  if (!size) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <p style={{ fontSize: 14, color: '#888' }}>게임 정보를 불러오는 중...</p>
+      </div>
+    )
+  }
+
+  const isMyTurn = mode === 'local' || turn === room.myColor
   const maxCell = size === 19 ? 20 : size === 13 ? 28 : 38
   const cellSize = Math.min(Math.floor((window.innerWidth - 32) / size), maxCell)
   const boardPx = cellSize * (size - 1)
@@ -220,17 +467,21 @@ export default function Baduk({ onBack }) {
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={() => setSize(null)}
+          <button onClick={handleBack}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
-            ← 크기선택
+            ← {mode === 'online' ? '나가기' : '크기선택'}
           </button>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>바둑 ({size}×{size})</span>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>
+            바둑 ({size}×{size}) {mode === 'online' ? '· 온라인' : ''}
+          </span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={undo}
-              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
-              ↩
-            </button>
-            <button onClick={() => startGame(size)}
+            {mode === 'local' && (
+              <button onClick={undo}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
+                ↩
+              </button>
+            )}
+            <button onClick={resetGame}
               style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
               새 게임
             </button>
@@ -252,12 +503,23 @@ export default function Baduk({ onBack }) {
           color: gameOver ? '#333' : turn === 'black' ? '#FFF' : '#333',
           border: '1px solid #DDD', fontSize: 12, fontWeight: 600,
         }}>
-          {gameOver ? '종료' : `${turn === 'black' ? '흑' : '백'} 차례`}
+          {gameOver
+            ? '종료'
+            : mode === 'online'
+              ? (isMyTurn ? '내 차례' : '상대 차례')
+              : `${turn === 'black' ? '흑' : '백'} 차례`
+          }
         </div>
         <div style={{ textAlign: 'center', fontWeight: turn === 'white' && !gameOver ? 700 : 400 }}>
           ⚪ 백 <span style={{ fontSize: 11, color: '#888' }}>잡은돌 {captures.white}</span>
         </div>
       </div>
+
+      {mode === 'online' && (
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
+          방 코드: <strong>{room.roomCode}</strong> · 나는 {room.myColor === 'black' ? '⚫ 흑' : '⚪ 백'}
+        </div>
+      )}
 
       {message && (
         <div style={{ textAlign: 'center', padding: '6px', fontSize: 13, fontWeight: 600, color: '#E74C3C', background: '#FFF5F5' }}>
@@ -300,7 +562,8 @@ export default function Baduk({ onBack }) {
             return (
               <rect key={`click-${r}-${c}`}
                 x={padding + c * cellSize - cellSize / 2} y={padding + r * cellSize - cellSize / 2}
-                width={cellSize} height={cellSize} fill="transparent" style={{ cursor: 'pointer' }}
+                width={cellSize} height={cellSize} fill="transparent"
+                style={{ cursor: isMyTurn ? 'pointer' : 'default' }}
                 onClick={() => place(r, c)} />
             )
           }))}
@@ -310,7 +573,11 @@ export default function Baduk({ onBack }) {
       {!gameOver && (
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <button onClick={pass}
-            style={{ padding: '10px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#555', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
+            style={{
+              padding: '10px 28px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: (mode === 'online' && !isMyTurn) ? '#AAA' : '#555',
+              color: '#FFF', fontSize: 14, fontWeight: 600,
+            }}>
             패스 {passCount >= 1 ? '(양쪽 패스 시 종료)' : ''}
           </button>
         </div>
@@ -339,14 +606,16 @@ export default function Baduk({ onBack }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            <button onClick={() => startGame(size)}
+            <button onClick={resetGame}
               style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#333', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
               다시 하기
             </button>
-            <button onClick={() => setSize(null)}
-              style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
-              크기 변경
-            </button>
+            {mode === 'local' && (
+              <button onClick={() => setSize(null)}
+                style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
+                크기 변경
+              </button>
+            )}
           </div>
         </div>
       )}

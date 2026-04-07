@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useGameRoom } from '../utils/useGameRoom'
 
 const SUITS = ['♠', '♥', '♦', '♣']
 const SUIT_COLORS = { '♠': '#333', '♥': '#E74C3C', '♦': '#E74C3C', '♣': '#333' }
@@ -35,6 +36,21 @@ function canPlay(card, top, activeSuit, pendingDraw) {
 
 function cardKey(card, idx) {
   return `${card.suit}${card.rank}-${idx}`
+}
+
+// Serialization helpers for online mode
+function serializeCards(cards) {
+  return cards.map(c => `${c.suit}${c.rank}`).join(',')
+}
+
+function deserializeCards(str) {
+  if (!str) return []
+  return str.split(',').filter(Boolean).map(s => {
+    // suit is first char (unicode symbol), rank is rest
+    const suit = s[0]
+    const rank = s.slice(1)
+    return { suit, rank }
+  })
 }
 
 function Card({ card, small, onClick, disabled, faceDown, highlight }) {
@@ -79,6 +95,10 @@ function Card({ card, small, onClick, disabled, faceDown, highlight }) {
 }
 
 export default function OneCard({ onBack }) {
+  const [mode, setMode] = useState(null) // null | 'local' | 'online'
+  const [joinCode, setJoinCode] = useState('')
+
+  // --- Local mode state ---
   const [deck, setDeck] = useState([])
   const [myHand, setMyHand] = useState([])
   const [cpuHand, setCpuHand] = useState([])
@@ -91,6 +111,45 @@ export default function OneCard({ onBack }) {
   const [gameOver, setGameOver] = useState(null) // 'win' | 'lose'
   const [started, setStarted] = useState(false)
 
+  // --- Online mode ---
+  const room = useGameRoom('onecard')
+
+  // Online state derived from Firebase
+  const [onDeck, setOnDeck] = useState([])
+  const [onMyHand, setOnMyHand] = useState([])
+  const [onOpponentHand, setOnOpponentHand] = useState([])
+  const [onDiscard, setOnDiscard] = useState([])
+  const [onTurn, setOnTurn] = useState('host')
+  const [onPendingDraw, setOnPendingDraw] = useState(0)
+  const [onActiveSuit, setOnActiveSuit] = useState('')
+  const [onShowSuitPicker, setOnShowSuitPicker] = useState('')
+  const [onWinner, setOnWinner] = useState('')
+  const [onMessage, setOnMessage] = useState('')
+
+  // Sync online state from Firebase
+  useEffect(() => {
+    if (mode !== 'online' || !room.gameState) return
+    const s = room.gameState
+    setOnDeck(deserializeCards(s.deck))
+    const hostHand = deserializeCards(s.hostHand)
+    const guestHand = deserializeCards(s.guestHand)
+    if (room.role === 'host') {
+      setOnMyHand(hostHand)
+      setOnOpponentHand(guestHand)
+    } else {
+      setOnMyHand(guestHand)
+      setOnOpponentHand(hostHand)
+    }
+    setOnDiscard(deserializeCards(s.discard))
+    setOnTurn(s.turn || 'host')
+    setOnPendingDraw(s.pendingDraw || 0)
+    setOnActiveSuit(s.activeSuit || '')
+    setOnShowSuitPicker(s.showSuitPicker || '')
+    setOnWinner(s.winner || '')
+    setOnMessage(s.message || '')
+  }, [room.gameState, mode, room.role])
+
+  // --- Local mode functions (unchanged) ---
   const startGame = () => {
     const d = createDeck()
     const p = d.slice(0, 7)
@@ -133,7 +192,7 @@ export default function OneCard({ onBack }) {
     return { drawn, deck: d, discard: disc }
   }
 
-  // 플레이어 카드 내기
+  // 플레이어 카드 내기 (local)
   const playCard = (idx) => {
     if (turn !== 'player' || gameOver) return
     const card = myHand[idx]
@@ -147,7 +206,7 @@ export default function OneCard({ onBack }) {
 
     if (newHand.length === 0) {
       setGameOver('win')
-      setMessage('🎉 승리!')
+      setMessage('승리!')
       return
     }
     if (newHand.length === 1) setMessage('원카드!')
@@ -168,14 +227,14 @@ export default function OneCard({ onBack }) {
     }
   }
 
-  // 7 무늬 선택
+  // 7 무늬 선택 (local)
   const pickSuit = (suit) => {
     setActiveSuit(suit)
     setShowSuitPicker(false)
     setTurn('cpu')
   }
 
-  // 플레이어 드로우
+  // 플레이어 드로우 (local)
   const playerDraw = () => {
     if (turn !== 'player' || gameOver) return
     const count = pendingDraw > 0 ? pendingDraw : 1
@@ -190,8 +249,9 @@ export default function OneCard({ onBack }) {
     setTurn('cpu')
   }
 
-  // CPU 턴
+  // CPU 턴 (local only)
   useEffect(() => {
+    if (mode !== 'local') return
     if (turn !== 'cpu' || gameOver || !started) return
     const timer = setTimeout(() => {
       const currentTop = discard[discard.length - 1]
@@ -262,11 +322,184 @@ export default function OneCard({ onBack }) {
       }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [turn, gameOver, started])
+  }, [turn, gameOver, started, mode])
 
-  const playableIndices = myHand.map((c, i) => canPlay(c, top, activeSuit, pendingDraw) ? i : -1).filter(i => i >= 0)
+  // --- Online mode functions ---
+  const createOnline = async () => {
+    const d = createDeck()
+    const hostHand = d.slice(0, 7)
+    const guestHand = d.slice(7, 14)
+    const firstCard = d[14]
+    const remaining = d.slice(15)
+    await room.createRoom({
+      hostHand: serializeCards(hostHand),
+      guestHand: serializeCards(guestHand),
+      deck: serializeCards(remaining),
+      discard: serializeCards([firstCard]),
+      turn: 'host',
+      pendingDraw: 0,
+      activeSuit: '',
+      showSuitPicker: '',
+      winner: '',
+      message: '',
+    })
+    setMode('online')
+  }
 
-  if (!started) {
+  const joinOnline = async () => {
+    if (joinCode.length !== 4) { room.setError('4자리 코드를 입력하세요'); return }
+    const ok = await room.joinRoom(joinCode.toUpperCase())
+    if (ok) setMode('online')
+  }
+
+  const handleBack = () => {
+    if (mode === 'online') room.leaveRoom()
+    if (mode) {
+      setMode(null)
+      setStarted(false)
+      setGameOver(null)
+      return
+    }
+    onBack()
+  }
+
+  // Online: play a card
+  const onlinePlayCard = (idx) => {
+    if (!room.connected || onWinner) return
+    if (onTurn !== room.role) return
+    if (onShowSuitPicker) return
+
+    const onTop = onDiscard[onDiscard.length - 1]
+    const card = onMyHand[idx]
+    if (!canPlay(card, onTop, onActiveSuit || null, onPendingDraw)) return
+
+    const newMyHand = onMyHand.filter((_, i) => i !== idx)
+    const newDiscard = [...onDiscard, card]
+    const opponentRole = room.role === 'host' ? 'guest' : 'host'
+
+    let newTurn = opponentRole
+    let newPendingDraw = onPendingDraw
+    let newActiveSuit = ''
+    let newShowSuitPicker = ''
+    let newWinner = ''
+    let newMessage = ''
+
+    if (newMyHand.length === 0) {
+      newWinner = room.role
+      newMessage = ''
+    } else {
+      if (newMyHand.length === 1) {
+        newMessage = '원카드!'
+      }
+
+      if (card.rank === '2') {
+        newPendingDraw = onPendingDraw + 2
+        newTurn = opponentRole
+      } else if (card.rank === 'J') {
+        // Skip opponent -> my turn again
+        newTurn = room.role
+        newMessage = 'J — 상대 건너뛰기!'
+      } else if (card.rank === '7') {
+        // Show suit picker for this player
+        newShowSuitPicker = room.role
+        newTurn = onTurn // keep current turn until suit is picked
+      } else {
+        newTurn = opponentRole
+        newPendingDraw = 0
+      }
+    }
+
+    const newState = {
+      hostHand: room.role === 'host' ? serializeCards(newMyHand) : serializeCards(onOpponentHand),
+      guestHand: room.role === 'guest' ? serializeCards(newMyHand) : serializeCards(onOpponentHand),
+      deck: serializeCards(onDeck),
+      discard: serializeCards(newDiscard),
+      turn: newTurn,
+      pendingDraw: newWinner ? 0 : newPendingDraw,
+      activeSuit: newActiveSuit,
+      showSuitPicker: newShowSuitPicker,
+      winner: newWinner,
+      message: newMessage,
+    }
+    room.updateState(newState)
+  }
+
+  // Online: pick suit after playing 7
+  const onlinePickSuit = (suit) => {
+    if (onShowSuitPicker !== room.role) return
+    const opponentRole = room.role === 'host' ? 'guest' : 'host'
+    const s = room.gameState
+    room.updateState({
+      ...s,
+      activeSuit: suit,
+      showSuitPicker: '',
+      turn: opponentRole,
+      message: `무늬 변경 → ${suit}`,
+    })
+  }
+
+  // Online: draw card(s)
+  const onlinePlayerDraw = () => {
+    if (!room.connected || onWinner) return
+    if (onTurn !== room.role) return
+    if (onShowSuitPicker) return
+
+    const count = onPendingDraw > 0 ? onPendingDraw : 1
+    const result = drawCards(count, onDeck, onDiscard)
+    const newMyHand = [...onMyHand, ...result.drawn]
+    const opponentRole = room.role === 'host' ? 'guest' : 'host'
+
+    const newState = {
+      hostHand: room.role === 'host' ? serializeCards(newMyHand) : serializeCards(onOpponentHand),
+      guestHand: room.role === 'guest' ? serializeCards(newMyHand) : serializeCards(onOpponentHand),
+      deck: serializeCards(result.deck),
+      discard: serializeCards(result.discard),
+      turn: opponentRole,
+      pendingDraw: 0,
+      activeSuit: '',
+      showSuitPicker: '',
+      winner: '',
+      message: count > 1 ? `+${count}장 드로우!` : '',
+    }
+    room.updateState(newState)
+  }
+
+  // Online: new game (host only reshuffles)
+  const onlineNewGame = () => {
+    const d = createDeck()
+    const hostHand = d.slice(0, 7)
+    const guestHand = d.slice(7, 14)
+    const firstCard = d[14]
+    const remaining = d.slice(15)
+    room.updateState({
+      hostHand: serializeCards(hostHand),
+      guestHand: serializeCards(guestHand),
+      deck: serializeCards(remaining),
+      discard: serializeCards([firstCard]),
+      turn: 'host',
+      pendingDraw: 0,
+      activeSuit: '',
+      showSuitPicker: '',
+      winner: '',
+      message: '',
+    })
+  }
+
+  // Compute playable indices for local
+  const playableIndices = mode === 'local' && top
+    ? myHand.map((c, i) => canPlay(c, top, activeSuit, pendingDraw) ? i : -1).filter(i => i >= 0)
+    : []
+
+  // Compute playable indices for online
+  const onTop = onDiscard.length > 0 ? onDiscard[onDiscard.length - 1] : null
+  const onlinePlayableIndices = mode === 'online' && onTop && onTurn === room.role && !onShowSuitPicker && !onWinner
+    ? onMyHand.map((c, i) => canPlay(c, onTop, onActiveSuit || null, onPendingDraw) ? i : -1).filter(i => i >= 0)
+    : []
+
+  const isMyOnlineTurn = mode === 'online' && onTurn === room.role && !onWinner
+
+  // ===== MODE SELECT SCREEN =====
+  if (!mode) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={onBack}
@@ -285,16 +518,238 @@ export default function OneCard({ onBack }) {
           7 → 무늬 변경<br />
           J → 상대 건너뛰기
         </div>
-        <button onClick={startGame}
-          style={{
-            padding: '14px 40px', borderRadius: 14, border: 'none', cursor: 'pointer',
-            fontSize: 16, fontWeight: 700, color: '#FFF',
-            background: 'linear-gradient(135deg, #4A3F8A, #6B5FBF)',
-          }}>
-          게임 시작
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => { setMode('local'); startGame() }}
+            style={{
+              padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
+              fontSize: 16, fontWeight: 700, color: '#FFF',
+              background: 'linear-gradient(135deg, #4A3F8A, #6B5FBF)',
+            }}>
+            같은 기기에서 (vs 컴퓨터)
+          </button>
+          <button onClick={createOnline}
+            style={{
+              padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
+              fontSize: 16, fontWeight: 700, color: '#FFF',
+              background: 'linear-gradient(135deg, #4895EF, #3A7BD5)',
+            }}>
+            온라인 방 만들기
+          </button>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>또는 코드로 참가</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={4}
+              placeholder="방 코드 4자리"
+              inputMode="numeric"
+              style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
+                fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
+                fontFamily: 'monospace',
+              }}
+            />
+            <button onClick={joinOnline}
+              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700 }}>
+              참가
+            </button>
+          </div>
+          {room.error && <div style={{ color: '#E74C3C', fontSize: 13 }}>{room.error}</div>}
+        </div>
       </div>
     )
+  }
+
+  // ===== ONLINE: WAITING FOR OPPONENT =====
+  if (mode === 'online' && !room.connected) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={handleBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 24 }}>
+          ← 취소
+        </button>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>상대를 기다리는 중...</h3>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
+          상대방에게 아래 코드를 알려주세요
+        </p>
+        <div style={{
+          fontSize: 36, fontWeight: 700, letterSpacing: 8,
+          padding: '16px 24px', background: '#F7F6F3', borderRadius: 14,
+          display: 'inline-block', fontFamily: 'monospace',
+        }}>
+          {room.roomCode}
+        </div>
+        <p style={{ fontSize: 12, color: '#AAA', marginTop: 16 }}>
+          나는 선공 (호스트)
+        </p>
+      </div>
+    )
+  }
+
+  // ===== ONLINE GAME SCREEN =====
+  if (mode === 'online') {
+    const myTurnAndNoSuitPicker = isMyOnlineTurn && !onShowSuitPicker
+    const showMySuitPicker = onShowSuitPicker === room.role
+
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: '1rem' }}>
+        {/* 헤더 */}
+        <div style={{
+          background: 'linear-gradient(135deg, #4895EF, #3A7BD5)',
+          color: '#FFF', padding: '1rem 1.25rem',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={handleBack}
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
+              ← 나가기
+            </button>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>원카드 (온라인)</span>
+            <span style={{ fontSize: 12, opacity: 0.7 }}>덱 {onDeck.length}장</span>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
+          방 코드: <strong>{room.roomCode}</strong> · 나는 {room.role === 'host' ? '호스트 (선공)' : '게스트'}
+        </div>
+
+        <div style={{ padding: '0 12px' }}>
+          {/* 상대 패 (face-down) */}
+          <div style={{ textAlign: 'center', padding: '12px 0 8px' }}>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>
+              상대 ({onOpponentHand.length}장)
+              {onTurn !== room.role && !onWinner && <span style={{ marginLeft: 6 }}>생각중...</span>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
+              {onOpponentHand.map((_, i) => <Card key={i} card={{}} faceDown small />)}
+            </div>
+          </div>
+
+          {/* 가운데: 버린카드 + 덱 */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 20, padding: '16px 0',
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#AAA', marginBottom: 4 }}>덱</div>
+              <div
+                onClick={myTurnAndNoSuitPicker ? onlinePlayerDraw : undefined}
+                style={{ cursor: myTurnAndNoSuitPicker ? 'pointer' : 'default' }}
+              >
+                <Card card={{}} faceDown />
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#AAA', marginBottom: 4 }}>
+                {onActiveSuit ? `무늬: ${onActiveSuit}` : '버린 카드'}
+                {onPendingDraw > 0 && <span style={{ color: '#E74C3C', fontWeight: 700 }}> +{onPendingDraw}</span>}
+              </div>
+              {onTop && <Card card={onTop} disabled />}
+            </div>
+          </div>
+
+          {/* 메시지 */}
+          {onMessage && (
+            <div style={{
+              textAlign: 'center', padding: '8px 12px', marginBottom: 8,
+              background: '#FFF9E6', borderRadius: 10, fontSize: 14, fontWeight: 600,
+              color: '#333',
+            }}>
+              {onMessage}
+            </div>
+          )}
+
+          {/* 턴 표시 */}
+          {!onWinner && (
+            <div style={{
+              textAlign: 'center', padding: '6px 0', fontSize: 13, fontWeight: 600,
+              color: isMyOnlineTurn ? '#4895EF' : '#888',
+            }}>
+              {isMyOnlineTurn ? '내 차례 — 카드를 내거나 덱을 터치' : '상대 차례...'}
+            </div>
+          )}
+
+          {/* 무늬 선택 (only for the player who played 7) */}
+          {showMySuitPicker && (
+            <div style={{
+              display: 'flex', justifyContent: 'center', gap: 8, padding: '12px 0',
+              background: '#F7F6F3', borderRadius: 12, marginBottom: 8,
+            }}>
+              <span style={{ fontSize: 13, alignSelf: 'center', marginRight: 4 }}>무늬 선택:</span>
+              {SUITS.map(s => (
+                <button key={s} onClick={() => onlinePickSuit(s)}
+                  style={{
+                    width: 44, height: 44, borderRadius: 10, border: '2px solid #DDD',
+                    background: '#FFF', fontSize: 22, cursor: 'pointer',
+                    color: SUIT_COLORS[s],
+                  }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 내 패 */}
+          <div style={{
+            padding: '12px 0', borderTop: '1px solid #EEE',
+          }}>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 6, textAlign: 'center' }}>
+              내 카드 ({onMyHand.length}장)
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {onMyHand.map((card, i) => (
+                <Card
+                  key={cardKey(card, i)}
+                  card={card}
+                  small={onMyHand.length > 10}
+                  highlight={onlinePlayableIndices.includes(i)}
+                  disabled={!onlinePlayableIndices.includes(i) || showMySuitPicker}
+                  onClick={() => onlinePlayCard(i)}
+                />
+              ))}
+            </div>
+            {isMyOnlineTurn && onlinePlayableIndices.length === 0 && !onWinner && !showMySuitPicker && (
+              <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: '#E74C3C' }}>
+                낼 수 있는 카드가 없어요. 덱을 터치해서 드로우하세요!
+              </div>
+            )}
+          </div>
+
+          {/* 게임 오버 (online) */}
+          {onWinner && (
+            <div style={{
+              textAlign: 'center', padding: '20px', marginTop: 8,
+              background: onWinner === room.role ? 'linear-gradient(135deg, #FFF9E6, #FFF3CD)' : '#F8F8F8',
+              borderRadius: 14,
+              border: onWinner === room.role ? '2px solid #F1C40F' : '2px solid #DDD',
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>{onWinner === room.role ? '🎉' : '😢'}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
+                {onWinner === room.role ? '승리!' : '패배...'}
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button onClick={onlineNewGame}
+                  style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
+                  다시 하기
+                </button>
+                <button onClick={handleBack}
+                  style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
+                  나가기
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== LOCAL GAME SCREEN (original, unchanged) =====
+  if (!started) {
+    // This shouldn't happen since we call startGame() when selecting local,
+    // but just in case, start the game
+    startGame()
+    return null
   }
 
   return (
@@ -305,7 +760,7 @@ export default function OneCard({ onBack }) {
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onBack}
+          <button onClick={handleBack}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
             ← 돌아가기
           </button>
@@ -319,7 +774,7 @@ export default function OneCard({ onBack }) {
         <div style={{ textAlign: 'center', padding: '12px 0 8px' }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>
             컴퓨터 ({cpuHand.length}장)
-            {turn === 'cpu' && !gameOver && <span style={{ marginLeft: 6 }}>🤔 생각중...</span>}
+            {turn === 'cpu' && !gameOver && <span style={{ marginLeft: 6 }}>생각중...</span>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
             {cpuHand.map((_, i) => <Card key={i} card={{}} faceDown small />)}
@@ -426,7 +881,7 @@ export default function OneCard({ onBack }) {
                 style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4A3F8A', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
                 다시 하기
               </button>
-              <button onClick={onBack}
+              <button onClick={handleBack}
                 style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
                 게임 목록
               </button>
