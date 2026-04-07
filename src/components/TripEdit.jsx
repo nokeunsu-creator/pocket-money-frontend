@@ -200,8 +200,13 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
         <div className="card" style={{ padding: 20 }}>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>여행 제목 *</label>
-            <input style={inputStyle} value={trip.title} placeholder="예: 하동·거제 가족여행"
+            <input style={inputStyle} value={trip.title} placeholder="예: 거제도 가족여행"
               onChange={e => updateTrip('title', e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>부제목</label>
+            <input style={inputStyle} value={trip.subtitle || ''} placeholder="예: 3박 4일"
+              onChange={e => updateTrip('subtitle', e.target.value)} />
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
@@ -307,7 +312,7 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
                         </div>
                       </div>
                       <div style={{ marginBottom: 8 }}>
-                        <input style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }}
+                        <textarea style={{ ...inputStyle, padding: '6px 8px', fontSize: 12, minHeight: 40, resize: 'vertical' }}
                           value={item.desc} placeholder="설명"
                           onChange={e => updateItem(dayIdx, itemIdx, 'desc', e.target.value)} />
                       </div>
@@ -414,9 +419,20 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
                       onChange={e => updateBudgetItem(idx, 'value', e.target.value)} />
                   </div>
                 </div>
-                <input style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }}
-                  value={item.detail || ''} placeholder="상세 (선택)"
-                  onChange={e => updateBudgetItem(idx, 'detail', e.target.value)} />
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <textarea style={{ ...inputStyle, padding: '6px 8px', fontSize: 12, minHeight: 36, resize: 'vertical' }}
+                      value={item.detail || ''} placeholder="상세 (선택)"
+                      onChange={e => updateBudgetItem(idx, 'detail', e.target.value)} />
+                  </div>
+                  <select style={{ ...inputStyle, padding: '6px 8px', fontSize: 12, width: 80 }}
+                    value={item.type || ''}
+                    onChange={e => updateBudgetItem(idx, 'type', e.target.value)}>
+                    <option value="">일반</option>
+                    <option value="free">무료</option>
+                    <option value="sub">보조</option>
+                  </select>
+                </div>
               </div>
             ))}
             <button onClick={addBudgetItem}
