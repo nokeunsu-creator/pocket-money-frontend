@@ -86,7 +86,7 @@ export default function ProfileSelect({ onSelect }) {
           onPointerUp={e => e.currentTarget.style.transform = ''}
           onPointerLeave={e => e.currentTarget.style.transform = ''}
         >
-          <span style={{ fontSize: 28 }}>🚙</span>
+          <img src="/sportage.png" alt="스포티지" style={{ width: 60, height: 'auto', objectFit: 'contain' }} />
           <span>여행</span>
         </button>
         <button
