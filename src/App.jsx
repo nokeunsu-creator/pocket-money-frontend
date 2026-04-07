@@ -14,6 +14,8 @@ import GameHub from './components/GameHub'
 import MemoryCard from './components/MemoryCard'
 import MultiplyChallenge from './components/MultiplyChallenge'
 import MathSpeedQuiz from './components/MathSpeedQuiz'
+import OneCard from './components/OneCard'
+import Hula from './components/Hula'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -245,6 +247,12 @@ export default function App() {
       )}
       {currentPage === 'game-mathquiz' && (
         <MathSpeedQuiz onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-onecard' && (
+        <OneCard onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-hula' && (
+        <Hula onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}

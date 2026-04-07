@@ -4,6 +4,8 @@ export default function GameHub({ onBack, onSelectGame }) {
     { key: 'memory', icon: '🃏', title: '카드 뒤집기', desc: '같은 그림 찾기', color: '#06D6A0' },
     { key: 'multiply', icon: '✖️', title: '구구단 챌린지', desc: '구구단 타임어택', color: '#F39C12' },
     { key: 'mathquiz', icon: '🧮', title: '사칙연산 퀴즈', desc: '스피드 연산 대결', color: '#EF476F' },
+    { key: 'onecard', icon: '🃏', title: '원카드', desc: '컴퓨터와 1:1 대결', color: '#4A3F8A' },
+    { key: 'hula', icon: '🎴', title: '훌라', desc: '카드 조합 맞추기', color: '#2D6A4F' },
   ]
 
   return (
