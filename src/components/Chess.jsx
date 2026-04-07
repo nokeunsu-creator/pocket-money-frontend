@@ -486,6 +486,7 @@ export default function Chess({ onBack }) {
   const [onlineColor, setOnlineColor] = useState(null)
   const [aiThinking, setAiThinking] = useState(false)
   const aiTimerRef = useRef(null)
+  const aiThinkingRef = useRef(false)
 
   const room = useGameRoom('chess')
 
@@ -523,11 +524,14 @@ export default function Chess({ onBack }) {
     if (turn !== 'black') return
     if (gameOver) return
     if (promotion) return
+    if (aiThinkingRef.current) return
 
+    aiThinkingRef.current = true
     setAiThinking(true)
     aiTimerRef.current = setTimeout(() => {
       const aiMove = getAIMove(board, enPassant, castling)
       if (!aiMove) {
+        aiThinkingRef.current = false
         setAiThinking(false)
         return
       }
@@ -602,16 +606,16 @@ export default function Chess({ onBack }) {
       setInCheck(check)
       setTurn(nextTurn)
       setGameOver(newGameOver)
+      aiThinkingRef.current = false
       setAiThinking(false)
     }, 500)
 
-    return () => {
-      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
-    }
+    return () => clearTimeout(aiTimerRef.current)
   }, [mode, turn, gameOver, promotion, board, enPassant, castling, captured])
 
   const reset = () => {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    aiThinkingRef.current = false
     setAiThinking(false)
     if (mode === 'online') {
       room.updateState(makeInitialOnlineState())

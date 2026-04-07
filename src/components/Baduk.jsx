@@ -470,57 +470,60 @@ export default function Baduk({ onBack }) {
   }, [room.gameState, mode])
 
   // AI move effect
+  const aiThinkingRef = useRef(false)
   useEffect(() => {
-    if (mode !== 'ai' || turn !== 'white' || gameOver || aiThinking) return
+    if (mode !== 'ai' || turn !== 'white' || gameOver) return
     if (!size || board.length === 0) return
+    if (aiThinkingRef.current) return
 
+    aiThinkingRef.current = true
     setAiThinking(true)
     const delay = aiLevel <= 4 ? 300 : aiLevel <= 6 ? 400 : 500
 
-    aiTimerRef.current = setTimeout(() => {
-      const move = getAiMove(board, size, aiLevel, prevBoardStr)
+    const timer = setTimeout(() => {
+      try {
+        const move = getAiMove(board, size, aiLevel, prevBoardStr)
 
-      if (move === null) {
-        // AI passes
-        const newPassCount = passCount + 1
-        if (newPassCount >= 2) {
-          const newScore = countTerritory(board, size)
-          setScore(newScore)
-          setGameOver(true)
-          setMessage('')
+        if (move === null) {
+          const newPassCount = passCount + 1
+          if (newPassCount >= 2) {
+            const newScore = countTerritory(board, size)
+            setScore(newScore)
+            setGameOver(true)
+            setMessage('')
+          } else {
+            setPassCount(newPassCount)
+            setTurn('black')
+            setMessage('⚪ 백(AI) 패스')
+          }
         } else {
-          setPassCount(newPassCount)
+          const [r, c] = move
+          const testBoard = board.map(row => [...row])
+          testBoard[r][c] = 'white'
+          const afterCapture = removeDeadStones(testBoard, 'black', size)
+          const newBoard = afterCapture.board
+          const newCaptured = afterCapture.captured
+          const newCaptures = { ...captures, white: captures.white + newCaptured }
+          const newPrevBoardStr = boardToString(board)
+
+          setHistory(prev => [...prev, { board: board.map(row => [...row]), turn: 'white', captures: { ...captures }, prevBoardStr }])
+          setPrevBoardStr(newPrevBoardStr)
+          setBoard(newBoard)
+          setLastMove([r, c])
+          setCaptures(newCaptures)
+          setPassCount(0)
           setTurn('black')
-          setMessage('⚪ 백(AI) 패스')
+          setMessage('')
         }
-        setAiThinking(false)
-        return
+      } catch (e) {
+        console.error('AI error:', e)
       }
-
-      const [r, c] = move
-      const testBoard = board.map(row => [...row])
-      testBoard[r][c] = 'white'
-      const afterCapture = removeDeadStones(testBoard, 'black', size)
-      const newBoard = afterCapture.board
-      const newCaptured = afterCapture.captured
-      const newCaptures = { ...captures, white: captures.white + newCaptured }
-      const newPrevBoardStr = boardToString(board)
-
-      setHistory(prev => [...prev, { board: board.map(row => [...row]), turn: 'white', captures: { ...captures }, prevBoardStr }])
-      setPrevBoardStr(newPrevBoardStr)
-      setBoard(newBoard)
-      setLastMove([r, c])
-      setCaptures(newCaptures)
-      setPassCount(0)
-      setTurn('black')
-      setMessage('')
+      aiThinkingRef.current = false
       setAiThinking(false)
     }, delay)
 
-    return () => {
-      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
-    }
-  }, [mode, turn, gameOver, aiThinking, board, size, aiLevel, prevBoardStr, passCount, captures])
+    return () => clearTimeout(timer)
+  }, [mode, turn, gameOver, board, size, aiLevel, prevBoardStr, passCount, captures])
 
   const startGame = (s) => {
     setSize(s)
