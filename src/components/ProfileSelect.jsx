@@ -12,26 +12,35 @@ export default function ProfileSelect({ onSelect }) {
     { name: '노승우', photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
   ]
 
+  const categories = [
+    { key: 'money', label: '용돈기입장', icon: '💰' },
+    { key: 'travel', label: '여행', icon: '✈️' },
+    { key: 'game', label: '게임', icon: '🎮', disabled: true },
+  ]
+
   const [showModal, setShowModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState(null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
 
-  const handleClick = (name) => {
+  const handleCategoryClick = (name, category) => {
+    if (category === 'game') return
     if (PASSWORDS[name]) {
       setSelectedUser(name)
+      setSelectedCategory(category)
       setPassword('')
       setError(false)
       setShowModal(true)
     } else {
-      onSelect(name)
+      onSelect(name, category)
     }
   }
 
   const handleSubmit = () => {
     if (password === PASSWORDS[selectedUser]) {
       setShowModal(false)
-      onSelect(selectedUser)
+      onSelect(selectedUser, selectedCategory)
     } else {
       setError(true)
     }
@@ -50,11 +59,10 @@ export default function ProfileSelect({ onSelect }) {
       <p className="profile-subtitle">누구의 용돈기입장을 열까요?</p>
       <div className="profile-cards">
         {profiles.map((p, i) => (
-          <button
+          <div
             key={p.name}
             className="profile-card"
-            onClick={() => handleClick(p.name)}
-            style={{ animationDelay: `${i * 0.1}s` }}
+            style={{ animationDelay: `${i * 0.1}s`, cursor: 'default' }}
           >
             <img
               src={p.photo}
@@ -67,7 +75,32 @@ export default function ProfileSelect({ onSelect }) {
               }}
             />
             <div className="name">{p.name}</div>
-          </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10, width: '100%' }}>
+              {categories.map(cat => (
+                <button
+                  key={cat.key}
+                  onClick={() => handleCategoryClick(p.name, cat.key)}
+                  disabled={cat.disabled}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '7px 0', borderRadius: 10,
+                    background: cat.disabled ? '#F0F0F0' : p.color,
+                    color: cat.disabled ? '#AAA' : '#FFF',
+                    fontSize: 12, fontWeight: 600,
+                    border: 'none', cursor: cat.disabled ? 'default' : 'pointer',
+                    opacity: cat.disabled ? 0.6 : 1,
+                    transition: 'transform 0.1s',
+                  }}
+                  onPointerDown={e => { if (!cat.disabled) e.currentTarget.style.transform = 'scale(0.95)' }}
+                  onPointerUp={e => e.currentTarget.style.transform = ''}
+                  onPointerLeave={e => e.currentTarget.style.transform = ''}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}{cat.disabled ? ' (준비중)' : ''}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 

@@ -57,9 +57,12 @@ export default function App() {
   const HUB_USERS = ['노건우', '노승우']
 
   // 프로필 선택
-  const selectUser = (user) => {
+  const selectUser = (user, category) => {
     setCurrentUser(user)
-    const startPage = HUB_USERS.includes(user) ? 'hub' : 'home'
+    let startPage = 'home'
+    if (category === 'travel') startPage = 'trips'
+    else if (category === 'money') startPage = 'home'
+    else startPage = HUB_USERS.includes(user) ? 'hub' : 'home'
     setCurrentPage(startPage)
     window.history.pushState({ page: startPage, user, edit: null, tab: 'cash', tripId: null }, '', '')
   }
