@@ -41,6 +41,7 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
           width: 200, height: 200,
           background: 'rgba(255,255,255,0.06)',
           borderRadius: '50%',
+          pointerEvents: 'none',
         }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <button onClick={onBack}
