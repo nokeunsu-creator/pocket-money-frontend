@@ -18,13 +18,13 @@ const ADVISOR = 'advisor'
 const SOLDIER = 'soldier'
 
 const PIECE_NAMES = {
-  [KING]: { [CHO]: '궁', [HAN]: '궁' },
-  [CHARIOT]: { [CHO]: '차', [HAN]: '차' },
-  [CANNON]: { [CHO]: '포', [HAN]: '포' },
-  [HORSE]: { [CHO]: '마', [HAN]: '마' },
-  [ELEPHANT]: { [CHO]: '상', [HAN]: '상' },
-  [ADVISOR]: { [CHO]: '사', [HAN]: '사' },
-  [SOLDIER]: { [CHO]: '병', [HAN]: '졸' },
+  [KING]: { [CHO]: '楚', [HAN]: '漢' },
+  [CHARIOT]: { [CHO]: '車', [HAN]: '車' },
+  [CANNON]: { [CHO]: '包', [HAN]: '包' },
+  [HORSE]: { [CHO]: '馬', [HAN]: '馬' },
+  [ELEPHANT]: { [CHO]: '象', [HAN]: '象' },
+  [ADVISOR]: { [CHO]: '士', [HAN]: '士' },
+  [SOLDIER]: { [CHO]: '兵', [HAN]: '卒' },
 }
 
 const PIECE_VALUES = {
