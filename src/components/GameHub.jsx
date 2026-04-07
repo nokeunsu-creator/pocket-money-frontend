@@ -7,7 +7,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     { key: 'onecard', icon: '🃏', title: '원카드', desc: '컴퓨터와 1:1 대결', color: '#4A3F8A' },
     { key: 'hula', icon: '♠️', title: '훌라', desc: '카드 조합 맞추기', color: '#2D6A4F' },
     { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
-    { key: 'janggi', icon: '🏯', title: '장기', desc: 'AI · 2인 · 온라인', color: '#8B0000' },
+    { key: 'janggi', icon: '將', title: '장기', desc: 'AI · 2인 · 온라인', color: '#8B0000' },
     { key: 'omok', icon: '⚫', title: '오목', desc: 'AI · 2인 · 온라인', color: '#333' },
     { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
   ]
