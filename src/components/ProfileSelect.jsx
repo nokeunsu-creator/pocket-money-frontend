@@ -78,7 +78,7 @@ export default function ProfileSelect({ onSelect }) {
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
             background: '#FFF',
-            color: '#333', border: '2px solid #EEE', cursor: 'pointer',
+            color: '#333', border: '3px solid #2D6A4F', cursor: 'pointer',
             fontSize: 13, fontWeight: 600,
             transition: 'transform 0.1s',
           }}
