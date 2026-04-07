@@ -137,7 +137,7 @@ export default function Omok({ onBack }) {
   }
 
   const joinOnline = async () => {
-    if (joinCode.length !== 6) { room.setError('6자리 코드를 입력하세요'); return }
+    if (joinCode.length !== 4) { room.setError('4자리 코드를 입력하세요'); return }
     const ok = await room.joinRoom(joinCode.toUpperCase())
     if (ok) setMode('online')
   }
@@ -165,9 +165,10 @@ export default function Omok({ onBack }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               value={joinCode}
-              onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              maxLength={6}
-              placeholder="방 코드 6자리"
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={4}
+              placeholder="방 코드 4자리"
+              inputMode="numeric"
               style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
                 fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
