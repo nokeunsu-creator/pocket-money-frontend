@@ -16,6 +16,8 @@ import MultiplyChallenge from './components/MultiplyChallenge'
 import MathSpeedQuiz from './components/MathSpeedQuiz'
 import OneCard from './components/OneCard'
 import Hula from './components/Hula'
+import Omok from './components/Omok'
+import Baduk from './components/Baduk'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -253,6 +255,12 @@ export default function App() {
       )}
       {currentPage === 'game-hula' && (
         <Hula onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-omok' && (
+        <Omok onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-baduk' && (
+        <Baduk onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
