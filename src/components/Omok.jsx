@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 
 const SIZE = 15
@@ -35,14 +35,152 @@ function checkWin(board, r, c, player) {
   return false
 }
 
+// ─── AI Logic ───
+
+function getCandidateMoves(board) {
+  const candidates = new Set()
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c]) {
+        for (let dr = -2; dr <= 2; dr++) {
+          for (let dc = -2; dc <= 2; dc++) {
+            const nr = r + dr, nc = c + dc
+            if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !board[nr][nc]) {
+              candidates.add(nr * SIZE + nc)
+            }
+          }
+        }
+      }
+    }
+  }
+  // If board is empty, play center
+  if (candidates.size === 0) candidates.add(7 * SIZE + 7)
+  return [...candidates].map(v => [Math.floor(v / SIZE), v % SIZE])
+}
+
+function countPattern(board, player) {
+  let score = 0
+  const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]]
+  const opponent = player === 'black' ? 'white' : 'black'
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      for (const [dr, dc] of dirs) {
+        // Only count each line once: start from cells where the previous cell is not the same player
+        const pr = r - dr, pc = c - dc
+        if (pr >= 0 && pr < SIZE && pc >= 0 && pc < SIZE && board[pr][pc] === player) continue
+
+        let count = 0
+        let cr = r, cc = c
+        while (cr >= 0 && cr < SIZE && cc >= 0 && cc < SIZE && board[cr][cc] === player) {
+          count++
+          cr += dr
+          cc += dc
+        }
+        if (count === 0) continue
+
+        // Check ends
+        const endR = cr, endC = cc
+        const startR = r - dr, startC = c - dc
+        const openEnd = (endR >= 0 && endR < SIZE && endC >= 0 && endC < SIZE && board[endR][endC] === null)
+        const openStart = (startR >= 0 && startR < SIZE && startC >= 0 && startC < SIZE && board[startR][startC] === null)
+
+        if (count >= 5) {
+          score += 100000
+        } else if (count === 4) {
+          if (openEnd && openStart) score += 10000
+          else if (openEnd || openStart) score += 1000
+        } else if (count === 3) {
+          if (openEnd && openStart) score += 1000
+          else if (openEnd || openStart) score += 100
+        } else if (count === 2) {
+          if (openEnd && openStart) score += 10
+        }
+      }
+    }
+  }
+  return score
+}
+
+function evaluate(board, aiColor) {
+  const humanColor = aiColor === 'black' ? 'white' : 'black'
+  return countPattern(board, aiColor) - countPattern(board, humanColor)
+}
+
+function minimax(board, depth, alpha, beta, isMaximizing, aiColor) {
+  const humanColor = aiColor === 'black' ? 'white' : 'black'
+
+  if (depth === 0) return { score: evaluate(board, aiColor) }
+
+  const moves = getCandidateMoves(board)
+  if (moves.length === 0) return { score: 0 }
+
+  let bestMove = null
+
+  if (isMaximizing) {
+    let maxScore = -Infinity
+    for (const [r, c] of moves) {
+      board[r][c] = aiColor
+      if (checkWin(board, r, c, aiColor)) {
+        board[r][c] = null
+        return { score: 100000 + depth, move: [r, c] }
+      }
+      const result = minimax(board, depth - 1, alpha, beta, false, aiColor)
+      board[r][c] = null
+      if (result.score > maxScore) {
+        maxScore = result.score
+        bestMove = [r, c]
+      }
+      alpha = Math.max(alpha, maxScore)
+      if (beta <= alpha) break
+    }
+    return { score: maxScore, move: bestMove }
+  } else {
+    let minScore = Infinity
+    for (const [r, c] of moves) {
+      board[r][c] = humanColor
+      if (checkWin(board, r, c, humanColor)) {
+        board[r][c] = null
+        return { score: -(100000 + depth), move: [r, c] }
+      }
+      const result = minimax(board, depth - 1, alpha, beta, true, aiColor)
+      board[r][c] = null
+      if (result.score < minScore) {
+        minScore = result.score
+        bestMove = [r, c]
+      }
+      beta = Math.min(beta, minScore)
+      if (beta <= alpha) break
+    }
+    return { score: minScore, move: bestMove }
+  }
+}
+
+function getAiMove(board, aiColor) {
+  // Use depth 3 when few stones, depth 2 when board is busier
+  const stoneCount = board.flat().filter(Boolean).length
+  const depth = stoneCount < 10 ? 3 : 2
+  const cloned = board.map(row => [...row])
+  const result = minimax(cloned, depth, -Infinity, Infinity, true, aiColor)
+  return result.move
+}
+
+// ─── Component ───
+
 export default function Omok({ onBack }) {
-  const [mode, setMode] = useState(null) // null | 'local' | 'online'
+  const [mode, setMode] = useState(null) // null | 'local' | 'ai' | 'online'
   const [board, setBoard] = useState(createBoard())
   const [turn, setTurn] = useState('black')
   const [winner, setWinner] = useState(null)
   const [lastMove, setLastMove] = useState(null)
   const [history, setHistory] = useState([])
   const [joinCode, setJoinCode] = useState('')
+
+  // AI-specific state
+  const [aiColor, setAiColor] = useState(null) // color the AI plays
+  const [aiThinking, setAiThinking] = useState(false)
+  const aiThinkingRef = useRef(false)
+  const playerColor = aiColor === 'black' ? 'white' : 'black'
 
   const room = useGameRoom('omok')
 
@@ -57,8 +195,46 @@ export default function Omok({ onBack }) {
     setHistory(s.history || [])
   }, [room.gameState, mode])
 
+  // AI: make a move when it's AI's turn
+  useEffect(() => {
+    if (mode !== 'ai' || !aiColor || winner || turn !== aiColor) return
+    if (aiThinkingRef.current) return
+    aiThinkingRef.current = true
+    setAiThinking(true)
+
+    const timer = setTimeout(() => {
+      const move = getAiMove(board, aiColor)
+      if (move) {
+        const [r, c] = move
+        const newBoard = board.map(row => [...row])
+        newBoard[r][c] = aiColor
+        const newHistory = [...history, { r, c, player: aiColor }]
+        const newWinner = checkWin(newBoard, r, c, aiColor) ? aiColor : null
+        const newTurn = newWinner ? aiColor : (aiColor === 'black' ? 'white' : 'black')
+        setBoard(newBoard)
+        setLastMove([r, c])
+        setHistory(newHistory)
+        setWinner(newWinner)
+        setTurn(newTurn)
+      }
+      aiThinkingRef.current = false
+      setAiThinking(false)
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+      aiThinkingRef.current = false
+    }
+  }, [mode, aiColor, winner, turn, board, history])
+
   const place = (r, c) => {
     if (board[r][c] || winner) return
+
+    // AI 모드: 플레이어 턴만 가능
+    if (mode === 'ai') {
+      if (turn !== playerColor) return
+      if (aiThinking) return
+    }
 
     // 온라인: 자기 턴만 가능
     if (mode === 'online') {
@@ -90,7 +266,7 @@ export default function Omok({ onBack }) {
   }
 
   const undo = () => {
-    if (mode === 'online') return // 온라인은 무르기 불가
+    if (mode === 'online' || mode === 'ai') return
     if (history.length === 0 || winner) return
     const prev = history.slice(0, -1)
     const newBoard = createBoard()
@@ -121,8 +297,30 @@ export default function Omok({ onBack }) {
 
   const handleBack = () => {
     if (mode === 'online') room.leaveRoom()
-    if (mode) { setMode(null); return }
+    if (mode) {
+      setMode(null)
+      setAiColor(null)
+      setAiThinking(false)
+      aiThinkingRef.current = false
+      setBoard(createBoard())
+      setTurn('black')
+      setWinner(null)
+      setLastMove(null)
+      setHistory([])
+      return
+    }
     onBack()
+  }
+
+  const startAiGame = (playerPickedColor) => {
+    const ai = playerPickedColor === 'black' ? 'white' : 'black'
+    setAiColor(ai)
+    setBoard(createBoard())
+    setTurn('black')
+    setWinner(null)
+    setLastMove(null)
+    setHistory([])
+    setMode('ai')
   }
 
   const createOnline = async () => {
@@ -142,6 +340,31 @@ export default function Omok({ onBack }) {
     if (ok) setMode('online')
   }
 
+  // AI 색상 선택 화면
+  if (mode === 'ai-pick') {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={() => setMode(null)}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>🤖</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>vs 컴퓨터</h2>
+        <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>색을 선택하세요</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => startAiGame('black')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #222, #444)' }}>
+            ⚫ 흑 (선공)
+          </button>
+          <button onClick={() => startAiGame('white')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#333', background: 'linear-gradient(135deg, #EEE, #CCC)' }}>
+            ⚪ 백 (후공)
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // 모드 선택 화면
   if (!mode) {
     return (
@@ -156,6 +379,10 @@ export default function Omok({ onBack }) {
           <button onClick={() => setMode('local')}
             style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #333, #555)' }}>
             📱 같은 기기에서 (2인)
+          </button>
+          <button onClick={() => setMode('ai-pick')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #E67E22, #D35400)' }}>
+            🤖 vs 컴퓨터
           </button>
           <button onClick={createOnline}
             style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
@@ -213,7 +440,7 @@ export default function Omok({ onBack }) {
     )
   }
 
-  const isMyTurn = mode === 'local' || turn === room.myColor
+  const isMyTurn = mode === 'local' || (mode === 'ai' ? turn === playerColor : turn === room.myColor)
   const cellSize = Math.min(Math.floor((window.innerWidth - 32) / SIZE), 28)
   const boardSize = cellSize * (SIZE - 1)
   const padding = cellSize
@@ -221,7 +448,7 @@ export default function Omok({ onBack }) {
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: '1rem' }}>
       <div style={{
-        background: 'linear-gradient(135deg, #333, #555)',
+        background: mode === 'ai' ? 'linear-gradient(135deg, #E67E22, #D35400)' : 'linear-gradient(135deg, #333, #555)',
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -230,7 +457,7 @@ export default function Omok({ onBack }) {
             ← {mode === 'online' ? '나가기' : '돌아가기'}
           </button>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
-            오목 {mode === 'online' ? `(온라인)` : ''}
+            오목 {mode === 'online' ? '(온라인)' : mode === 'ai' ? '(vs AI)' : ''}
           </span>
           <div style={{ display: 'flex', gap: 6 }}>
             {mode === 'local' && (
@@ -255,18 +482,28 @@ export default function Omok({ onBack }) {
         background: winner ? '#FFF9E6' : '#F7F6F3',
       }}>
         {winner
-          ? `🎉 ${winner === 'black' ? '⚫ 흑' : '⚪ 백'} 승리!`
-          : mode === 'online'
-            ? (isMyTurn
-              ? `내 차례 (${room.myColor === 'black' ? '⚫ 흑' : '⚪ 백'}) · ${history.length}수`
-              : `상대 차례 · ${history.length}수`)
-            : `${turn === 'black' ? '⚫ 흑' : '⚪ 백'}의 차례 · ${history.length}수`
+          ? `🎉 ${winner === 'black' ? '⚫ 흑' : '⚪ 백'}${mode === 'ai' ? (winner === aiColor ? ' (AI)' : ' (나)') : ''} 승리!`
+          : mode === 'ai'
+            ? (aiThinking
+              ? `🤖 AI 생각 중... · ${history.length}수`
+              : `내 차례 (${playerColor === 'black' ? '⚫ 흑' : '⚪ 백'}) · ${history.length}수`)
+            : mode === 'online'
+              ? (isMyTurn
+                ? `내 차례 (${room.myColor === 'black' ? '⚫ 흑' : '⚪ 백'}) · ${history.length}수`
+                : `상대 차례 · ${history.length}수`)
+              : `${turn === 'black' ? '⚫ 흑' : '⚪ 백'}의 차례 · ${history.length}수`
         }
       </div>
 
       {mode === 'online' && (
         <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
           방 코드: <strong>{room.roomCode}</strong> · 나는 {room.myColor === 'black' ? '⚫ 흑' : '⚪ 백'}
+        </div>
+      )}
+
+      {mode === 'ai' && (
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
+          나: {playerColor === 'black' ? '⚫ 흑' : '⚪ 백'} · AI: {aiColor === 'black' ? '⚫ 흑' : '⚪ 백'}
         </div>
       )}
 

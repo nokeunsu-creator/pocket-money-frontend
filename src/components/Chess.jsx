@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 
 const PIECES = {
@@ -150,6 +150,237 @@ function hasAnyLegalMove(board, turn, enPassant, castling) {
   return false
 }
 
+// --- AI Engine (Minimax with alpha-beta pruning) ---
+const PIECE_VALUES = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 }
+
+// Piece-square tables (from black's perspective; flipped for white)
+const PST_PAWN = [
+  [  0,  0,  0,  0,  0,  0,  0,  0],
+  [ 50, 50, 50, 50, 50, 50, 50, 50],
+  [ 10, 10, 20, 30, 30, 20, 10, 10],
+  [  5,  5, 10, 25, 25, 10,  5,  5],
+  [  0,  0,  0, 20, 20,  0,  0,  0],
+  [  5, -5,-10,  0,  0,-10, -5,  5],
+  [  5, 10, 10,-20,-20, 10, 10,  5],
+  [  0,  0,  0,  0,  0,  0,  0,  0],
+]
+
+const PST_KNIGHT = [
+  [-50,-40,-30,-30,-30,-30,-40,-50],
+  [-40,-20,  0,  0,  0,  0,-20,-40],
+  [-30,  0, 10, 15, 15, 10,  0,-30],
+  [-30,  5, 15, 20, 20, 15,  5,-30],
+  [-30,  0, 15, 20, 20, 15,  0,-30],
+  [-30,  5, 10, 15, 15, 10,  5,-30],
+  [-40,-20,  0,  5,  5,  0,-20,-40],
+  [-50,-40,-30,-30,-30,-30,-40,-50],
+]
+
+const PST_BISHOP = [
+  [-20,-10,-10,-10,-10,-10,-10,-20],
+  [-10,  0,  0,  0,  0,  0,  0,-10],
+  [-10,  0, 10, 10, 10, 10,  0,-10],
+  [-10,  5,  5, 10, 10,  5,  5,-10],
+  [-10,  0,  5, 10, 10,  5,  0,-10],
+  [-10, 10, 10, 10, 10, 10, 10,-10],
+  [-10,  5,  0,  0,  0,  0,  5,-10],
+  [-20,-10,-10,-10,-10,-10,-10,-20],
+]
+
+const PST_ROOK = [
+  [  0,  0,  0,  0,  0,  0,  0,  0],
+  [  5, 10, 10, 10, 10, 10, 10,  5],
+  [ -5,  0,  0,  0,  0,  0,  0, -5],
+  [ -5,  0,  0,  0,  0,  0,  0, -5],
+  [ -5,  0,  0,  0,  0,  0,  0, -5],
+  [ -5,  0,  0,  0,  0,  0,  0, -5],
+  [ -5,  0,  0,  0,  0,  0,  0, -5],
+  [  0,  0,  0,  5,  5,  0,  0,  0],
+]
+
+const PST_QUEEN = [
+  [-20,-10,-10, -5, -5,-10,-10,-20],
+  [-10,  0,  0,  0,  0,  0,  0,-10],
+  [-10,  0,  5,  5,  5,  5,  0,-10],
+  [ -5,  0,  5,  5,  5,  5,  0, -5],
+  [  0,  0,  5,  5,  5,  5,  0, -5],
+  [-10,  5,  5,  5,  5,  5,  0,-10],
+  [-10,  0,  5,  0,  0,  0,  0,-10],
+  [-20,-10,-10, -5, -5,-10,-10,-20],
+]
+
+const PST_KING = [
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-20,-30,-30,-40,-40,-30,-30,-20],
+  [-10,-20,-20,-20,-20,-20,-20,-10],
+  [ 20, 20,  0,  0,  0,  0, 20, 20],
+  [ 20, 30, 10,  0,  0, 10, 30, 20],
+]
+
+const PST = { P: PST_PAWN, N: PST_KNIGHT, B: PST_BISHOP, R: PST_ROOK, Q: PST_QUEEN, K: PST_KING }
+
+function getPST(pieceType, r, c, white) {
+  const table = PST[pieceType]
+  if (!table) return 0
+  // Tables are from black's perspective (row 0 = black's back rank)
+  // For white pieces, flip the row
+  const row = white ? (7 - r) : r
+  return table[row][c]
+}
+
+function evaluateBoard(board) {
+  let score = 0
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c]
+      if (!p) continue
+      const type = p.toUpperCase()
+      const val = PIECE_VALUES[type] || 0
+      const pst = getPST(type, r, c, isWhite(p))
+      if (isWhite(p)) {
+        score += val + pst
+      } else {
+        score -= val + pst
+      }
+    }
+  }
+  return score
+}
+
+// Execute a move on a board clone and return the new state
+function executeMove(board, fromR, fromC, toR, toC, enPassant, castling) {
+  const nb = cloneBoard(board)
+  const piece = nb[fromR][fromC]
+  const capturedPiece = nb[toR][toC]
+  const white = isWhite(piece)
+
+  // En passant capture
+  let epCapture = null
+  if (piece.toUpperCase() === 'P' && enPassant && toR === enPassant[0] && toC === enPassant[1]) {
+    const capturedRow = white ? toR + 1 : toR - 1
+    epCapture = nb[capturedRow][toC]
+    nb[capturedRow][toC] = null
+  }
+
+  nb[toR][toC] = piece
+  nb[fromR][fromC] = null
+
+  // Castling rook move
+  const newCastling = { ...castling }
+  if (piece.toUpperCase() === 'K') {
+    if (white) { newCastling.whiteK = false; newCastling.whiteQ = false }
+    else { newCastling.blackK = false; newCastling.blackQ = false }
+    if (Math.abs(toC - fromC) === 2) {
+      if (toC === 6) { nb[toR][5] = nb[toR][7]; nb[toR][7] = null }
+      if (toC === 2) { nb[toR][3] = nb[toR][0]; nb[toR][0] = null }
+    }
+  }
+  if (piece.toUpperCase() === 'R') {
+    if (fromR === 7 && fromC === 0) newCastling.whiteQ = false
+    if (fromR === 7 && fromC === 7) newCastling.whiteK = false
+    if (fromR === 0 && fromC === 0) newCastling.blackQ = false
+    if (fromR === 0 && fromC === 7) newCastling.blackK = false
+  }
+
+  // New en passant target
+  let newEP = null
+  if (piece.toUpperCase() === 'P' && Math.abs(toR - fromR) === 2) {
+    newEP = [(toR + fromR) / 2, toC]
+  }
+
+  // Promotion (AI always promotes to queen)
+  if (piece.toUpperCase() === 'P' && (toR === 0 || toR === 7)) {
+    nb[toR][toC] = white ? 'Q' : 'q'
+  }
+
+  return { board: nb, castling: newCastling, enPassant: newEP, captured: capturedPiece || epCapture }
+}
+
+// Generate all legal moves for a side, ordered: captures first (MVV-LVA), then non-captures
+function generateOrderedMoves(board, turn, enPassant, castling) {
+  const captures = []
+  const quiet = []
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (!isAlly(board[r][c], turn)) continue
+      const moves = getLegalMoves(board, r, c, turn, enPassant, castling)
+      for (const [toR, toC] of moves) {
+        const victim = board[toR][toC]
+        if (victim) {
+          // MVV-LVA: sort by victim value desc, attacker value asc
+          const victimVal = PIECE_VALUES[victim.toUpperCase()] || 0
+          const attackerVal = PIECE_VALUES[board[r][c].toUpperCase()] || 0
+          captures.push({ from: [r, c], to: [toR, toC], score: victimVal * 10 - attackerVal })
+        } else if (enPassant && board[r][c].toUpperCase() === 'P' && toR === enPassant[0] && toC === enPassant[1]) {
+          captures.push({ from: [r, c], to: [toR, toC], score: 100 })
+        } else {
+          quiet.push({ from: [r, c], to: [toR, toC] })
+        }
+      }
+    }
+  }
+  captures.sort((a, b) => b.score - a.score)
+  return [...captures, ...quiet]
+}
+
+function minimax(board, depth, alpha, beta, maximizing, turn, enPassant, castling) {
+  if (depth === 0) {
+    return { score: evaluateBoard(board) }
+  }
+
+  const moves = generateOrderedMoves(board, turn, enPassant, castling)
+
+  if (moves.length === 0) {
+    // No legal moves: checkmate or stalemate
+    if (isInCheck(board, turn)) {
+      // Checkmate: very bad for the side to move
+      return { score: maximizing ? -100000 + (3 - depth) : 100000 - (3 - depth) }
+    }
+    return { score: 0 } // Stalemate
+  }
+
+  let bestMove = null
+
+  if (maximizing) {
+    let maxEval = -Infinity
+    for (const move of moves) {
+      const result = executeMove(board, move.from[0], move.from[1], move.to[0], move.to[1], enPassant, castling)
+      const nextTurn = turn === 'white' ? 'black' : 'white'
+      const { score } = minimax(result.board, depth - 1, alpha, beta, false, nextTurn, result.enPassant, result.castling)
+      if (score > maxEval) {
+        maxEval = score
+        bestMove = move
+      }
+      alpha = Math.max(alpha, score)
+      if (beta <= alpha) break
+    }
+    return { score: maxEval, move: bestMove }
+  } else {
+    let minEval = Infinity
+    for (const move of moves) {
+      const result = executeMove(board, move.from[0], move.from[1], move.to[0], move.to[1], enPassant, castling)
+      const nextTurn = turn === 'white' ? 'black' : 'white'
+      const { score } = minimax(result.board, depth - 1, alpha, beta, true, nextTurn, result.enPassant, result.castling)
+      if (score < minEval) {
+        minEval = score
+        bestMove = move
+      }
+      beta = Math.min(beta, score)
+      if (beta <= alpha) break
+    }
+    return { score: minEval, move: bestMove }
+  }
+}
+
+function getAIMove(board, enPassant, castling) {
+  // AI plays black (minimizing)
+  const result = minimax(board, 3, -Infinity, Infinity, false, 'black', enPassant, castling)
+  return result.move
+}
+
 // --- Serialization helpers for Firebase ---
 function boardToFlat(board) {
   return board.map(row => row.map(c => c || '').join(',')).join('|')
@@ -237,7 +468,7 @@ function makeInitialOnlineState() {
 }
 
 export default function Chess({ onBack }) {
-  const [mode, setMode] = useState(null) // null | 'local' | 'online'
+  const [mode, setMode] = useState(null) // null | 'local' | 'ai' | 'online'
   const [board, setBoard] = useState(cloneBoard(INIT_BOARD))
   const [turn, setTurn] = useState('white')
   const [selected, setSelected] = useState(null)
@@ -253,6 +484,8 @@ export default function Chess({ onBack }) {
   const [joinCode, setJoinCode] = useState('')
   // Override color: host=white, guest=black for chess (hook defaults opposite)
   const [onlineColor, setOnlineColor] = useState(null)
+  const [aiThinking, setAiThinking] = useState(false)
+  const aiTimerRef = useRef(null)
 
   const room = useGameRoom('chess')
 
@@ -277,7 +510,109 @@ export default function Chess({ onBack }) {
     setLegalMoves([])
   }, [room.gameState, mode])
 
+  // Cleanup AI timer on unmount or mode change
+  useEffect(() => {
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    }
+  }, [mode])
+
+  // AI move effect: when it's black's turn in AI mode, compute and play
+  useEffect(() => {
+    if (mode !== 'ai') return
+    if (turn !== 'black') return
+    if (gameOver) return
+    if (promotion) return
+
+    setAiThinking(true)
+    aiTimerRef.current = setTimeout(() => {
+      const aiMove = getAIMove(board, enPassant, castling)
+      if (!aiMove) {
+        setAiThinking(false)
+        return
+      }
+
+      const { from, to } = aiMove
+      const [fromR, fromC] = from
+      const [toR, toC] = to
+
+      const nb = cloneBoard(board)
+      const piece = nb[fromR][fromC]
+      const capturedPiece = nb[toR][toC]
+      const newCaptured = { white: [...captured.white], black: [...captured.black] }
+
+      // En passant capture
+      if (piece.toUpperCase() === 'P' && enPassant && toR === enPassant[0] && toC === enPassant[1]) {
+        const capturedRow = isWhite(piece) ? toR + 1 : toR - 1
+        const ep = nb[capturedRow][toC]
+        if (ep) newCaptured[isWhite(piece) ? 'white' : 'black'].push(ep)
+        nb[capturedRow][toC] = null
+      }
+
+      if (capturedPiece) {
+        newCaptured[isWhite(piece) ? 'white' : 'black'].push(capturedPiece)
+      }
+
+      nb[toR][toC] = piece
+      nb[fromR][fromC] = null
+
+      // Castling
+      const newCastling = { ...castling }
+      if (piece.toUpperCase() === 'K') {
+        if (isWhite(piece)) { newCastling.whiteK = false; newCastling.whiteQ = false }
+        else { newCastling.blackK = false; newCastling.blackQ = false }
+        if (Math.abs(toC - fromC) === 2) {
+          if (toC === 6) { nb[toR][5] = nb[toR][7]; nb[toR][7] = null }
+          if (toC === 2) { nb[toR][3] = nb[toR][0]; nb[toR][0] = null }
+        }
+      }
+      if (piece.toUpperCase() === 'R') {
+        if (fromR === 7 && fromC === 0) newCastling.whiteQ = false
+        if (fromR === 7 && fromC === 7) newCastling.whiteK = false
+        if (fromR === 0 && fromC === 0) newCastling.blackQ = false
+        if (fromR === 0 && fromC === 7) newCastling.blackK = false
+      }
+
+      // En passant
+      let newEP = null
+      if (piece.toUpperCase() === 'P' && Math.abs(toR - fromR) === 2) {
+        newEP = [(toR + fromR) / 2, toC]
+      }
+
+      // Promotion (AI always promotes to queen)
+      if (piece.toUpperCase() === 'P' && (toR === 0 || toR === 7)) {
+        nb[toR][toC] = isWhite(piece) ? 'Q' : 'q'
+      }
+
+      const newLastMove = [from, to]
+      const nextTurn = 'white'
+      const check = isInCheck(nb, nextTurn)
+      let newGameOver = null
+      if (!hasAnyLegalMove(nb, nextTurn, newEP, newCastling)) {
+        newGameOver = check ? 'checkmate-black' : 'stalemate'
+      }
+
+      setBoard(nb)
+      setCastling(newCastling)
+      setEnPassant(newEP)
+      setCaptured(newCaptured)
+      setLastMove(newLastMove)
+      setSelected(null)
+      setLegalMoves([])
+      setInCheck(check)
+      setTurn(nextTurn)
+      setGameOver(newGameOver)
+      setAiThinking(false)
+    }, 500)
+
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    }
+  }, [mode, turn, gameOver, promotion, board, enPassant, castling, captured])
+
   const reset = () => {
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    setAiThinking(false)
     if (mode === 'online') {
       room.updateState(makeInitialOnlineState())
     } else {
@@ -297,7 +632,7 @@ export default function Chess({ onBack }) {
   }
 
   const undo = () => {
-    if (mode === 'online') return
+    if (mode === 'online' || mode === 'ai') return
     if (history.length === 0 || gameOver) return
     const last = history[history.length - 1]
     setBoard(last.board)
@@ -331,6 +666,11 @@ export default function Chess({ onBack }) {
 
   const handleClick = useCallback((r, c) => {
     if (gameOver) return
+    // In AI mode, only allow moves when it's white's turn and AI is not thinking
+    if (mode === 'ai') {
+      if (turn !== 'white') return
+      if (aiThinking) return
+    }
     // In online mode, only allow moves on your turn
     if (mode === 'online') {
       if (!room.connected) return
@@ -398,6 +738,16 @@ export default function Chess({ onBack }) {
         const newPromotion = { r, c, from: selected }
         if (mode === 'online') {
           pushOnlineState(nb, turn, newCastling, newEP, newLastMove, null, inCheck, newCaptured, newPromotion)
+        } else if (mode === 'ai') {
+          // In AI mode, player (white) still gets promotion UI
+          setBoard(nb)
+          setPromotion(newPromotion)
+          setEnPassant(newEP)
+          setCastling(newCastling)
+          setCaptured(newCaptured)
+          setLastMove(newLastMove)
+          setSelected(null)
+          setLegalMoves([])
         } else {
           setBoard(nb)
           setPromotion(newPromotion)
@@ -437,7 +787,17 @@ export default function Chess({ onBack }) {
 
     // 자기 말 선택
     const piece = board[r][c]
-    if (piece && isAlly(piece, turn)) {
+    // In AI mode, only allow selecting white pieces
+    if (mode === 'ai') {
+      if (piece && isWhite(piece)) {
+        const moves = getLegalMoves(board, r, c, turn, enPassant, castling)
+        setSelected([r, c])
+        setLegalMoves(moves)
+      } else {
+        setSelected(null)
+        setLegalMoves([])
+      }
+    } else if (piece && isAlly(piece, turn)) {
       const moves = getLegalMoves(board, r, c, turn, enPassant, castling)
       setSelected([r, c])
       setLegalMoves(moves)
@@ -445,7 +805,7 @@ export default function Chess({ onBack }) {
       setSelected(null)
       setLegalMoves([])
     }
-  }, [board, turn, selected, legalMoves, enPassant, castling, gameOver, promotion, history, captured, inCheck, mode, myColor, room.connected, pushOnlineState])
+  }, [board, turn, selected, legalMoves, enPassant, castling, gameOver, promotion, history, captured, inCheck, mode, myColor, room.connected, pushOnlineState, aiThinking])
 
   const promote = (piece) => {
     if (!promotion) return
@@ -474,6 +834,8 @@ export default function Chess({ onBack }) {
   }
 
   const handleBack = () => {
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
+    setAiThinking(false)
     if (mode === 'online') room.leaveRoom()
     if (mode) { setMode(null); setOnlineColor(null); return }
     onBack()
@@ -507,6 +869,23 @@ export default function Chess({ onBack }) {
     }
   }
 
+  const startAI = () => {
+    setBoard(cloneBoard(INIT_BOARD))
+    setTurn('white')
+    setSelected(null)
+    setLegalMoves([])
+    setEnPassant(null)
+    setCastling({ whiteK: true, whiteQ: true, blackK: true, blackQ: true })
+    setGameOver(null)
+    setInCheck(false)
+    setLastMove(null)
+    setPromotion(null)
+    setHistory([])
+    setCaptured({ white: [], black: [] })
+    setAiThinking(false)
+    setMode('ai')
+  }
+
   // Mode selection screen
   if (!mode) {
     return (
@@ -521,6 +900,10 @@ export default function Chess({ onBack }) {
           <button onClick={() => setMode('local')}
             style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #5D4037, #795548)' }}>
             같은 기기에서 (2인)
+          </button>
+          <button onClick={startAI}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #43A047, #66BB6A)' }}>
+            vs 컴퓨터
           </button>
           <button onClick={createOnline}
             style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
@@ -578,7 +961,7 @@ export default function Chess({ onBack }) {
     )
   }
 
-  const isMyTurn = mode === 'local' || turn === myColor
+  const isMyTurn = mode === 'local' || mode === 'ai' ? turn === 'white' || mode === 'local' : turn === myColor
   const cellSize = Math.min(Math.floor((window.innerWidth - 32) / 8), 50)
 
   const renderPiece = (p) => {
@@ -589,7 +972,9 @@ export default function Chess({ onBack }) {
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: '1rem' }}>
       <div style={{
-        background: 'linear-gradient(135deg, #5D4037, #795548)',
+        background: mode === 'ai'
+          ? 'linear-gradient(135deg, #2E7D32, #43A047)'
+          : 'linear-gradient(135deg, #5D4037, #795548)',
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -598,7 +983,7 @@ export default function Chess({ onBack }) {
             ← {mode === 'online' ? '나가기' : '돌아가기'}
           </button>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
-            체스 {mode === 'online' ? '(온라인)' : ''}
+            체스 {mode === 'online' ? '(온라인)' : mode === 'ai' ? '(vs 컴퓨터)' : ''}
           </span>
           <div style={{ display: 'flex', gap: 6 }}>
             {mode === 'local' && (
@@ -635,7 +1020,13 @@ export default function Chess({ onBack }) {
               ? (isMyTurn
                 ? `내 차례 (${myColor === 'white' ? '백' : '흑'})`
                 : '상대 차례')
-              : inCheck ? `${turn === 'white' ? '백' : '흑'} 체크!` : `${turn === 'white' ? '백' : '흑'} 차례`
+              : mode === 'ai'
+                ? (aiThinking
+                  ? '컴퓨터 생각 중...'
+                  : inCheck
+                    ? `${turn === 'white' ? '백' : '흑'} 체크!`
+                    : turn === 'white' ? '내 차례 (백)' : '컴퓨터 차례')
+                : inCheck ? `${turn === 'white' ? '백' : '흑'} 체크!` : `${turn === 'white' ? '백' : '흑'} 차례`
           }
         </div>
         <div>
@@ -646,6 +1037,13 @@ export default function Chess({ onBack }) {
       {mode === 'online' && (
         <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
           방 코드: <strong>{room.roomCode}</strong> · 나는 {myColor === 'white' ? '⚪ 백' : '⚫ 흑'}
+          {inCheck && !gameOver && ` · ${turn === 'white' ? '백' : '흑'} 체크!`}
+        </div>
+      )}
+
+      {mode === 'ai' && (
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
+          나: ⚪ 백 (선공) · 컴퓨터: ⚫ 흑
           {inCheck && !gameOver && ` · ${turn === 'white' ? '백' : '흑'} 체크!`}
         </div>
       )}
@@ -674,7 +1072,7 @@ export default function Chess({ onBack }) {
                       width: cellSize, height: cellSize,
                       background: bg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: isMyTurn && !gameOver ? 'pointer' : 'default', position: 'relative',
+                      cursor: (mode === 'ai' ? turn === 'white' && !aiThinking : isMyTurn) && !gameOver ? 'pointer' : 'default', position: 'relative',
                     }}
                   >
                     {renderPiece(cell)}
@@ -710,7 +1108,7 @@ export default function Chess({ onBack }) {
       </div>
 
       {/* 프로모션 선택 */}
-      {promotion && (mode === 'local' || turn === myColor) && (
+      {promotion && (mode === 'local' || mode === 'ai' || turn === myColor) && (
         <div style={{
           display: 'flex', justifyContent: 'center', gap: 8, padding: '12px',
           background: '#FFF9E6', borderRadius: 12, margin: '0 12px',
@@ -752,8 +1150,9 @@ export default function Chess({ onBack }) {
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
             {gameOver === 'stalemate' ? '스테일메이트 — 무승부'
-              : gameOver === 'checkmate-white' ? '⚪ 백 승리! (체크메이트)'
-              : '⚫ 흑 승리! (체크메이트)'}
+              : gameOver === 'checkmate-white'
+                ? mode === 'ai' ? '축하합니다! 승리! (체크메이트)' : '⚪ 백 승리! (체크메이트)'
+                : mode === 'ai' ? '컴퓨터 승리! (체크메이트)' : '⚫ 흑 승리! (체크메이트)'}
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button onClick={reset}

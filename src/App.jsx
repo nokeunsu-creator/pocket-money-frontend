@@ -17,6 +17,7 @@ import MathSpeedQuiz from './components/MathSpeedQuiz'
 import OneCard from './components/OneCard'
 import Hula from './components/Hula'
 import Chess from './components/Chess'
+import Janggi from './components/Janggi'
 import Omok from './components/Omok'
 import Baduk from './components/Baduk'
 
@@ -259,6 +260,9 @@ export default function App() {
       )}
       {currentPage === 'game-chess' && (
         <Chess onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-janggi' && (
+        <Janggi onBack={() => goToPage('game')} />
       )}
       {currentPage === 'game-omok' && (
         <Omok onBack={() => goToPage('game')} />
