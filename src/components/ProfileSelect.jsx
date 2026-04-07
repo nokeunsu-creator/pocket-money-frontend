@@ -91,18 +91,21 @@ export default function ProfileSelect({ onSelect }) {
           <span>여행</span>
         </button>
         <button
-          disabled
+          onClick={() => onSelect(null, 'game')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
-            background: '#F0F0F0',
-            color: '#AAA', border: 'none',
+            background: 'linear-gradient(135deg, #E74C3C, #C0392B)',
+            color: '#FFF', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 600,
-            opacity: 0.6,
+            transition: 'transform 0.1s',
           }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+          onPointerUp={e => e.currentTarget.style.transform = ''}
+          onPointerLeave={e => e.currentTarget.style.transform = ''}
         >
           <span style={{ fontSize: 28 }}>🎮</span>
-          <span>게임 (준비중)</span>
+          <span>게임</span>
         </button>
       </div>
 

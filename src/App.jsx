@@ -9,6 +9,7 @@ import DeletedList from './components/DeletedList'
 import TripList from './components/TripList'
 import TripDetail from './components/TripDetail'
 import TripEdit from './components/TripEdit'
+import NumberBaseball from './components/NumberBaseball'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -59,10 +60,15 @@ export default function App() {
   // 프로필 선택
   const selectUser = (user, category) => {
     if (category === 'travel') {
-      // 여행은 공통 — 유저 선택 없이 바로 진입
       setCurrentUser('__common__')
       setCurrentPage('trips')
       window.history.pushState({ page: 'trips', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'game') {
+      setCurrentUser('__common__')
+      setCurrentPage('game')
+      window.history.pushState({ page: 'game', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
     setCurrentUser(user)
@@ -220,6 +226,9 @@ export default function App() {
           onDone={() => { goBack() }}
           onCancel={goBack}
         />
+      )}
+      {currentPage === 'game' && (
+        <NumberBaseball onBack={switchUser} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
