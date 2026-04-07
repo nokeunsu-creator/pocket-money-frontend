@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useGameRoom } from '../utils/useGameRoom'
 
 const PIECES = {
   K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
@@ -149,7 +150,94 @@ function hasAnyLegalMove(board, turn, enPassant, castling) {
   return false
 }
 
+// --- Serialization helpers for Firebase ---
+function boardToFlat(board) {
+  return board.map(row => row.map(c => c || '').join(',')).join('|')
+}
+
+function flatToBoard(flat) {
+  if (!flat) return cloneBoard(INIT_BOARD)
+  return flat.split('|').map(row => row.split(',').map(c => c || null))
+}
+
+function serializeState({ board, turn, castling, enPassant, lastMove, gameOver, inCheck, captured, promotion }) {
+  return {
+    board: boardToFlat(board),
+    turn,
+    castling: castling || { whiteK: true, whiteQ: true, blackK: true, blackQ: true },
+    enPassant: enPassant || '',
+    lastMove: lastMove || '',
+    gameOver: gameOver || '',
+    inCheck: inCheck || false,
+    capturedWhite: (captured && captured.white) ? captured.white.join(',') : '',
+    capturedBlack: (captured && captured.black) ? captured.black.join(',') : '',
+    promotion: promotion ? `${promotion.r},${promotion.c},${promotion.from[0]},${promotion.from[1]}` : '',
+  }
+}
+
+function deserializeState(s) {
+  if (!s) return null
+  return {
+    board: flatToBoard(s.board),
+    turn: s.turn || 'white',
+    castling: s.castling || { whiteK: true, whiteQ: true, blackK: true, blackQ: true },
+    enPassant: s.enPassant ? (typeof s.enPassant === 'string' && s.enPassant.length > 0 ? s.enPassant.split(',').map(Number) : null) : null,
+    lastMove: s.lastMove ? (typeof s.lastMove === 'string' && s.lastMove.length > 0 ? deserializeLastMove(s.lastMove) : null) : null,
+    gameOver: s.gameOver || null,
+    inCheck: s.inCheck || false,
+    captured: {
+      white: s.capturedWhite ? s.capturedWhite.split(',').filter(Boolean) : [],
+      black: s.capturedBlack ? s.capturedBlack.split(',').filter(Boolean) : [],
+    },
+    promotion: s.promotion ? deserializePromotion(s.promotion) : null,
+  }
+}
+
+function deserializeLastMove(str) {
+  if (!str || str.length === 0) return null
+  const parts = str.split(',').map(Number)
+  if (parts.length === 4) return [[parts[0], parts[1]], [parts[2], parts[3]]]
+  return null
+}
+
+function deserializePromotion(str) {
+  if (!str || str.length === 0) return null
+  const parts = str.split(',').map(Number)
+  if (parts.length === 4) return { r: parts[0], c: parts[1], from: [parts[2], parts[3]] }
+  return null
+}
+
+function serializeLastMove(lm) {
+  if (!lm) return ''
+  return `${lm[0][0]},${lm[0][1]},${lm[1][0]},${lm[1][1]}`
+}
+
+function serializeEnPassant(ep) {
+  if (!ep) return ''
+  return `${ep[0]},${ep[1]}`
+}
+
+function serializePromotion(p) {
+  if (!p) return ''
+  return `${p.r},${p.c},${p.from[0]},${p.from[1]}`
+}
+
+function makeInitialOnlineState() {
+  return serializeState({
+    board: cloneBoard(INIT_BOARD),
+    turn: 'white',
+    castling: { whiteK: true, whiteQ: true, blackK: true, blackQ: true },
+    enPassant: null,
+    lastMove: null,
+    gameOver: null,
+    inCheck: false,
+    captured: { white: [], black: [] },
+    promotion: null,
+  })
+}
+
 export default function Chess({ onBack }) {
+  const [mode, setMode] = useState(null) // null | 'local' | 'online'
   const [board, setBoard] = useState(cloneBoard(INIT_BOARD))
   const [turn, setTurn] = useState('white')
   const [selected, setSelected] = useState(null)
@@ -162,23 +250,54 @@ export default function Chess({ onBack }) {
   const [promotion, setPromotion] = useState(null) // { r, c, from: [r,c] }
   const [history, setHistory] = useState([])
   const [captured, setCaptured] = useState({ white: [], black: [] })
+  const [joinCode, setJoinCode] = useState('')
+  // Override color: host=white, guest=black for chess (hook defaults opposite)
+  const [onlineColor, setOnlineColor] = useState(null)
 
-  const reset = () => {
-    setBoard(cloneBoard(INIT_BOARD))
-    setTurn('white')
+  const room = useGameRoom('chess')
+
+  // Effective color for online mode
+  const myColor = onlineColor || room.myColor
+
+  // Sync state from Firebase
+  useEffect(() => {
+    if (mode !== 'online' || !room.gameState) return
+    const s = deserializeState(room.gameState)
+    if (!s) return
+    setBoard(s.board)
+    setTurn(s.turn)
+    setCastling(s.castling)
+    setEnPassant(s.enPassant)
+    setLastMove(s.lastMove)
+    setGameOver(s.gameOver)
+    setInCheck(s.inCheck)
+    setCaptured(s.captured)
+    setPromotion(s.promotion)
     setSelected(null)
     setLegalMoves([])
-    setEnPassant(null)
-    setCastling({ whiteK: true, whiteQ: true, blackK: true, blackQ: true })
-    setGameOver(null)
-    setInCheck(false)
-    setLastMove(null)
-    setPromotion(null)
-    setHistory([])
-    setCaptured({ white: [], black: [] })
+  }, [room.gameState, mode])
+
+  const reset = () => {
+    if (mode === 'online') {
+      room.updateState(makeInitialOnlineState())
+    } else {
+      setBoard(cloneBoard(INIT_BOARD))
+      setTurn('white')
+      setSelected(null)
+      setLegalMoves([])
+      setEnPassant(null)
+      setCastling({ whiteK: true, whiteQ: true, blackK: true, blackQ: true })
+      setGameOver(null)
+      setInCheck(false)
+      setLastMove(null)
+      setPromotion(null)
+      setHistory([])
+      setCaptured({ white: [], black: [] })
+    }
   }
 
   const undo = () => {
+    if (mode === 'online') return
     if (history.length === 0 || gameOver) return
     const last = history[history.length - 1]
     setBoard(last.board)
@@ -195,8 +314,30 @@ export default function Chess({ onBack }) {
     setPromotion(null)
   }
 
+  const pushOnlineState = useCallback((newBoard, newTurn, newCastling, newEP, newLastMove, newGameOver, newInCheck, newCaptured, newPromotion) => {
+    room.updateState({
+      board: boardToFlat(newBoard),
+      turn: newTurn,
+      castling: newCastling,
+      enPassant: serializeEnPassant(newEP),
+      lastMove: serializeLastMove(newLastMove),
+      gameOver: newGameOver || '',
+      inCheck: newInCheck || false,
+      capturedWhite: newCaptured.white.join(','),
+      capturedBlack: newCaptured.black.join(','),
+      promotion: serializePromotion(newPromotion),
+    })
+  }, [room])
+
   const handleClick = useCallback((r, c) => {
-    if (gameOver || promotion) return
+    if (gameOver) return
+    // In online mode, only allow moves on your turn
+    if (mode === 'online') {
+      if (!room.connected) return
+      if (turn !== myColor) return
+    }
+    // If in promotion state, ignore board clicks
+    if (promotion) return
 
     // 이미 선택된 말이 있고, 클릭한 곳이 이동 가능한 곳
     if (selected && legalMoves.some(([mr, mc]) => mr === r && mc === c)) {
@@ -206,8 +347,10 @@ export default function Chess({ onBack }) {
       const capturedPiece = nb[r][c]
       const newCaptured = { white: [...captured.white], black: [...captured.black] }
 
-      // 히스토리 저장
-      setHistory([...history, { board: cloneBoard(board), turn, enPassant, castling: { ...castling }, captured: { white: [...captured.white], black: [...captured.black] }, inCheck }])
+      // 히스토리 저장 (local only)
+      if (mode === 'local') {
+        setHistory([...history, { board: cloneBoard(board), turn, enPassant, castling: { ...castling }, captured: { white: [...captured.white], black: [...captured.black] }, inCheck }])
+      }
 
       // 앙파상 잡기
       if (piece.toUpperCase() === 'P' && enPassant && r === enPassant[0] && c === enPassant[1]) {
@@ -248,34 +391,46 @@ export default function Chess({ onBack }) {
         newEP = [(r + selected[0]) / 2, c]
       }
 
+      const newLastMove = [selected, [r, c]]
+
       // 프로모션 체크
       if (piece.toUpperCase() === 'P' && (r === 0 || r === 7)) {
-        setBoard(nb)
-        setPromotion({ r, c, from: selected })
-        setEnPassant(newEP)
-        setCastling(newCastling)
-        setCaptured(newCaptured)
-        setLastMove([selected, [r, c]])
-        setSelected(null)
-        setLegalMoves([])
+        const newPromotion = { r, c, from: selected }
+        if (mode === 'online') {
+          pushOnlineState(nb, turn, newCastling, newEP, newLastMove, null, inCheck, newCaptured, newPromotion)
+        } else {
+          setBoard(nb)
+          setPromotion(newPromotion)
+          setEnPassant(newEP)
+          setCastling(newCastling)
+          setCaptured(newCaptured)
+          setLastMove(newLastMove)
+          setSelected(null)
+          setLegalMoves([])
+        }
         return
       }
 
-      setBoard(nb)
-      setCastling(newCastling)
-      setEnPassant(newEP)
-      setCaptured(newCaptured)
-      setLastMove([selected, [r, c]])
-      setSelected(null)
-      setLegalMoves([])
-
       const nextTurn = turn === 'white' ? 'black' : 'white'
       const check = isInCheck(nb, nextTurn)
-      setInCheck(check)
-      setTurn(nextTurn)
-
+      let newGameOver = null
       if (!hasAnyLegalMove(nb, nextTurn, newEP, newCastling)) {
-        setGameOver(check ? `checkmate-${turn}` : 'stalemate')
+        newGameOver = check ? `checkmate-${turn}` : 'stalemate'
+      }
+
+      if (mode === 'online') {
+        pushOnlineState(nb, nextTurn, newCastling, newEP, newLastMove, newGameOver, check, newCaptured, null)
+      } else {
+        setBoard(nb)
+        setCastling(newCastling)
+        setEnPassant(newEP)
+        setCaptured(newCaptured)
+        setLastMove(newLastMove)
+        setSelected(null)
+        setLegalMoves([])
+        setInCheck(check)
+        setTurn(nextTurn)
+        setGameOver(newGameOver)
       }
       return
     }
@@ -290,25 +445,140 @@ export default function Chess({ onBack }) {
       setSelected(null)
       setLegalMoves([])
     }
-  }, [board, turn, selected, legalMoves, enPassant, castling, gameOver, promotion, history, captured, inCheck])
+  }, [board, turn, selected, legalMoves, enPassant, castling, gameOver, promotion, history, captured, inCheck, mode, myColor, room.connected, pushOnlineState])
 
   const promote = (piece) => {
     if (!promotion) return
+    // In online mode, only the promoting player can pick the piece
+    if (mode === 'online' && turn !== myColor) return
+
     const nb = cloneBoard(board)
     nb[promotion.r][promotion.c] = turn === 'white' ? piece.toUpperCase() : piece.toLowerCase()
-    setBoard(nb)
-    setPromotion(null)
 
     const nextTurn = turn === 'white' ? 'black' : 'white'
     const check = isInCheck(nb, nextTurn)
-    setInCheck(check)
-    setTurn(nextTurn)
-
+    let newGameOver = null
     if (!hasAnyLegalMove(nb, nextTurn, enPassant, castling)) {
-      setGameOver(check ? `checkmate-${turn}` : 'stalemate')
+      newGameOver = check ? `checkmate-${turn}` : 'stalemate'
+    }
+
+    if (mode === 'online') {
+      pushOnlineState(nb, nextTurn, castling, enPassant, lastMove, newGameOver, check, captured, null)
+    } else {
+      setBoard(nb)
+      setPromotion(null)
+      setInCheck(check)
+      setTurn(nextTurn)
+      setGameOver(newGameOver)
     }
   }
 
+  const handleBack = () => {
+    if (mode === 'online') room.leaveRoom()
+    if (mode) { setMode(null); setOnlineColor(null); return }
+    onBack()
+  }
+
+  const createOnline = async () => {
+    await room.createRoom(makeInitialOnlineState())
+    setOnlineColor('white') // host = white for chess
+    setMode('online')
+    // Reset local state to initial
+    setBoard(cloneBoard(INIT_BOARD))
+    setTurn('white')
+    setSelected(null)
+    setLegalMoves([])
+    setEnPassant(null)
+    setCastling({ whiteK: true, whiteQ: true, blackK: true, blackQ: true })
+    setGameOver(null)
+    setInCheck(false)
+    setLastMove(null)
+    setPromotion(null)
+    setHistory([])
+    setCaptured({ white: [], black: [] })
+  }
+
+  const joinOnline = async () => {
+    if (joinCode.length !== 4) { room.setError('4자리 코드를 입력하세요'); return }
+    const ok = await room.joinRoom(joinCode)
+    if (ok) {
+      setOnlineColor('black') // guest = black for chess
+      setMode('online')
+    }
+  }
+
+  // Mode selection screen
+  if (!mode) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>♟</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>체스</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => setMode('local')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #5D4037, #795548)' }}>
+            같은 기기에서 (2인)
+          </button>
+          <button onClick={createOnline}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
+            온라인 방 만들기
+          </button>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>또는 코드로 참가</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={4}
+              placeholder="방 코드 4자리"
+              inputMode="numeric"
+              style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
+                fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
+                fontFamily: 'monospace',
+              }}
+            />
+            <button onClick={joinOnline}
+              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700 }}>
+              참가
+            </button>
+          </div>
+          {room.error && <div style={{ color: '#E74C3C', fontSize: 13 }}>{room.error}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  // Online: waiting for opponent
+  if (mode === 'online' && !room.connected) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={handleBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 24 }}>
+          ← 취소
+        </button>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>상대를 기다리는 중...</h3>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
+          상대방에게 아래 코드를 알려주세요
+        </p>
+        <div style={{
+          fontSize: 36, fontWeight: 700, letterSpacing: 8,
+          padding: '16px 24px', background: '#F7F6F3', borderRadius: 14,
+          display: 'inline-block', fontFamily: 'monospace',
+        }}>
+          {room.roomCode}
+        </div>
+        <p style={{ fontSize: 12, color: '#AAA', marginTop: 16 }}>
+          나는 ⚪ 백 (선공)
+        </p>
+      </div>
+    )
+  }
+
+  const isMyTurn = mode === 'local' || turn === myColor
   const cellSize = Math.min(Math.floor((window.innerWidth - 32) / 8), 50)
 
   const renderPiece = (p) => {
@@ -323,16 +593,20 @@ export default function Chess({ onBack }) {
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onBack}
+          <button onClick={handleBack}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
-            ← 돌아가기
+            ← {mode === 'online' ? '나가기' : '돌아가기'}
           </button>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>체스</span>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>
+            체스 {mode === 'online' ? '(온라인)' : ''}
+          </span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={undo}
-              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
-              ↩
-            </button>
+            {mode === 'local' && (
+              <button onClick={undo}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
+                ↩
+              </button>
+            )}
             <button onClick={reset}
               style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
               새 게임
@@ -357,13 +631,24 @@ export default function Chess({ onBack }) {
         }}>
           {gameOver
             ? gameOver === 'stalemate' ? '무승부' : '체크메이트!'
-            : inCheck ? `${turn === 'white' ? '백' : '흑'} 체크!` : `${turn === 'white' ? '백' : '흑'} 차례`
+            : mode === 'online'
+              ? (isMyTurn
+                ? `내 차례 (${myColor === 'white' ? '백' : '흑'})`
+                : '상대 차례')
+              : inCheck ? `${turn === 'white' ? '백' : '흑'} 체크!` : `${turn === 'white' ? '백' : '흑'} 차례`
           }
         </div>
         <div>
           ⚫ 흑 잡은말: {captured.black.map((p, i) => <span key={i} style={{ fontSize: 16 }}>{PIECES[p]}</span>)}
         </div>
       </div>
+
+      {mode === 'online' && (
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
+          방 코드: <strong>{room.roomCode}</strong> · 나는 {myColor === 'white' ? '⚪ 백' : '⚫ 흑'}
+          {inCheck && !gameOver && ` · ${turn === 'white' ? '백' : '흑'} 체크!`}
+        </div>
+      )}
 
       {/* 체스판 */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
@@ -389,7 +674,7 @@ export default function Chess({ onBack }) {
                       width: cellSize, height: cellSize,
                       background: bg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', position: 'relative',
+                      cursor: isMyTurn && !gameOver ? 'pointer' : 'default', position: 'relative',
                     }}
                   >
                     {renderPiece(cell)}
@@ -425,7 +710,7 @@ export default function Chess({ onBack }) {
       </div>
 
       {/* 프로모션 선택 */}
-      {promotion && (
+      {promotion && (mode === 'local' || turn === myColor) && (
         <div style={{
           display: 'flex', justifyContent: 'center', gap: 8, padding: '12px',
           background: '#FFF9E6', borderRadius: 12, margin: '0 12px',
@@ -441,6 +726,17 @@ export default function Chess({ onBack }) {
               {PIECES[turn === 'white' ? p : p.toLowerCase()]}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* 프로모션 대기 (온라인 - 상대가 선택 중) */}
+      {promotion && mode === 'online' && turn !== myColor && (
+        <div style={{
+          textAlign: 'center', padding: '12px',
+          background: '#FFF9E6', borderRadius: 12, margin: '0 12px',
+          border: '2px solid #F1C40F', fontSize: 13, fontWeight: 600,
+        }}>
+          상대방이 승급할 기물을 선택하는 중...
         </div>
       )}
 
@@ -464,9 +760,9 @@ export default function Chess({ onBack }) {
               style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#5D4037', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
               다시 하기
             </button>
-            <button onClick={onBack}
+            <button onClick={handleBack}
               style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
-              게임 목록
+              {mode === 'online' ? '나가기' : '게임 목록'}
             </button>
           </div>
         </div>
