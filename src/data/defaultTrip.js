@@ -24,14 +24,14 @@ export const DEFAULT_TRIP = {
     },
     {
       dayNum: 2,
-      title: '포로수용소 → 몽돌해변 → 소노캄',
+      title: '포로수용소 → 바람의 언덕 → 소노캄',
       date: '4월 16일 (목)',
       weather: '18° / 9°C',
       items: [
         { time: '08:00', name: '아침 + 체크아웃', desc: '거제도 내 이동이라 여유롭게', cost: '~15,000', costType: 'est' },
         { time: '09:00', name: '거제도 포로수용소 유적공원', desc: '성인 7,000×2 + 어린이 3,000×2', cost: '20,000', costType: 'normal' },
         { time: '11:30', name: '점심 — 싱싱게장 지세포점', desc: '게장정식 3인분\n성인 14,000×2 + 초등 6,000×1', cost: '34,000', costType: 'normal' },
-        { time: '12:40', name: '학동흑진주몽돌해수욕장', desc: '해변 산책 및 사진', cost: '무료', costType: 'free' },
+        { time: '12:40', name: '바람의 언덕 + 신선대', desc: '도장포마을 일대', cost: '무료', costType: 'free' },
         { time: '16:40', name: '소노캄 거제 체크인 (2박)', desc: '무료 (회원권/포인트)', cost: '무료', costType: 'free' },
         { time: '18:30', name: '저녁 — 꽃숯갈비 지세포본점', desc: '된장 황제돼지양념갈비 세트 3인분', cost: '49,000', costType: 'normal' },
       ],
@@ -52,12 +52,12 @@ export const DEFAULT_TRIP = {
     },
     {
       dayNum: 4,
-      title: '바람의 언덕 → 서울',
+      title: '몽돌해변 → 서울',
       date: '4월 18일 (토)',
       weather: '19° / 8°C',
       items: [
         { time: '08:30', name: '아침 + 체크아웃', desc: '', cost: '~15,000', costType: 'est' },
-        { time: '10:00', name: '바람의 언덕 + 신선대', desc: '도장포마을 일대', cost: '무료', costType: 'free' },
+        { time: '10:00', name: '학동흑진주몽돌해수욕장', desc: '해변 산책 및 사진', cost: '무료', costType: 'free' },
         { time: '11:50', name: '점심', desc: '거제 인근 / 3인분', cost: '~35,000', costType: 'est', tag: '미정' },
         { time: '13:00', name: '서울 출발', desc: '약 4.5~5시간 (토요일 정체 주의)', cost: '', costType: 'none' },
       ],

@@ -2,7 +2,7 @@ import { DEFAULT_TRIP } from '../data/defaultTrip'
 
 const STORAGE_KEY = 'pocket-money-trips'
 const TRIP_VERSION_KEY = 'pocket-money-trips-version'
-const CURRENT_VERSION = 3 // 버전 올리면 기본 데이터 교체
+const CURRENT_VERSION = 4 // 버전 올리면 기본 데이터 교체
 
 export function getTrips() {
   const ver = localStorage.getItem(TRIP_VERSION_KEY)
