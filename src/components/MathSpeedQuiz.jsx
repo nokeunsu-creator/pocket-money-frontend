@@ -243,7 +243,7 @@ export default function MathSpeedQuiz({ onBack }) {
           {question.text} = ?
         </div>
 
-        <div style={{ display: 'flex', gap: 8, maxWidth: 280, margin: '0 auto' }}>
+        <div style={{ display: 'flex', gap: 8, maxWidth: 220, margin: '0 auto' }}>
           <input
             ref={inputRef}
             type="text"
@@ -254,15 +254,16 @@ export default function MathSpeedQuiz({ onBack }) {
             onKeyDown={handleKeyDown}
             placeholder="?"
             style={{
-              flex: 1, padding: '14px', borderRadius: 12,
-              border: '2px solid #E0E0E0', fontSize: 28, fontWeight: 700,
+              flex: 1, minWidth: 0, padding: '12px 8px', borderRadius: 12,
+              border: '2px solid #E0E0E0', fontSize: 24, fontWeight: 700,
               textAlign: 'center', outline: 'none', fontFamily: 'monospace',
             }}
           />
           <button onClick={handleSubmit}
             style={{
-              padding: '0 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: mode.color, color: '#FFF', fontSize: 18, fontWeight: 700,
+              padding: '0 18px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: mode.color, color: '#FFF', fontSize: 16, fontWeight: 700,
+              flexShrink: 0,
             }}>
             확인
           </button>
