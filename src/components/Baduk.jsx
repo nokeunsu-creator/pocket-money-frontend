@@ -248,143 +248,28 @@ function isNearExistingGroup(board, r, c, color, size) {
   return false
 }
 
-function randomPlayout(boardIn, startColor, size) {
-  const board = boardIn.map(row => [...row])
-  let color = startColor
-  let passes = 0
-  const maxMoves = Math.min(size * size, size <= 9 ? 81 : size <= 13 ? 80 : 60)
-
-  for (let i = 0; i < maxMoves; i++) {
-    if (passes >= 2) break
-    const empties = []
-    for (let r = 0; r < size; r++)
-      for (let c = 0; c < size; c++)
-        if (board[r][c] === null) empties.push([r, c])
-
-    // Shuffle
-    for (let j = empties.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1))
-      ;[empties[j], empties[k]] = [empties[k], empties[j]]
-    }
-
-    let played = false
-    for (const [r, c] of empties) {
-      if (isLegalMove(board, r, c, color, size, '')) {
-        const opp = color === 'black' ? 'white' : 'black'
-        board[r][c] = color
-        const after = removeDeadStones(board, opp, size)
-        for (let rr = 0; rr < size; rr++)
-          for (let cc = 0; cc < size; cc++)
-            board[rr][cc] = after.board[rr][cc]
-        // Check not self-capture after removal
-        if (board[r][c] !== null) {
-          played = true
-          passes = 0
-          color = opp
-          break
-        }
-      }
-    }
-    if (!played) {
-      passes++
-      color = color === 'black' ? 'white' : 'black'
-    }
-  }
-
-  const score = countTerritory(board, size)
-  return score.white > score.black ? 'white' : 'black'
-}
-
-function smartPlayout(boardIn, startColor, size) {
-  const board = boardIn.map(row => [...row])
-  let color = startColor
-  let passes = 0
-  const maxMoves = Math.min(size * size, size <= 9 ? 81 : size <= 13 ? 80 : 60)
-
-  for (let i = 0; i < maxMoves; i++) {
-    if (passes >= 2) break
-    const opp = color === 'black' ? 'white' : 'black'
-
-    // Prioritized move selection for smarter playouts
-    let move = null
-
-    // 1. Try captures
-    const captureCandidates = []
-    for (let r = 0; r < size; r++)
-      for (let c = 0; c < size; c++)
-        if (board[r][c] === null && isLegalMove(board, r, c, color, size, '')) {
-          const testB = board.map(row => [...row])
-          testB[r][c] = color
-          const after = removeDeadStones(testB, opp, size)
-          if (after.captured > 0) captureCandidates.push([r, c])
-        }
-    if (captureCandidates.length > 0) {
-      move = captureCandidates[Math.floor(Math.random() * captureCandidates.length)]
-    }
-
-    // 2. Try saving own groups in atari
-    if (!move) {
-      const saves = findSaveMoves(board, color, size,
-        getCandidateMoves(board, size, 1), '')
-      if (saves.length > 0) {
-        move = saves[Math.floor(Math.random() * saves.length)]
-      }
-    }
-
-    // 3. Play near existing stones
-    if (!move) {
-      const near = []
-      for (let r = 0; r < size; r++)
-        for (let c = 0; c < size; c++)
-          if (board[r][c] === null && isNearExistingGroup(board, r, c, color, size)
-            && isLegalMove(board, r, c, color, size, ''))
-            near.push([r, c])
-      if (near.length > 0) {
-        move = near[Math.floor(Math.random() * near.length)]
-      }
-    }
-
-    // 4. Random legal move
-    if (!move) {
-      const empties = []
-      for (let r = 0; r < size; r++)
-        for (let c = 0; c < size; c++)
-          if (board[r][c] === null) empties.push([r, c])
-      for (let j = empties.length - 1; j > 0; j--) {
-        const k = Math.floor(Math.random() * (j + 1))
-        ;[empties[j], empties[k]] = [empties[k], empties[j]]
-      }
-      for (const [r, c] of empties) {
-        if (isLegalMove(board, r, c, color, size, '')) {
-          move = [r, c]
-          break
-        }
-      }
-    }
-
-    if (!move) {
-      passes++
-      color = opp
-      continue
-    }
-
-    const [mr, mc] = move
-    board[mr][mc] = color
-    const after = removeDeadStones(board, opp, size)
-    for (let rr = 0; rr < size; rr++)
-      for (let cc = 0; cc < size; cc++)
-        board[rr][cc] = after.board[rr][cc]
-    if (board[mr][mc] === null) {
-      passes++
-      color = opp
-      continue
-    }
-    passes = 0
-    color = opp
-  }
-
-  const score = countTerritory(board, size)
-  return score.white > score.black ? 'white' : 'black'
+// Advanced evaluation: territory + liberties + connectivity
+function advancedEval(board, r, c, color, size, prevBoardStr) {
+  const result = simulateMove(board, r, c, color, size)
+  let score = 0
+  // Territory
+  score += evaluateTerritory(result.board, size, color) * 2
+  // Captures are very valuable
+  score += result.captured * 10
+  // Own group liberties after move
+  const group = getGroup(result.board, r, c, size)
+  score += Math.min(group.liberties, 6) * 2
+  // Group size bonus
+  score += Math.min(group.stones.length, 8)
+  // Near own stones bonus
+  if (isNearExistingGroup(board, r, c, color, size)) score += 3
+  // Avoid opponent territory
+  if (isInOpponentTerritory(board, r, c, color, size)) score -= 8
+  // Edge penalty (corners and edges are less valuable early)
+  if (r === 0 || r === size - 1 || c === 0 || c === size - 1) score -= 2
+  // Self-atari penalty
+  if (group.liberties === 1 && result.captured === 0) score -= 15
+  return score
 }
 
 function getAiMove(board, size, aiLevel, prevBoardStr) {
@@ -458,10 +343,7 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     return [pick.r, pick.c]
   }
 
-  // Scale down for larger boards to avoid UI freeze
-  const sizeScale = size <= 9 ? 1 : size <= 13 ? 0.5 : 0.25
-
-  // Level 7-8: Monte Carlo
+  // Level 7-8: Advanced evaluation with deeper analysis
   if (aiLevel <= 8) {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
@@ -469,38 +351,20 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    let candidates = legalMoves.filter(([r, c]) =>
-      isNearExistingGroup(board, r, c, color, size) && !isInOpponentTerritory(board, r, c, color, size)
-    )
-    if (candidates.length === 0) candidates = legalMoves
-
-    const maxCandidates = Math.min(candidates.length, Math.ceil((aiLevel === 7 ? 10 : 12) * sizeScale))
-    const presorted = candidates.map(([r, c]) => ({
+    const scored = legalMoves.map(([r, c]) => ({
       r, c,
-      score: scoreMoveByTerritory(board, r, c, color, size),
+      score: advancedEval(board, r, c, color, size, prevBoardStr),
     }))
-    presorted.sort((a, b) => b.score - a.score)
-    const topCandidates = presorted.slice(0, maxCandidates)
+    scored.sort((a, b) => b.score - a.score)
+    if (scored.length === 0) return null
 
-    const playouts = Math.ceil((aiLevel === 7 ? 20 : 30) * sizeScale)
-    let bestMove = null, bestWins = -1
-
-    for (const { r, c } of topCandidates) {
-      const result = simulateMove(board, r, c, color, size)
-      let wins = 0
-      for (let p = 0; p < playouts; p++) {
-        const winner = randomPlayout(result.board, opp, size)
-        if (winner === color) wins++
-      }
-      if (wins > bestWins) {
-        bestWins = wins
-        bestMove = [r, c]
-      }
-    }
-    return bestMove || legalMoves[0]
+    // Level 7: pick from top 3, Level 8: pick best
+    const topN = aiLevel === 7 ? Math.min(3, scored.length) : 1
+    const pick = scored[Math.floor(Math.random() * topN)]
+    return [pick.r, pick.c]
   }
 
-  // Level 9-10: Monte Carlo with smart playout
+  // Level 9-10: Advanced evaluation + look-ahead (simulate opponent response)
   {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 3) return [captures[0].r, captures[0].c]
@@ -508,41 +372,31 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    let candidates = legalMoves.filter(([r, c]) =>
-      !isInOpponentTerritory(board, r, c, color, size)
-    )
-    if (candidates.length === 0) candidates = legalMoves
+    // Score all moves with advanced eval
+    const scored = legalMoves.map(([r, c]) => {
+      let score = advancedEval(board, r, c, color, size, prevBoardStr)
 
-    const maxCandidates = Math.min(candidates.length, Math.ceil((aiLevel === 9 ? 12 : 15) * sizeScale))
-    const presorted = candidates.map(([r, c]) => ({
-      r, c,
-      score: scoreMoveByTerritory(board, r, c, color, size)
-        + (isNearExistingGroup(board, r, c, color, size) ? 2 : 0)
-        + (findCaptures(board, color, size, [[r, c]], prevBoardStr).length > 0 ? 5 : 0),
-    }))
-    presorted.sort((a, b) => b.score - a.score)
-    const topCandidates = presorted.slice(0, maxCandidates)
-
-    const playouts = Math.ceil((aiLevel === 9 ? 60 : 100) * sizeScale)
-    let bestMove = null, bestWins = -1
-
-    for (const { r, c } of topCandidates) {
-      const result = simulateMove(board, r, c, color, size)
-      let wins = 0
-      for (let p = 0; p < playouts; p++) {
-        const winner = smartPlayout(result.board, opp, size)
-        if (winner === color) wins++
+      // Look-ahead: simulate opponent's best response
+      if (aiLevel === 10) {
+        const result = simulateMove(board, r, c, color, size)
+        const oppMoves = getCandidateMoves(result.board, size, 2)
+          .filter(([or, oc]) => isLegalMove(result.board, or, oc, opp, size, ''))
+          .slice(0, 8) // limit for speed
+        let bestOppScore = -Infinity
+        for (const [or, oc] of oppMoves) {
+          const oppResult = simulateMove(result.board, or, oc, opp, size)
+          const oppScore = evaluateTerritory(oppResult.board, size, opp) + oppResult.captured * 5
+          if (oppScore > bestOppScore) bestOppScore = oppScore
+        }
+        if (bestOppScore > -Infinity) score -= bestOppScore * 0.5
       }
-      if (wins > bestWins) {
-        bestWins = wins
-        bestMove = [r, c]
-      }
-    }
 
-    if (bestMove && bestWins < playouts * 0.05 && legalMoves.length < size) {
-      return null // pass
-    }
-    return bestMove || legalMoves[0]
+      return { r, c, score }
+    })
+    scored.sort((a, b) => b.score - a.score)
+    if (scored.length === 0) return null
+
+    return [scored[0].r, scored[0].c]
   }
 }
 
