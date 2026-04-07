@@ -252,7 +252,7 @@ function randomPlayout(boardIn, startColor, size) {
   const board = boardIn.map(row => [...row])
   let color = startColor
   let passes = 0
-  const maxMoves = size * size * 2
+  const maxMoves = Math.min(size * size, size <= 9 ? 81 : size <= 13 ? 80 : 60)
 
   for (let i = 0; i < maxMoves; i++) {
     if (passes >= 2) break
@@ -299,7 +299,7 @@ function smartPlayout(boardIn, startColor, size) {
   const board = boardIn.map(row => [...row])
   let color = startColor
   let passes = 0
-  const maxMoves = size * size * 2
+  const maxMoves = Math.min(size * size, size <= 9 ? 81 : size <= 13 ? 80 : 60)
 
   for (let i = 0; i < maxMoves; i++) {
     if (passes >= 2) break
@@ -458,7 +458,10 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     return [pick.r, pick.c]
   }
 
-  // Level 7-8: Monte Carlo with 50 playouts
+  // Scale down for larger boards to avoid UI freeze
+  const sizeScale = size <= 9 ? 1 : size <= 13 ? 0.5 : 0.25
+
+  // Level 7-8: Monte Carlo
   if (aiLevel <= 8) {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
@@ -466,15 +469,12 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // Filter candidates: prefer near existing groups, avoid opponent territory
     let candidates = legalMoves.filter(([r, c]) =>
       isNearExistingGroup(board, r, c, color, size) && !isInOpponentTerritory(board, r, c, color, size)
     )
     if (candidates.length === 0) candidates = legalMoves
 
-    // Limit candidates for performance
-    const maxCandidates = Math.min(candidates.length, aiLevel === 7 ? 15 : 20)
-    // Sort by territory score to pick best candidates
+    const maxCandidates = Math.min(candidates.length, Math.ceil((aiLevel === 7 ? 10 : 12) * sizeScale))
     const presorted = candidates.map(([r, c]) => ({
       r, c,
       score: scoreMoveByTerritory(board, r, c, color, size),
@@ -482,7 +482,7 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     presorted.sort((a, b) => b.score - a.score)
     const topCandidates = presorted.slice(0, maxCandidates)
 
-    const playouts = aiLevel === 7 ? 30 : 50
+    const playouts = Math.ceil((aiLevel === 7 ? 20 : 30) * sizeScale)
     let bestMove = null, bestWins = -1
 
     for (const { r, c } of topCandidates) {
@@ -500,7 +500,7 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     return bestMove || legalMoves[0]
   }
 
-  // Level 9-10: Monte Carlo with 200+ playouts and smart playout policy
+  // Level 9-10: Monte Carlo with smart playout
   {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 3) return [captures[0].r, captures[0].c]
@@ -513,7 +513,7 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     )
     if (candidates.length === 0) candidates = legalMoves
 
-    const maxCandidates = Math.min(candidates.length, aiLevel === 9 ? 20 : 25)
+    const maxCandidates = Math.min(candidates.length, Math.ceil((aiLevel === 9 ? 12 : 15) * sizeScale))
     const presorted = candidates.map(([r, c]) => ({
       r, c,
       score: scoreMoveByTerritory(board, r, c, color, size)
@@ -523,7 +523,7 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
     presorted.sort((a, b) => b.score - a.score)
     const topCandidates = presorted.slice(0, maxCandidates)
 
-    const playouts = aiLevel === 9 ? 150 : 250
+    const playouts = Math.ceil((aiLevel === 9 ? 60 : 100) * sizeScale)
     let bestMove = null, bestWins = -1
 
     for (const { r, c } of topCandidates) {
@@ -539,7 +539,6 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
       }
     }
 
-    // If win rate is very low, pass (AI can't find meaningful moves)
     if (bestMove && bestWins < playouts * 0.05 && legalMoves.length < size) {
       return null // pass
     }
