@@ -920,7 +920,24 @@ export default function Janggi({ onBack }) {
   const boardW = cellSize * (COLS - 1)
   const boardH = cellSize * (ROWS - 1)
   const pad = cellSize * 0.8
-  const pieceR = cellSize * 0.4
+  const baseR = cellSize * 0.4
+
+  // 말별 크기 비율
+  const PIECE_SIZE = {
+    [KING]: 1.0,
+    [CHARIOT]: 0.9,
+    [CANNON]: 0.85,
+    [HORSE]: 0.8,
+    [ELEPHANT]: 0.8,
+    [ADVISOR]: 0.75,
+    [SOLDIER]: 0.65,
+  }
+
+  // 팔각형 경로 생성
+  function octagonPath(cx, cy, w, h) {
+    const cut = Math.min(w, h) * 0.25
+    return `M${cx - w + cut},${cy - h} L${cx + w - cut},${cy - h} L${cx + w},${cy - h + cut} L${cx + w},${cy + h - cut} L${cx + w - cut},${cy + h} L${cx - w + cut},${cy + h} L${cx - w},${cy + h - cut} L${cx - w},${cy - h + cut} Z`
+  }
   const svgW = boardW + pad * 2
   const svgH = boardH + pad * 2
 
@@ -1028,9 +1045,9 @@ export default function Janggi({ onBack }) {
           {lastMove && (
             <>
               <circle cx={pad + lastMove.from[1] * cellSize} cy={pad + lastMove.from[0] * cellSize}
-                r={pieceR * 0.3} fill="none" stroke="#F39C12" strokeWidth={2} opacity={0.6} />
+                r={baseR * 0.3} fill="none" stroke="#F39C12" strokeWidth={2} opacity={0.6} />
               <circle cx={pad + lastMove.to[1] * cellSize} cy={pad + lastMove.to[0] * cellSize}
-                r={pieceR + 3} fill="none" stroke="#F39C12" strokeWidth={2.5} opacity={0.7} />
+                r={baseR + 3} fill="none" stroke="#F39C12" strokeWidth={2.5} opacity={0.7} />
             </>
           )}
 
@@ -1040,7 +1057,7 @@ export default function Janggi({ onBack }) {
             return hasPiece ? (
               <circle key={`vm-${mr}-${mc}`}
                 cx={pad + mc * cellSize} cy={pad + mr * cellSize}
-                r={pieceR + 2} fill="none" stroke="#E74C3C" strokeWidth={2.5} strokeDasharray="4,3" opacity={0.8} />
+                r={baseR + 2} fill="none" stroke="#E74C3C" strokeWidth={2.5} strokeDasharray="4,3" opacity={0.8} />
             ) : (
               <circle key={`vm-${mr}-${mc}`}
                 cx={pad + mc * cellSize} cy={pad + mr * cellSize}
@@ -1049,10 +1066,14 @@ export default function Janggi({ onBack }) {
           })}
 
           {/* Selected highlight */}
-          {selected && (
-            <circle cx={pad + selected[1] * cellSize} cy={pad + selected[0] * cellSize}
-              r={pieceR + 4} fill="none" stroke="#FFD700" strokeWidth={3} />
-          )}
+          {selected && (() => {
+            const sp = board[selected[0]][selected[1]]
+            const sc = PIECE_SIZE[sp?.type] || 0.8
+            const sw = baseR * sc + 4
+            const sh = baseR * sc * 1.1 + 4
+            return <path d={octagonPath(pad + selected[1] * cellSize, pad + selected[0] * cellSize, sw, sh)}
+              fill="none" stroke="#FFD700" strokeWidth={3} />
+          })()}
 
           {/* Pieces */}
           {board.map((row, r) => row.map((piece, c) => {
@@ -1060,24 +1081,27 @@ export default function Janggi({ onBack }) {
             const cx = pad + c * cellSize
             const cy = pad + r * cellSize
             const isCho = piece.side === CHO
-            const fillColor = isCho ? '#FFF5F5' : '#F0F0FF'
-            const strokeColor = isCho ? '#C0392B' : '#2E4057'
-            const textColor = isCho ? '#C0392B' : '#1A5276'
+            const scale = PIECE_SIZE[piece.type] || 0.8
+            const pw = baseR * scale  // half width
+            const ph = baseR * scale * 1.1 // half height (slightly taller)
+            const strokeColor = isCho ? '#C0392B' : '#1A6B4A'
+            const textColor = isCho ? '#C0392B' : '#1A6B4A'
             const name = PIECE_NAMES[piece.type][piece.side]
+            const fontSize = baseR * scale * 1.05
 
             return (
               <g key={`p-${r}-${c}`} style={{ cursor: 'pointer' }}>
-                {/* Piece shadow */}
-                <circle cx={cx + 1} cy={cy + 2} r={pieceR} fill="rgba(0,0,0,0.15)" />
-                {/* Piece body */}
-                <circle cx={cx} cy={cy} r={pieceR}
-                  fill={fillColor} stroke={strokeColor} strokeWidth={2} />
-                {/* Octagon-like inner border */}
-                <circle cx={cx} cy={cy} r={pieceR * 0.82}
-                  fill="none" stroke={strokeColor} strokeWidth={0.8} opacity={0.5} />
-                {/* Piece text */}
+                {/* Shadow */}
+                <path d={octagonPath(cx + 1, cy + 2, pw, ph)} fill="rgba(0,0,0,0.12)" />
+                {/* Body - wood color */}
+                <path d={octagonPath(cx, cy, pw, ph)}
+                  fill="#DEB887" stroke={strokeColor} strokeWidth={2} />
+                {/* Inner border */}
+                <path d={octagonPath(cx, cy, pw * 0.82, ph * 0.82)}
+                  fill="none" stroke={strokeColor} strokeWidth={0.8} opacity={0.6} />
+                {/* Text */}
                 <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
-                  fontSize={pieceR * 1.1} fontWeight="bold" fill={textColor}
+                  fontSize={fontSize} fontWeight="bold" fill={textColor}
                   style={{ userSelect: 'none', pointerEvents: 'none' }}>
                   {name}
                 </text>
@@ -1087,9 +1111,9 @@ export default function Janggi({ onBack }) {
 
           {/* Click targets (invisible overlay) */}
           {board.map((row, r) => row.map((_, c) => (
-            <circle key={`click-${r}-${c}`}
-              cx={pad + c * cellSize} cy={pad + r * cellSize}
-              r={pieceR + 2} fill="transparent"
+            <rect key={`click-${r}-${c}`}
+              x={pad + c * cellSize - cellSize / 2} y={pad + r * cellSize - cellSize / 2}
+              width={cellSize} height={cellSize} fill="transparent"
               style={{ cursor: 'pointer' }}
               onClick={() => handleClick(r, c)} />
           )))}
