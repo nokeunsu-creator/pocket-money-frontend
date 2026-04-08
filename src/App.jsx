@@ -31,6 +31,10 @@ import ClockReading from './components/ClockReading'
 import MathChampionship from './components/MathChampionship'
 import AchievementList from './components/AchievementList'
 import TodoList from './components/TodoList'
+import StudyTimer from './components/StudyTimer'
+import QuickMemo from './components/QuickMemo'
+import ScienceQuiz from './components/ScienceQuiz'
+import HistoryQuiz from './components/HistoryQuiz'
 import WordSprint from './components/WordSprint'
 import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
@@ -101,6 +105,18 @@ export default function App() {
       setCurrentUser('__common__')
       setCurrentPage('todo')
       window.history.pushState({ page: 'todo', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'timer') {
+      setCurrentUser('__common__')
+      setCurrentPage('timer')
+      window.history.pushState({ page: 'timer', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'memo') {
+      setCurrentUser('__common__')
+      setCurrentPage('memo')
+      window.history.pushState({ page: 'memo', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
     setCurrentUser(user)
@@ -339,6 +355,18 @@ export default function App() {
       )}
       {currentPage === 'todo' && (
         <TodoList onBack={switchUser} />
+      )}
+      {currentPage === 'timer' && (
+        <StudyTimer onBack={switchUser} />
+      )}
+      {currentPage === 'memo' && (
+        <QuickMemo onBack={switchUser} />
+      )}
+      {currentPage === 'game-science' && (
+        <ScienceQuiz onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-history' && (
+        <HistoryQuiz onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}

@@ -125,6 +125,40 @@ export default function ProfileSelect({ onSelect }) {
           <span style={{ fontSize: 28 }}>✅</span>
           <span>할 일</span>
         </button>
+        <button
+          onClick={() => onSelect(null, 'timer')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '16px 0', borderRadius: 16,
+            background: 'linear-gradient(135deg, #E74C3C, #C0392B)',
+            color: '#FFF', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            transition: 'transform 0.1s',
+          }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+          onPointerUp={e => e.currentTarget.style.transform = ''}
+          onPointerLeave={e => e.currentTarget.style.transform = ''}
+        >
+          <span style={{ fontSize: 28 }}>⏱</span>
+          <span>공부 타이머</span>
+        </button>
+        <button
+          onClick={() => onSelect(null, 'memo')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '16px 0', borderRadius: 16,
+            background: 'linear-gradient(135deg, #F39C12, #E67E22)',
+            color: '#FFF', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            transition: 'transform 0.1s',
+          }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+          onPointerUp={e => e.currentTarget.style.transform = ''}
+          onPointerLeave={e => e.currentTarget.style.transform = ''}
+        >
+          <span style={{ fontSize: 28 }}>📝</span>
+          <span>메모</span>
+        </button>
       </div>
 
       {showModal && (
