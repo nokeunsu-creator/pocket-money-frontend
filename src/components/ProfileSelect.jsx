@@ -230,12 +230,12 @@ export default function ProfileSelect({ onSelect }) {
             <input
               type="password"
               inputMode="numeric"
-              maxLength={6}
+              maxLength={selectedMenu ? 4 : 6}
               value={password}
               onChange={(e) => { setPassword(e.target.value.replace(/[^0-9]/g, '')); setError(false) }}
               onKeyDown={handleKeyDown}
               autoFocus
-              placeholder="비밀번호 6자리"
+              placeholder={selectedMenu ? '비밀번호 4자리' : '비밀번호 6자리'}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: `2px solid ${error ? '#EF476F' : '#EEE'}`,
