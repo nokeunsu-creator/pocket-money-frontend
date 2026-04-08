@@ -11,6 +11,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     { key: 'omok', icon: '⚫', title: '오목', desc: 'AI · 2인 · 온라인', color: '#333' },
     { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
     { key: 'baduk-classroom', icon: '🎓', title: '바둑 교실', desc: '50레슨 · 초보부터 실전까지', color: '#2D6A4F' },
+    { key: 'english', icon: '🔤', title: '영어나라', desc: '단어·스펠링·문장·대전', color: '#4895EF' },
   ]
 
   return (

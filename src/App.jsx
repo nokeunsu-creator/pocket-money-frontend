@@ -21,6 +21,12 @@ import Janggi from './components/Janggi'
 import Omok from './components/Omok'
 import Baduk from './components/Baduk'
 import BadukClassroom from './components/BadukClassroom'
+import EnglishHub from './components/EnglishHub'
+import WordSprint from './components/WordSprint'
+import SpellingTower from './components/SpellingTower'
+import SentenceRush from './components/SentenceRush'
+import WordBattle from './components/WordBattle'
+import EnglishChampionship from './components/EnglishChampionship'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -273,6 +279,24 @@ export default function App() {
       )}
       {currentPage === 'game-baduk-classroom' && (
         <BadukClassroom onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-english' && (
+        <EnglishHub onBack={() => goToPage('game')} onSelectGame={(g) => goToPage('game-eng-' + g)} />
+      )}
+      {currentPage === 'game-eng-wordSprint' && (
+        <WordSprint onBack={() => goToPage('game-english')} />
+      )}
+      {currentPage === 'game-eng-spellingTower' && (
+        <SpellingTower onBack={() => goToPage('game-english')} />
+      )}
+      {currentPage === 'game-eng-sentenceRush' && (
+        <SentenceRush onBack={() => goToPage('game-english')} />
+      )}
+      {currentPage === 'game-eng-wordBattle' && (
+        <WordBattle onBack={() => goToPage('game-english')} />
+      )}
+      {currentPage === 'game-eng-championship' && (
+        <EnglishChampionship onBack={() => goToPage('game-english')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
