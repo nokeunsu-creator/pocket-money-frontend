@@ -106,6 +106,8 @@ export default function ProfileSelect({ onSelect }) {
           <span style={{ fontSize: 28 }}>🎮</span>
           <span>게임</span>
         </button>
+      </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
         <button
           onClick={() => onSelect(null, 'todo')}
           style={{
