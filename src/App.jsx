@@ -20,6 +20,7 @@ import Chess from './components/Chess'
 import Janggi from './components/Janggi'
 import Omok from './components/Omok'
 import Baduk from './components/Baduk'
+import BadukClassroom from './components/BadukClassroom'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -269,6 +270,9 @@ export default function App() {
       )}
       {currentPage === 'game-baduk' && (
         <Baduk onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-baduk-classroom' && (
+        <BadukClassroom onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
