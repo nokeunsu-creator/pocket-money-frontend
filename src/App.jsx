@@ -30,6 +30,8 @@ import UnitConvert from './components/UnitConvert'
 import ClockReading from './components/ClockReading'
 import MathChampionship from './components/MathChampionship'
 import AchievementList from './components/AchievementList'
+import TodoList from './components/TodoList'
+import TodoAdd from './components/TodoAdd'
 import WordSprint from './components/WordSprint'
 import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
@@ -94,6 +96,12 @@ export default function App() {
       setCurrentUser('__common__')
       setCurrentPage('game')
       window.history.pushState({ page: 'game', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'todo') {
+      setCurrentUser('__common__')
+      setCurrentPage('todo')
+      window.history.pushState({ page: 'todo', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
     setCurrentUser(user)
@@ -329,6 +337,15 @@ export default function App() {
       )}
       {currentPage === 'game-achievements' && (
         <AchievementList onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'todo' && (
+        <TodoList onBack={switchUser} onAdd={() => goToPage('todoAdd')} onEdit={(todo) => { setEditEntry(todo); goToPage('todoEdit') }} />
+      )}
+      {currentPage === 'todoAdd' && (
+        <TodoAdd onDone={goBack} onCancel={goBack} />
+      )}
+      {currentPage === 'todoEdit' && (
+        <TodoAdd editTodo={editEntry} onDone={() => { setEditEntry(null); goBack() }} onCancel={goBack} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
