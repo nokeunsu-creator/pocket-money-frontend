@@ -210,7 +210,7 @@ export default function TodoList({ onBack }) {
           padding: '10px 4px 6px', fontSize: 15, fontWeight: 'bold', color: 'var(--brown)',
         }}>
           <span>📋 오늘</span>
-          <span style={{ fontSize: 12, color: 'var(--gray)' }}>{todayTodos.length}개</span>
+          <span style={{ fontSize: 12, color: 'var(--gray)' }}>{totalCount}개</span>
         </div>
         {sortedToday.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--gray)' }}>
