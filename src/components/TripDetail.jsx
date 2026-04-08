@@ -151,6 +151,15 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
                         {item.desc}
                       </div>
                     )}
+                    {(item.distance || item.duration) && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        marginTop: 4, fontSize: 10, color: '#4A3F8A',
+                        background: '#EEEDFE', padding: '2px 8px', borderRadius: 6,
+                      }}>
+                        🚗 {[item.distance, item.duration].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                   </div>
                   <span style={{
                     fontSize: 12, fontWeight: item.costType === 'normal' ? 700 : 500,

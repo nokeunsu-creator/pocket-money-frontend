@@ -316,6 +316,18 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
                           value={item.desc} placeholder="설명"
                           onChange={e => updateItem(dayIdx, itemIdx, 'desc', e.target.value)} />
                       </div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <input style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }}
+                            value={item.distance || ''} placeholder="🚗 거리 (예: 25km)"
+                            onChange={e => updateItem(dayIdx, itemIdx, 'distance', e.target.value)} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <input style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }}
+                            value={item.duration || ''} placeholder="⏱ 시간 (예: 30분)"
+                            onChange={e => updateItem(dayIdx, itemIdx, 'duration', e.target.value)} />
+                        </div>
+                      </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <div style={{ flex: 1 }}>
                           <input style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }}
