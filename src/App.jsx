@@ -41,6 +41,7 @@ import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
 import WordBattle from './components/WordBattle'
 import EnglishChampionship from './components/EnglishChampionship'
+import FamilyTree from './components/FamilyTree'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -186,6 +187,9 @@ export default function App() {
     } else if (category === 'travel') {
       setCurrentPage('trips')
       pushState('trips')
+    } else if (category === 'family') {
+      setCurrentPage('family')
+      pushState('family')
     }
   }
 
@@ -260,6 +264,9 @@ export default function App() {
           user={currentUser}
           onBack={goBack}
         />
+      )}
+      {currentPage === 'family' && (
+        <FamilyTree onBack={() => goToPage('hub')} />
       )}
       {currentPage === 'trips' && (
         <TripList

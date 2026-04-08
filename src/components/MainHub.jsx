@@ -17,6 +17,14 @@ export default function MainHub({ user, onSelect, onSwitchUser }) {
       bg: 'linear-gradient(135deg, #4A3F8A 0%, #6B5FBF 100%)',
     },
     {
+      key: 'family',
+      emoji: '👨‍👩‍👦‍👦',
+      title: '우리 가족',
+      desc: '가계도 & 호칭',
+      color: '#E07A5F',
+      bg: 'linear-gradient(135deg, #E07A5F 0%, #F2A07B 100%)',
+    },
+    {
       key: 'game',
       emoji: '🎮',
       title: '게임',
