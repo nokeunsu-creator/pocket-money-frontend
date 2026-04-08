@@ -6,23 +6,24 @@ const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 const DAY_NAMES_SHORT = ['월', '화', '수', '목', '금', '토', '일']
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${DAY_NAMES[d.getDay()]}`
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일 ${DAY_NAMES[dt.getDay()]}`
 }
 
 function addDays(dateStr, n) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + n)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 function getEndOfWeek(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const day = d.getDay()
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const day = dt.getDay()
   const sundayOffset = day === 0 ? 0 : 7 - day
-  const sunday = new Date(d)
-  sunday.setDate(d.getDate() + sundayOffset)
-  return sunday.toISOString().slice(0, 10)
+  const sunday = new Date(y, m - 1, d + sundayOffset)
+  return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`
 }
 
 function getCategoryIcon(key) {

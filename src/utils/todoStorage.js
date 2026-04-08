@@ -114,7 +114,8 @@ export function toggleComplete(id, dateStr) {
 
 export function getTodosForDate(dateStr) {
   const data = getData()
-  const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay() // 0=Sun, 1=Mon...
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dayOfWeek = new Date(y, m - 1, d).getDay() // 0=Sun, 1=Mon...
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5
 
   return data.todos.filter(todo => {
@@ -132,19 +133,20 @@ export function getTodosForDate(dateStr) {
   })
 }
 
+function toDateStr(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
 export function getWeekStats() {
-  // Get current week Mon-Sun
   const today = new Date()
   const dayOfWeek = today.getDay() // 0=Sun
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(today)
-  monday.setDate(today.getDate() + mondayOffset)
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset)
 
   const stats = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    const dateStr = d.toISOString().slice(0, 10)
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
+    const dateStr = toDateStr(d)
     const todos = getTodosForDate(dateStr)
     stats.push({
       date: dateStr,

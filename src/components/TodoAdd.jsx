@@ -8,18 +8,18 @@ const REPEAT_OPTIONS = [
 ]
 
 function addDays(dateStr, n) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + n)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 function getEndOfWeek(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const day = d.getDay()
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const day = dt.getDay()
   const sundayOffset = day === 0 ? 0 : 7 - day
-  const sunday = new Date(d)
-  sunday.setDate(d.getDate() + sundayOffset)
-  return sunday.toISOString().slice(0, 10)
+  const sunday = new Date(y, m - 1, d + sundayOffset)
+  return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`
 }
 
 export default function TodoAdd({ editTodo, defaultDate, onDone, onCancel }) {
