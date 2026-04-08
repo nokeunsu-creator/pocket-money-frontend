@@ -31,8 +31,13 @@ function getCategoryIcon(key) {
   return cat ? cat.icon : '📌'
 }
 
+function getToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function TodoList({ onBack }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getToday()
   const [selectedDate, setSelectedDate] = useState(today)
   const [showAdd, setShowAdd] = useState(false)
   const [editTodo, setEditTodo] = useState(null)

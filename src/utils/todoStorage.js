@@ -1,5 +1,10 @@
 const STORAGE_KEY = 'pocket-money-todos'
 
+function getLocalDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const DEFAULT_DATA = {
   todos: [],
   completedHistory: [], // { id, title, completedAt }
@@ -41,7 +46,7 @@ export function addTodo(todo) {
     id: generateId(),
     title: todo.title || '',
     category: todo.category || 'etc',
-    date: todo.date || new Date().toISOString().slice(0, 10),
+    date: todo.date || getLocalDateStr(),
     important: todo.important || false,
     repeat: todo.repeat || null, // null | 'daily' | 'weekday'
     completed: false,
@@ -76,7 +81,7 @@ export function toggleComplete(id, dateStr) {
   const todo = data.todos.find(t => t.id === id)
   if (!todo) return null
 
-  const targetDate = dateStr || new Date().toISOString().slice(0, 10)
+  const targetDate = dateStr || getLocalDateStr()
 
   if (todo.repeat) {
     // For repeat todos, toggle the date in completedDates
