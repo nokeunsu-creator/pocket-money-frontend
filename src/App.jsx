@@ -22,6 +22,14 @@ import Omok from './components/Omok'
 import Baduk from './components/Baduk'
 import BadukClassroom from './components/BadukClassroom'
 import EnglishHub from './components/EnglishHub'
+import MathHub from './components/MathHub'
+import ArithmeticSprint from './components/ArithmeticSprint'
+import FractionMaster from './components/FractionMaster'
+import ShapeQuiz from './components/ShapeQuiz'
+import UnitConvert from './components/UnitConvert'
+import ClockReading from './components/ClockReading'
+import MathChampionship from './components/MathChampionship'
+import AchievementList from './components/AchievementList'
 import WordSprint from './components/WordSprint'
 import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
@@ -297,6 +305,30 @@ export default function App() {
       )}
       {currentPage === 'game-eng-championship' && (
         <EnglishChampionship onBack={() => goToPage('game-english')} />
+      )}
+      {currentPage === 'game-math' && (
+        <MathHub onBack={() => goToPage('game')} onSelectGame={(g) => goToPage('game-math-' + g)} />
+      )}
+      {currentPage === 'game-math-arithmeticSprint' && (
+        <ArithmeticSprint onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-math-fractionMaster' && (
+        <FractionMaster onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-math-shapeQuiz' && (
+        <ShapeQuiz onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-math-unitConvert' && (
+        <UnitConvert onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-math-clockReading' && (
+        <ClockReading onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-math-championship' && (
+        <MathChampionship onBack={() => goToPage('game-math')} />
+      )}
+      {currentPage === 'game-achievements' && (
+        <AchievementList onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}

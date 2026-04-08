@@ -5,6 +5,23 @@ function generateCode() {
   return String(Math.floor(10 + Math.random() * 90))
 }
 
+// 1시간 지난 방 자동 정리
+async function cleanOldRooms(gameType) {
+  try {
+    const roomsRef = ref(db, `rooms/${gameType}`)
+    const snap = await get(roomsRef)
+    if (!snap.exists()) return
+    const rooms = snap.val()
+    const now = Date.now()
+    const ONE_HOUR = 60 * 60 * 1000
+    for (const code of Object.keys(rooms)) {
+      if (rooms[code].createdAt && now - rooms[code].createdAt > ONE_HOUR) {
+        await remove(ref(db, `rooms/${gameType}/${code}`))
+      }
+    }
+  } catch (e) {}
+}
+
 export function useGameRoom(gameType) {
   const [roomCode, setRoomCode] = useState(null)
   const [role, setRole] = useState(null) // 'host' | 'guest'
@@ -16,6 +33,7 @@ export function useGameRoom(gameType) {
 
   // 방 만들기
   const createRoom = useCallback(async (initialState) => {
+    await cleanOldRooms(gameType)
     const code = generateCode()
     const roomRef = ref(db, `rooms/${gameType}/${code}`)
     await set(roomRef, {
