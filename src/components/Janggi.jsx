@@ -1069,10 +1069,9 @@ export default function Janggi({ onBack }) {
           {selected && (() => {
             const sp = board[selected[0]][selected[1]]
             const sc = PIECE_SIZE[sp?.type] || 0.8
-            const sw = baseR * sc + 4
-            const sh = baseR * sc * 1.1 + 4
-            return <path d={octagonPath(pad + selected[1] * cellSize, pad + selected[0] * cellSize, sw, sh)}
-              fill="none" stroke="#FFD700" strokeWidth={3} />
+            const sr = baseR * sc + 4
+            return <circle cx={pad + selected[1] * cellSize} cy={pad + selected[0] * cellSize}
+              r={sr} fill="none" stroke="#FFD700" strokeWidth={3} />
           })()}
 
           {/* Pieces */}
@@ -1082,23 +1081,23 @@ export default function Janggi({ onBack }) {
             const cy = pad + r * cellSize
             const isCho = piece.side === CHO
             const scale = PIECE_SIZE[piece.type] || 0.8
-            const pw = baseR * scale  // half width
-            const ph = baseR * scale * 1.1 // half height (slightly taller)
-            const strokeColor = isCho ? '#C0392B' : '#1A6B4A'
-            const textColor = isCho ? '#C0392B' : '#1A6B4A'
+            const pr = baseR * scale
+            const fillColor = isCho ? '#FFF5F5' : '#F0F0FF'
+            const strokeColor = isCho ? '#C0392B' : '#2E4057'
+            const textColor = isCho ? '#C0392B' : '#1A5276'
             const name = PIECE_NAMES[piece.type][piece.side]
-            const fontSize = baseR * scale * 1.05
+            const fontSize = baseR * scale * 1.1
 
             return (
               <g key={`p-${r}-${c}`} style={{ cursor: 'pointer' }}>
                 {/* Shadow */}
-                <path d={octagonPath(cx + 1, cy + 2, pw, ph)} fill="rgba(0,0,0,0.12)" />
-                {/* Body - wood color */}
-                <path d={octagonPath(cx, cy, pw, ph)}
-                  fill="#DEB887" stroke={strokeColor} strokeWidth={2} />
+                <circle cx={cx + 1} cy={cy + 2} r={pr} fill="rgba(0,0,0,0.15)" />
+                {/* Body */}
+                <circle cx={cx} cy={cy} r={pr}
+                  fill={fillColor} stroke={strokeColor} strokeWidth={2} />
                 {/* Inner border */}
-                <path d={octagonPath(cx, cy, pw * 0.82, ph * 0.82)}
-                  fill="none" stroke={strokeColor} strokeWidth={0.8} opacity={0.6} />
+                <circle cx={cx} cy={cy} r={pr * 0.82}
+                  fill="none" stroke={strokeColor} strokeWidth={0.8} opacity={0.5} />
                 {/* Text */}
                 <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
                   fontSize={fontSize} fontWeight="bold" fill={textColor}
