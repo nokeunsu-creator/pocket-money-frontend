@@ -507,26 +507,128 @@ function minimax(board, depth, alpha, beta, maximizing, aiSide) {
   }
 }
 
-function getBestAIMove(board, aiSide) {
+function getBestAIMove(board, aiSide, level) {
   const moves = getAllMoves(board, aiSide)
   if (moves.length === 0) return null
-  let bestMove = moves[0]
-  let bestVal = -Infinity
-  for (const [fr, fc, tr, tc] of moves) {
-    const newBoard = applyMove(board, fr, fc, tr, tc)
-    const val = minimax(newBoard, 2, -Infinity, Infinity, false, aiSide)
-    if (val > bestVal) {
-      bestVal = val
-      bestMove = [fr, fc, tr, tc]
+
+  // Level 1-2: mostly random
+  if (level <= 2) {
+    // Capture if obvious, otherwise random
+    const captures = moves.filter(([fr, fc, tr, tc]) => board[tr][tc] !== null)
+    if (level === 2 && captures.length > 0 && Math.random() < 0.5) {
+      return captures[Math.floor(Math.random() * captures.length)]
     }
+    return moves[Math.floor(Math.random() * moves.length)]
   }
-  return bestMove
+
+  // Level 3-4: depth 1
+  if (level <= 4) {
+    const depth = 1
+    let bestMove = moves[0]
+    let bestVal = -Infinity
+    // Shuffle for variety
+    const shuffled = [...moves].sort(() => Math.random() - 0.5)
+    for (const [fr, fc, tr, tc] of shuffled) {
+      const newBoard = applyMove(board, fr, fc, tr, tc)
+      let val = minimax(newBoard, depth - 1, -Infinity, Infinity, false, aiSide)
+      // Add randomness
+      val += (Math.random() - 0.5) * (level === 3 ? 3 : 1.5)
+      if (val > bestVal) { bestVal = val; bestMove = [fr, fc, tr, tc] }
+    }
+    return bestMove
+  }
+
+  // Level 5-6: depth 2
+  if (level <= 6) {
+    const depth = 2
+    let bestMove = moves[0]
+    let bestVal = -Infinity
+    const shuffled = [...moves].sort(() => Math.random() - 0.5)
+    for (const [fr, fc, tr, tc] of shuffled) {
+      const newBoard = applyMove(board, fr, fc, tr, tc)
+      let val = minimax(newBoard, depth - 1, -Infinity, Infinity, false, aiSide)
+      val += (Math.random() - 0.5) * (level === 5 ? 1 : 0.5)
+      if (val > bestVal) { bestVal = val; bestMove = [fr, fc, tr, tc] }
+    }
+    return bestMove
+  }
+
+  // Level 7-8: depth 2 with move ordering
+  if (level <= 8) {
+    const depth = 2
+    // Sort: captures first
+    const sorted = [...moves].sort((a, b) => {
+      const capA = board[a[2]][a[3]] ? PIECE_VALUES[board[a[2]][a[3]].type] : 0
+      const capB = board[b[2]][b[3]] ? PIECE_VALUES[board[b[2]][b[3]].type] : 0
+      return capB - capA
+    })
+    let bestMove = sorted[0]
+    let bestVal = -Infinity
+    for (const [fr, fc, tr, tc] of sorted) {
+      const newBoard = applyMove(board, fr, fc, tr, tc)
+      const val = minimax(newBoard, depth - 1, -Infinity, Infinity, false, aiSide)
+      if (val > bestVal) { bestVal = val; bestMove = [fr, fc, tr, tc] }
+    }
+    return bestMove
+  }
+
+  // Level 9-10: depth 3 with move ordering
+  {
+    const depth = level === 9 ? 2 : 3
+    const sorted = [...moves].sort((a, b) => {
+      const capA = board[a[2]][a[3]] ? PIECE_VALUES[board[a[2]][a[3]].type] : 0
+      const capB = board[b[2]][b[3]] ? PIECE_VALUES[board[b[2]][b[3]].type] : 0
+      return capB - capA
+    })
+    let bestMove = sorted[0]
+    let bestVal = -Infinity
+    for (const [fr, fc, tr, tc] of sorted) {
+      const newBoard = applyMove(board, fr, fc, tr, tc)
+      const val = minimax(newBoard, depth - 1, -Infinity, Infinity, false, aiSide)
+      if (val > bestVal) { bestVal = val; bestMove = [fr, fc, tr, tc] }
+    }
+    return bestMove
+  }
+}
+
+// Level labels/colors
+const JANGGI_LEVELS = [
+  { range: '1-2', label: '입문', levels: [1, 2], color: '#2ECC71' },
+  { range: '3-4', label: '초급', levels: [3, 4], color: '#F1C40F' },
+  { range: '5-6', label: '중급', levels: [5, 6], color: '#E67E22' },
+  { range: '7-8', label: '상급', levels: [7, 8], color: '#E74C3C' },
+  { range: '9-10', label: '고수', levels: [9, 10], color: '#8E44AD' },
+]
+
+function getLevelColor(lv) {
+  const colors = ['#2ECC71','#27AE60','#F1C40F','#F39C12','#E67E22','#D35400','#E74C3C','#C0392B','#8E44AD','#6C3483']
+  return colors[lv - 1] || '#333'
+}
+
+function getLevelLabel(lv) {
+  if (lv <= 2) return '입문'
+  if (lv <= 4) return '초급'
+  if (lv <= 6) return '중급'
+  if (lv <= 8) return '상급'
+  return '고수'
+}
+
+// Win record storage
+const JANGGI_WINS_KEY = 'janggi-wins'
+function getWins() {
+  try { return JSON.parse(localStorage.getItem(JANGGI_WINS_KEY)) || {} } catch { return {} }
+}
+function saveWin(level) {
+  const wins = getWins()
+  wins[level] = true
+  localStorage.setItem(JANGGI_WINS_KEY, JSON.stringify(wins))
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Janggi({ onBack }) {
-  const [mode, setMode] = useState(null) // null | 'ai' | 'local' | 'online'
+  const [mode, setMode] = useState(null) // null | 'ai' | 'ai-level' | 'local' | 'online'
+  const [aiLevel, setAiLevel] = useState(1)
   const [board, setBoard] = useState(createInitialBoard())
   const [turn, setTurn] = useState(CHO) // cho goes first
   const [selected, setSelected] = useState(null) // [r, c]
@@ -554,8 +656,9 @@ export default function Janggi({ onBack }) {
   useEffect(() => {
     if (mode !== 'ai' || turn !== HAN || winner || aiThinking.current) return
     aiThinking.current = true
+    const delay = aiLevel <= 4 ? 300 : 500
     const timer = setTimeout(() => {
-      const move = getBestAIMove(board, HAN)
+      const move = getBestAIMove(board, HAN, aiLevel)
       if (move) {
         const [fr, fc, tr, tc] = move
         const newBoard = applyMove(board, fr, fc, tr, tc)
@@ -575,9 +678,16 @@ export default function Janggi({ onBack }) {
         setValidMoves([])
       }
       aiThinking.current = false
-    }, 500)
+    }, delay)
     return () => { clearTimeout(timer); aiThinking.current = false }
-  }, [mode, turn, winner, board])
+  }, [mode, turn, winner, board, aiLevel])
+
+  // Save win record when player wins in AI mode
+  useEffect(() => {
+    if (mode === 'ai' && winner === CHO && aiLevel) {
+      saveWin(aiLevel)
+    }
+  }, [mode, winner, aiLevel])
 
   const handleClick = useCallback((r, c) => {
     if (winner) return
@@ -689,17 +799,53 @@ export default function Janggi({ onBack }) {
   }
 
   // ─── Mode select screen ─────────────────────────────────────────────────────
-  if (!mode) {
+  if (!mode || mode === 'ai-level') {
+    const wins = getWins()
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={onBack}
+        <button onClick={() => { if (mode === 'ai-level') { setMode(null); return } onBack() }}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
         <div style={{ fontSize: 56, marginBottom: 12 }}>♟</div>
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>장기</h2>
+
+        {mode === 'ai-level' ? (
+          <div style={{ maxWidth: 280, margin: '0 auto' }}>
+            <p style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>난이도를 선택하세요</p>
+            {Object.keys(wins).length > 0 && (
+              <button onClick={() => { localStorage.removeItem(JANGGI_WINS_KEY); setMode('ai-level') }}
+                style={{ fontSize: 11, color: '#AAA', background: 'none', border: '1px solid #DDD', borderRadius: 8, padding: '4px 12px', cursor: 'pointer', marginBottom: 12 }}>
+                🔄 기록 초기화
+              </button>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[1,2,3,4,5,6,7,8,9,10].map(lv => (
+                <button key={lv}
+                  onClick={() => {
+                    setAiLevel(lv)
+                    setMode('ai')
+                    setBoard(createInitialBoard())
+                    setTurn(CHO)
+                    setWinner(null)
+                    setLastMove(null)
+                    setInCheck(null)
+                  }}
+                  style={{
+                    padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 700, color: '#FFF',
+                    background: getLevelColor(lv),
+                    position: 'relative',
+                  }}>
+                  Lv.{lv} {getLevelLabel(lv)}
+                  {wins[lv] && <span style={{ position: 'absolute', top: 4, right: 8, fontSize: 12 }}>🏆</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
-          <button onClick={() => { setMode('ai'); setBoard(createInitialBoard()); setTurn(CHO); setWinner(null); setLastMove(null); setInCheck(null) }}
+          <button onClick={() => setMode('ai-level')}
             style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #E74C3C, #C0392B)' }}>
             🤖 vs 컴퓨터
           </button>
@@ -732,6 +878,7 @@ export default function Janggi({ onBack }) {
           </div>
           {room.error && <div style={{ color: '#E74C3C', fontSize: 13 }}>{room.error}</div>}
         </div>
+        )}
       </div>
     )
   }
@@ -783,7 +930,9 @@ export default function Janggi({ onBack }) {
   const statusText = winner
     ? winner === 'draw'
       ? '무승부 (빅장)!'
-      : `${winner === CHO ? '초 (빨강)' : '한 (파랑)'} 승리!`
+      : mode === 'ai'
+        ? (winner === CHO ? `🏆 Lv.${aiLevel} 승리!` : `Lv.${aiLevel} AI 승리...`)
+        : `${winner === CHO ? '초 (빨강)' : '한 (파랑)'} 승리!`
     : mode === 'online'
       ? isMyTurn
         ? `내 차례 (${mySide === CHO ? '초' : '한'})`
