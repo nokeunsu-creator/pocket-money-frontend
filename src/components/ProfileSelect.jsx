@@ -5,6 +5,11 @@ const PASSWORDS = {
   '노승우': '170410',
 }
 
+const MENU_PASSWORDS = {
+  'budget': '1219',
+  'game': '5431',
+}
+
 export default function ProfileSelect({ onSelect }) {
   const profiles = [
     { name: '노건우', photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
@@ -13,12 +18,14 @@ export default function ProfileSelect({ onSelect }) {
 
   const [showModal, setShowModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedMenu, setSelectedMenu] = useState(null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
 
   const handleClick = (name) => {
     if (PASSWORDS[name]) {
       setSelectedUser(name)
+      setSelectedMenu(null)
       setPassword('')
       setError(false)
       setShowModal(true)
@@ -27,12 +34,33 @@ export default function ProfileSelect({ onSelect }) {
     }
   }
 
-  const handleSubmit = () => {
-    if (password === PASSWORDS[selectedUser]) {
-      setShowModal(false)
-      onSelect(selectedUser, 'money')
+  const handleMenuClick = (category) => {
+    if (MENU_PASSWORDS[category]) {
+      setSelectedUser(null)
+      setSelectedMenu(category)
+      setPassword('')
+      setError(false)
+      setShowModal(true)
     } else {
-      setError(true)
+      onSelect(null, category)
+    }
+  }
+
+  const handleSubmit = () => {
+    if (selectedMenu) {
+      if (password === MENU_PASSWORDS[selectedMenu]) {
+        setShowModal(false)
+        onSelect(null, selectedMenu)
+      } else {
+        setError(true)
+      }
+    } else if (selectedUser) {
+      if (password === PASSWORDS[selectedUser]) {
+        setShowModal(false)
+        onSelect(selectedUser, 'money')
+      } else {
+        setError(true)
+      }
     }
   }
 
@@ -90,7 +118,7 @@ export default function ProfileSelect({ onSelect }) {
           <span>여행</span>
         </button>
         <button
-          onClick={() => onSelect(null, 'game')}
+          onClick={() => handleMenuClick('game')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
@@ -162,7 +190,7 @@ export default function ProfileSelect({ onSelect }) {
       </div>
       <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
         <button
-          onClick={() => onSelect(null, 'budget')}
+          onClick={() => handleMenuClick('budget')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
@@ -195,7 +223,9 @@ export default function ProfileSelect({ onSelect }) {
           >
             <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
             <h3 style={{ fontSize: 16, color: 'var(--brown)', marginBottom: 16 }}>
-              {selectedUser}의 비밀번호를 입력하세요
+              {selectedMenu
+                ? (selectedMenu === 'budget' ? '가계부' : '게임') + ' 비밀번호를 입력하세요'
+                : selectedUser + '의 비밀번호를 입력하세요'}
             </h3>
             <input
               type="password"
