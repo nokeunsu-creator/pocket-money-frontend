@@ -69,12 +69,11 @@ export default function ProfileSelect({ onSelect }) {
   }
 
   return (
-    <div className="profile-page fade-in">
-      <div style={{ fontSize: 64, marginBottom: 16, animation: 'float 3s ease-in-out infinite' }}>
+    <div className="profile-page fade-in" style={{ paddingTop: 16 }}>
+      <div style={{ fontSize: 40, marginBottom: 8, animation: 'float 3s ease-in-out infinite' }}>
         🎁
       </div>
-      <h1 className="profile-title">우리집 보물상자</h1>
-      <p className="profile-subtitle">누구의 보물상자를 열까요?</p>
+      <h1 className="profile-title" style={{ marginBottom: 8 }}>우리집 보물상자</h1>
       <div className="profile-cards">
         {profiles.map((p, i) => (
           <button
