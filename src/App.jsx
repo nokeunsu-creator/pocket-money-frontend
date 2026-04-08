@@ -33,6 +33,7 @@ import AchievementList from './components/AchievementList'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
 import QuickMemo from './components/QuickMemo'
+import BudgetMain from './components/BudgetMain'
 import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
 import WordSprint from './components/WordSprint'
@@ -111,6 +112,12 @@ export default function App() {
       setCurrentUser('__common__')
       setCurrentPage('timer')
       window.history.pushState({ page: 'timer', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'budget') {
+      setCurrentUser('__common__')
+      setCurrentPage('budget')
+      window.history.pushState({ page: 'budget', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
     if (category === 'memo') {
@@ -361,6 +368,9 @@ export default function App() {
       )}
       {currentPage === 'memo' && (
         <QuickMemo onBack={switchUser} />
+      )}
+      {currentPage === 'budget' && (
+        <BudgetMain onBack={switchUser} />
       )}
       {currentPage === 'game-science' && (
         <ScienceQuiz onBack={() => goToPage('game')} />

@@ -160,6 +160,25 @@ export default function ProfileSelect({ onSelect }) {
           <span>메모</span>
         </button>
       </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
+        <button
+          onClick={() => onSelect(null, 'budget')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '16px 0', borderRadius: 16,
+            background: 'linear-gradient(135deg, #2C3E50, #3498DB)',
+            color: '#FFF', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            transition: 'transform 0.1s',
+          }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+          onPointerUp={e => e.currentTarget.style.transform = ''}
+          onPointerLeave={e => e.currentTarget.style.transform = ''}
+        >
+          <span style={{ fontSize: 28 }}>💰</span>
+          <span>가계부</span>
+        </button>
+      </div>
 
       {showModal && (
         <div style={{
