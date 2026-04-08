@@ -157,7 +157,7 @@ export default function BudgetAdd({ editEntry: editEntryProp, defaultDate, onDon
         <label style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 6, display: 'block' }}>
           💰 금액
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input
             type="text"
             inputMode="numeric"
@@ -166,13 +166,13 @@ export default function BudgetAdd({ editEntry: editEntryProp, defaultDate, onDon
             placeholder="0"
             autoFocus
             style={{
-              flex: 1, border: 'none', borderBottom: `2px solid ${accentColor}`,
-              fontSize: 28, padding: '8px 0', background: 'transparent',
+              flex: 1, minWidth: 0, border: 'none', borderBottom: `2px solid ${accentColor}`,
+              fontSize: 22, padding: '8px 0', background: 'transparent',
               color: '#333', fontFamily: 'Jua, sans-serif',
-              textAlign: 'right',
+              textAlign: 'right', maxWidth: '100%',
             }}
           />
-          <span style={{ fontSize: 20, color: '#888', fontWeight: 'bold' }}>원</span>
+          <span style={{ fontSize: 16, color: '#888', fontWeight: 'bold', flexShrink: 0 }}>원</span>
         </div>
       </div>
 
