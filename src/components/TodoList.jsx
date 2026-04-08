@@ -372,7 +372,7 @@ export default function TodoList({ onBack }) {
         style={{
           position: 'fixed',
           bottom: 28,
-          right: 'calc(50% - 200px)',
+          right: 24,
           width: 56, height: 56,
           borderRadius: '50%',
           background: 'linear-gradient(135deg, #06D6A0, #05B384)',
