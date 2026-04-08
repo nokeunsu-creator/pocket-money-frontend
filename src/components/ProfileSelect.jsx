@@ -212,7 +212,7 @@ export default function ProfileSelect({ onSelect }) {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.4)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', zIndex: 200,
+          alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh', zIndex: 200,
         }}
           onClick={() => setShowModal(false)}
         >
