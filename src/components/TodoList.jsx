@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { getTodosForDate, getWeekStats, toggleComplete, deleteTodo, CATEGORIES } from '../utils/todoStorage'
 import TodoAdd from './TodoAdd'
 
@@ -42,54 +42,55 @@ export default function TodoList({ onBack }) {
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
 
-  // Get todos for selected date, tomorrow, and rest of week
-  const todayTodos = getTodosForDate(selectedDate)
-  const tomorrowDate = addDays(selectedDate, 1)
-  const tomorrowTodos = getTodosForDate(tomorrowDate)
-  const endOfWeek = getEndOfWeek(selectedDate)
+  // Memoize heavy calculations
+  const { sortedToday, completedCount, totalCount, progressPct, tomorrowDate, tomorrowTodos, weekTodos, weekStats, weekTotal, weekCompleted, weekPct, perfectStreak } = useMemo(() => {
+    try {
+      const todayList = getTodosForDate(selectedDate)
+      const tmrDate = addDays(selectedDate, 1)
+      const tmrTodos = getTodosForDate(tmrDate)
+      const eow = getEndOfWeek(selectedDate)
 
-  // Rest of week (after tomorrow until Sunday)
-  const weekTodos = []
-  const dayAfterTomorrow = addDays(selectedDate, 2)
-  if (dayAfterTomorrow <= endOfWeek) {
-    let d = dayAfterTomorrow
-    while (d <= endOfWeek) {
-      const todos = getTodosForDate(d)
-      if (todos.length > 0) {
-        weekTodos.push({ date: d, todos })
+      const wTodos = []
+      const dat = addDays(selectedDate, 2)
+      if (dat <= eow) {
+        let d = dat
+        for (let i = 0; i < 7 && d <= eow; i++) {
+          const todos = getTodosForDate(d)
+          if (todos.length > 0) wTodos.push({ date: d, todos })
+          d = addDays(d, 1)
+        }
       }
-      d = addDays(d, 1)
+
+      const sortTodos = (list) => [...list].sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1
+        if (a.important !== b.important) return a.important ? -1 : 1
+        return 0
+      })
+
+      const sorted = sortTodos(todayList)
+      const comp = todayList.filter(t => t.completed).length
+      const tot = todayList.length
+      const pct = tot > 0 ? (comp / tot) * 100 : 0
+
+      const ws = getWeekStats()
+      const wt = ws.reduce((s, d) => s + d.total, 0)
+      const wc = ws.reduce((s, d) => s + d.completed, 0)
+      const wp = wt > 0 ? Math.round((wc / wt) * 100) : 0
+
+      let streak = 0
+      for (let i = ws.length - 1; i >= 0; i--) {
+        const s = ws[i]
+        if (s.date > today) continue
+        if (s.total > 0 && s.completed === s.total) streak++
+        else if (s.total > 0) break
+      }
+
+      return { sortedToday: sorted, completedCount: comp, totalCount: tot, progressPct: pct, tomorrowDate: tmrDate, tomorrowTodos: tmrTodos, weekTodos: wTodos, weekStats: ws, weekTotal: wt, weekCompleted: wc, weekPct: wp, perfectStreak: streak }
+    } catch (e) {
+      console.error('TodoList calc error:', e)
+      return { sortedToday: [], completedCount: 0, totalCount: 0, progressPct: 0, tomorrowDate: addDays(selectedDate, 1), tomorrowTodos: [], weekTodos: [], weekStats: [], weekTotal: 0, weekCompleted: 0, weekPct: 0, perfectStreak: 0 }
     }
-  }
-
-  // Sort: important first, then incomplete, then completed
-  const sortTodos = (list) => {
-    return [...list].sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1
-      if (a.important !== b.important) return a.important ? -1 : 1
-      return 0
-    })
-  }
-
-  const sortedToday = sortTodos(todayTodos)
-  const completedCount = todayTodos.filter(t => t.completed).length
-  const totalCount = todayTodos.length
-  const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
-
-  // Weekly stats
-  const weekStats = getWeekStats()
-  const weekTotal = weekStats.reduce((s, d) => s + d.total, 0)
-  const weekCompleted = weekStats.reduce((s, d) => s + d.completed, 0)
-  const weekPct = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0
-
-  // Consecutive perfect days
-  let perfectStreak = 0
-  for (let i = weekStats.length - 1; i >= 0; i--) {
-    const s = weekStats[i]
-    if (s.date > today) continue
-    if (s.total > 0 && s.completed === s.total) perfectStreak++
-    else if (s.total > 0) break
-  }
+  }, [selectedDate, refreshKey])
 
   const handleToggle = (id, dateStr) => {
     setAnimatingId(id)
