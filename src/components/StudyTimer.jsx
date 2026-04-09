@@ -42,6 +42,7 @@ export default function StudyTimer({ onBack }) {
   const [mode, setMode] = useState(null) // 'pomodoro' | 'free'
   const [subject, setSubject] = useState(null)
   const [showStats, setShowStats] = useState(false)
+  const [customMinutes, setCustomMinutes] = useState('')
 
   // Timer state
   const [timeLeft, setTimeLeft] = useState(0)
@@ -405,6 +406,36 @@ export default function StudyTimer({ onBack }) {
               {opt.label}
             </button>
           ))}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>또는 직접 입력</div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={3}
+              value={customMinutes}
+              onChange={e => setCustomMinutes(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="분"
+              style={{
+                width: 80, padding: '10px 8px', borderRadius: 10,
+                border: '2px solid #DDD', fontSize: 18, fontWeight: 700,
+                textAlign: 'center', outline: 'none',
+              }}
+            />
+            <span style={{ fontSize: 14, color: '#888' }}>분</span>
+            <button
+              onClick={() => { const m = parseInt(customMinutes); if (m > 0 && m <= 180) startFreeTimer(m) }}
+              disabled={!customMinutes || parseInt(customMinutes) <= 0}
+              style={{
+                padding: '10px 20px', borderRadius: 10, border: 'none',
+                background: customMinutes && parseInt(customMinutes) > 0 ? '#3498DB' : '#DDD',
+                color: '#FFF', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              시작
+            </button>
+          </div>
         </div>
       </div>
     )
