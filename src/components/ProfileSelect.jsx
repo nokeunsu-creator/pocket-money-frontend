@@ -248,7 +248,32 @@ export default function ProfileSelect({ onSelect }) {
               inputMode="numeric"
               maxLength={selectedMenu ? 4 : 6}
               value={password}
-              onChange={(e) => { setPassword(e.target.value.replace(/[^0-9]/g, '')); setError(false) }}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '')
+                setPassword(val)
+                setError(false)
+                const maxLen = selectedMenu ? 4 : 6
+                if (val.length === maxLen) {
+                  setTimeout(() => {
+                    // Auto submit
+                    if (selectedMenu) {
+                      if (val === MENU_PASSWORDS[selectedMenu]) {
+                        setShowModal(false)
+                        onSelect(null, selectedMenu)
+                      } else {
+                        setError(true)
+                      }
+                    } else if (selectedUser) {
+                      if (val === PASSWORDS[selectedUser]) {
+                        setShowModal(false)
+                        onSelect(selectedUser, 'money')
+                      } else {
+                        setError(true)
+                      }
+                    }
+                  }, 100)
+                }
+              }}
               onKeyDown={handleKeyDown}
               autoFocus
               placeholder={selectedMenu ? '비밀번호 4자리' : '비밀번호 6자리'}
