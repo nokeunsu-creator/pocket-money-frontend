@@ -144,17 +144,18 @@ export default function BudgetMain({ onBack }) {
           {/* Budget setting */}
           <div style={styles.card}>
             <h3 style={styles.cardTitle}>월 예산 설정</h3>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={budgetInput}
-                onChange={e => setBudgetInput(e.target.value)}
+                onChange={e => setBudgetInput(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="예산 금액"
-                style={styles.input}
+                style={{ ...styles.input, minWidth: 0, maxWidth: '100%', fontSize: 16, textAlign: 'right' }}
               />
-              <span style={{ whiteSpace: 'nowrap' }}>원</span>
-              <button onClick={handleSaveBudget} style={styles.saveBtn}>저장</button>
+              <span style={{ whiteSpace: 'nowrap', flexShrink: 0, fontSize: 14 }}>원</span>
             </div>
+            <button onClick={handleSaveBudget} style={{ ...styles.saveBtn, width: '100%' }}>저장</button>
           </div>
 
           {/* Fixed expenses */}
