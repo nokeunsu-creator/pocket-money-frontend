@@ -208,6 +208,18 @@ export default function FamilyTree({ onBack }) {
                   {label}
                 </text>
 
+                {/* 우리 가족만 이름 표시 */}
+                {['me', 'wife', 'son1', 'son2'].includes(member.id) && (
+                  <text
+                    x={pos.x} y={pos.y + NODE_R + 16}
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize={11} fill="#5D4037" fontWeight="500"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {member.name}
+                  </text>
+                )}
+
               </g>
             )
           })}

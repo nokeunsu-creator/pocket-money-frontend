@@ -6,13 +6,13 @@ export const familyMembers = [
   { id: 'mother_in_law', name: '장모님', emoji: '👵', gender: 'F', generation: 1 },
   { id: 'sister', name: '누나', emoji: '👩', gender: 'F', generation: 2 },
   { id: 'brother_in_law', name: '매형', emoji: '👨', gender: 'M', generation: 2 },
-  { id: 'me', name: '나', emoji: '🧑', gender: 'M', generation: 2 },
-  { id: 'wife', name: '아내', emoji: '👩', gender: 'F', generation: 2 },
+  { id: 'me', name: '노근수', emoji: '🧑', gender: 'M', generation: 2 },
+  { id: 'wife', name: '이인수', emoji: '👩', gender: 'F', generation: 2 },
   { id: 'wife_brother', name: '처남', emoji: '👨', gender: 'M', generation: 2 },
   { id: 'wife_brother_wife', name: '처남댁', emoji: '👩', gender: 'F', generation: 2 },
   { id: 'nephew', name: '조카', emoji: '👦', gender: 'M', generation: 3 },
-  { id: 'son1', name: '큰아들', emoji: '👦', gender: 'M', generation: 3 },
-  { id: 'son2', name: '작은아들', emoji: '👦', gender: 'M', generation: 3 },
+  { id: 'son1', name: '노건우', emoji: '👦', gender: 'M', generation: 3 },
+  { id: 'son2', name: '노승우', emoji: '👦', gender: 'M', generation: 3 },
 ]
 
 // 배우자 연결
