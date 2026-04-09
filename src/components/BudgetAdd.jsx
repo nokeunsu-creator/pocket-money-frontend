@@ -42,6 +42,7 @@ export default function BudgetAdd({ editEntry: editEntryProp, defaultDate, onDon
   const [repeat, setRepeat] = useState(editEntryProp?.repeat || null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const amount = parseAmount(amountStr)
   const isExpense = type === 'expense'
@@ -73,7 +74,8 @@ export default function BudgetAdd({ editEntry: editEntryProp, defaultDate, onDon
   const canSave = amount > 0 && (isExpense ? !!category : true)
 
   const handleSave = () => {
-    if (!canSave) return
+    if (!canSave || saving) return
+    setSaving(true)
 
     const entryData = {
       type,
@@ -320,19 +322,19 @@ export default function BudgetAdd({ editEntry: editEntryProp, defaultDate, onDon
       {/* Save button */}
       <button
         onClick={handleSave}
-        disabled={!canSave}
+        disabled={!canSave || saving}
         style={{
           width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-          background: canSave ? accentGradient : '#DDD',
-          color: canSave ? '#FFF' : '#AAA',
+          background: (canSave && !saving) ? accentGradient : '#DDD',
+          color: (canSave && !saving) ? '#FFF' : '#AAA',
           fontSize: 17, fontWeight: 'bold',
-          cursor: canSave ? 'pointer' : 'default',
+          cursor: (canSave && !saving) ? 'pointer' : 'default',
           marginBottom: 12,
-          boxShadow: canSave ? `0 4px 16px ${isExpense ? 'rgba(231,76,60,0.3)' : 'rgba(46,204,113,0.3)'}` : 'none',
+          boxShadow: (canSave && !saving) ? `0 4px 16px ${isExpense ? 'rgba(231,76,60,0.3)' : 'rgba(46,204,113,0.3)'}` : 'none',
           transition: 'all 0.2s',
         }}
       >
-        저장하기
+        {saving ? '저장 중...' : '저장하기'}
       </button>
 
       {/* Delete button (edit mode only) */}
