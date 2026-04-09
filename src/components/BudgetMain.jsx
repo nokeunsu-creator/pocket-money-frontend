@@ -301,7 +301,24 @@ export default function BudgetMain({ onBack }) {
           <button onClick={onBack} style={styles.backBtn}>←</button>
           <h1 style={styles.title}>💰 가계부</h1>
         </div>
-        <div style={styles.ownerName}>노성미</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginLeft: 44, marginRight: 4 }}>
+          <span style={{ fontSize: 14, opacity: 0.85 }}>노성미</span>
+          <button
+            onClick={() => setScreen('memo')}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 8,
+              padding: '5px 12px',
+              cursor: 'pointer',
+            }}
+          >
+            📝 메모
+          </button>
+        </div>
         <div style={styles.monthNav}>
           <button onClick={prevMonth} style={styles.navBtn}>◀</button>
           <span style={styles.monthLabel}>{year}년 {month}월</span>
@@ -418,9 +435,6 @@ export default function BudgetMain({ onBack }) {
           </button>
           <button onClick={() => setScreen('list')} style={styles.secondaryBtn}>
             📋 전체 목록
-          </button>
-          <button onClick={() => setScreen('memo')} style={styles.secondaryBtn}>
-            📝 메모
           </button>
           <button onClick={openSettings} style={styles.secondaryBtn}>
             ⚙️ 설정
