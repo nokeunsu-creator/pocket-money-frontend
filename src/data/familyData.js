@@ -8,6 +8,8 @@ export const familyMembers = [
   { id: 'brother_in_law', name: '매형', emoji: '👨', gender: 'M', generation: 2 },
   { id: 'me', name: '나', emoji: '🧑', gender: 'M', generation: 2 },
   { id: 'wife', name: '아내', emoji: '👩', gender: 'F', generation: 2 },
+  { id: 'wife_brother', name: '처남', emoji: '👨', gender: 'M', generation: 2 },
+  { id: 'wife_brother_wife', name: '처남댁', emoji: '👩', gender: 'F', generation: 2 },
   { id: 'nephew', name: '조카', emoji: '👦', gender: 'M', generation: 3 },
   { id: 'son1', name: '큰아들', emoji: '👦', gender: 'M', generation: 3 },
   { id: 'son2', name: '작은아들', emoji: '👦', gender: 'M', generation: 3 },
@@ -19,12 +21,13 @@ export const spouseLinks = [
   ['father_in_law', 'mother_in_law'],
   ['sister', 'brother_in_law'],
   ['me', 'wife'],
+  ['wife_brother', 'wife_brother_wife'],
 ]
 
 // 부모 → 자녀 연결 (부모 쌍 → 자녀들)
 export const parentChildLinks = [
   { parents: ['dad', 'mom'], children: ['sister', 'me'] },
-  { parents: ['father_in_law', 'mother_in_law'], children: ['wife'] },
+  { parents: ['father_in_law', 'mother_in_law'], children: ['wife', 'wife_brother'] },
   { parents: ['sister', 'brother_in_law'], children: ['nephew'] },
   { parents: ['me', 'wife'], children: ['son1', 'son2'] },
 ]
@@ -44,6 +47,8 @@ export const relationshipLabels = {
     nephew: '조카',
     son1: '큰아들',
     son2: '작은아들',
+    wife_brother: '처남',
+    wife_brother_wife: '처남댁',
   },
 
   // "아내" 기준
@@ -58,6 +63,8 @@ export const relationshipLabels = {
     nephew: '조카',
     son1: '큰아들',
     son2: '작은아들',
+    wife_brother: '남동생',
+    wife_brother_wife: '동서',
   },
 
   // "큰아들" 기준
@@ -72,6 +79,8 @@ export const relationshipLabels = {
     brother_in_law: '고모부',
     nephew: '사촌',
     son2: '동생',
+    wife_brother: '외삼촌',
+    wife_brother_wife: '외숙모',
   },
 
   // "작은아들" 기준
@@ -86,6 +95,8 @@ export const relationshipLabels = {
     brother_in_law: '고모부',
     nephew: '사촌',
     son1: '형',
+    wife_brother: '외삼촌',
+    wife_brother_wife: '외숙모',
   },
 
   // "아빠" 기준
@@ -100,6 +111,8 @@ export const relationshipLabels = {
     nephew: '외손주',
     son1: '손자',
     son2: '손자',
+    wife_brother: '사돈',
+    wife_brother_wife: '사돈',
   },
 
   // "엄마" 기준
@@ -114,6 +127,8 @@ export const relationshipLabels = {
     nephew: '외손주',
     son1: '손자',
     son2: '손자',
+    wife_brother: '사돈',
+    wife_brother_wife: '사돈',
   },
 
   // "누나" 기준
@@ -128,6 +143,8 @@ export const relationshipLabels = {
     nephew: '아들',
     son1: '조카',
     son2: '조카',
+    wife_brother: '사돈',
+    wife_brother_wife: '사돈',
   },
 
   // "매형" 기준
@@ -142,6 +159,8 @@ export const relationshipLabels = {
     nephew: '아들',
     son1: '조카',
     son2: '조카',
+    wife_brother: '사돈',
+    wife_brother_wife: '사돈',
   },
 
   // "조카" 기준
@@ -156,6 +175,8 @@ export const relationshipLabels = {
     brother_in_law: '아빠',
     son1: '외사촌',
     son2: '외사촌',
+    wife_brother: '외삼촌',
+    wife_brother_wife: '외숙모',
   },
 
   // "장인어른" 기준
@@ -170,6 +191,8 @@ export const relationshipLabels = {
     nephew: '사돈손주',
     son1: '외손자',
     son2: '외손자',
+    wife_brother: '아들',
+    wife_brother_wife: '며느리',
   },
 
   // "장모님" 기준
@@ -184,6 +207,40 @@ export const relationshipLabels = {
     nephew: '사돈손주',
     son1: '외손자',
     son2: '외손자',
+    wife_brother: '아들',
+    wife_brother_wife: '며느리',
+  },
+
+  // "처남" 기준
+  wife_brother: {
+    me: '매형',
+    wife: '누나',
+    dad: '사돈',
+    mom: '사돈',
+    father_in_law: '아빠',
+    mother_in_law: '엄마',
+    sister: '사돈',
+    brother_in_law: '사돈',
+    nephew: '사돈조카',
+    son1: '조카',
+    son2: '조카',
+    wife_brother_wife: '아내',
+  },
+
+  // "처남댁" 기준
+  wife_brother_wife: {
+    me: '형님',
+    wife: '형님',
+    dad: '사돈',
+    mom: '사돈',
+    father_in_law: '시아버지',
+    mother_in_law: '시어머니',
+    sister: '사돈',
+    brother_in_law: '사돈',
+    nephew: '사돈조카',
+    son1: '조카',
+    son2: '조카',
+    wife_brother: '남편',
   },
 }
 
@@ -198,11 +255,13 @@ export const nodePositions = {
   // 2세대 (y=300)
   sister:         { x: 130, y: 300 },
   brother_in_law: { x: 270, y: 300 },
-  me:             { x: 570, y: 300 },
-  wife:           { x: 710, y: 300 },
+  me:             { x: 500, y: 300 },
+  wife:           { x: 640, y: 300 },
+  wife_brother:   { x: 780, y: 300 },
+  wife_brother_wife: { x: 920, y: 300 },
 
   // 3세대 (y=520)
   nephew: { x: 200, y: 520 },
-  son1:   { x: 570, y: 520 },
-  son2:   { x: 710, y: 520 },
+  son1:   { x: 500, y: 520 },
+  son2:   { x: 640, y: 520 },
 }
