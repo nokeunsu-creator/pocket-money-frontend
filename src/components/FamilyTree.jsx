@@ -208,15 +208,6 @@ export default function FamilyTree({ onBack }) {
                   {label}
                 </text>
 
-                {/* 이름 (아래) */}
-                <text
-                  x={pos.x} y={pos.y + NODE_R + 16}
-                  textAnchor="middle" dominantBaseline="central"
-                  fontSize={13} fill="#5D4037" fontWeight="500"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {member.name}
-                </text>
               </g>
             )
           })}
