@@ -34,7 +34,9 @@ function genColor(generation) {
 }
 
 export default function FamilyTree({ onBack }) {
-  const selectedId = 'me'
+  const [selectedId, setSelectedId] = useState('me')
+
+  const selectedMember = familyMembers.find(m => m.id === selectedId)
 
   return (
     <div className="page fade-in" style={{ padding: '12px 0' }}>
@@ -151,7 +153,8 @@ export default function FamilyTree({ onBack }) {
             return (
               <g
                 key={member.id}
-                style={{ cursor: 'default' }}
+                onClick={() => setSelectedId(member.id)}
+                style={{ cursor: 'pointer' }}
               >
                 {/* 선택 시 외곽 글로우 */}
                 {isSelected && (
