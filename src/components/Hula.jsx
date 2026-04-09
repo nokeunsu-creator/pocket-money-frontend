@@ -523,7 +523,7 @@ export default function Hula({ onBack }) {
               type="text"
               placeholder="2자리 코드"
               value={joinCode}
-              onChange={e => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onChange={e => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
               style={{
                 flex: 1, padding: '12px 14px', borderRadius: 14,
                 border: '2px solid #DDD', fontSize: 16, textAlign: 'center',
