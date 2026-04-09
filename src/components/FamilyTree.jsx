@@ -34,9 +34,7 @@ function genColor(generation) {
 }
 
 export default function FamilyTree({ onBack }) {
-  const [selectedId, setSelectedId] = useState('me')
-
-  const selectedMember = familyMembers.find(m => m.id === selectedId)
+  const selectedId = 'me'
 
   return (
     <div className="page fade-in" style={{ padding: '12px 0' }}>
@@ -58,24 +56,6 @@ export default function FamilyTree({ onBack }) {
         <h1 style={{ fontSize: 20, color: 'var(--brown, #5D4037)', margin: 0 }}>
           우리 가족 가계도
         </h1>
-      </div>
-
-      {/* 기준 인물 안내 */}
-      <div style={{
-        background: `linear-gradient(135deg, ${COLORS.selected}44, ${COLORS.selectedBorder}22)`,
-        borderRadius: 16, padding: '12px 20px', marginBottom: 16,
-        display: 'flex', alignItems: 'center', gap: 10,
-        border: `2px solid ${COLORS.selectedBorder}44`,
-      }}>
-        <span style={{ fontSize: 28 }}>{selectedMember?.emoji}</span>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 'bold', color: '#5D4037' }}>
-            지금 <span style={{ color: COLORS.selectedBorder }}>{selectedMember?.name}</span> 기준으로 보고 있어요
-          </div>
-          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-            다른 사람을 눌러보면 호칭이 바뀌어요!
-          </div>
-        </div>
       </div>
 
       {/* SVG 가계도 */}
@@ -171,8 +151,7 @@ export default function FamilyTree({ onBack }) {
             return (
               <g
                 key={member.id}
-                onClick={() => setSelectedId(member.id)}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'default' }}
               >
                 {/* 선택 시 외곽 글로우 */}
                 {isSelected && (
@@ -241,29 +220,6 @@ export default function FamilyTree({ onBack }) {
         </svg>
       </div>
 
-      {/* 범례 */}
-      <div style={{
-        display: 'flex', justifyContent: 'center', gap: 16,
-        marginTop: 16, flexWrap: 'wrap',
-      }}>
-        {[
-          { color: COLORS.generation1, label: '1세대 (조부모)' },
-          { color: COLORS.generation2, label: '2세대 (부모)' },
-          { color: COLORS.generation3, label: '3세대 (자녀)' },
-          { color: COLORS.spouseLine, label: '부부', dash: true },
-        ].map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#888' }}>
-            <div style={{
-              width: item.dash ? 20 : 12,
-              height: item.dash ? 0 : 12,
-              borderRadius: item.dash ? 0 : '50%',
-              background: item.dash ? 'none' : item.color,
-              borderTop: item.dash ? `2.5px dashed ${item.color}` : 'none',
-            }} />
-            {item.label}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
