@@ -127,6 +127,12 @@ export default function App() {
       window.history.pushState({ page: 'memo', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
+    if (category === 'family') {
+      setCurrentUser('__common__')
+      setCurrentPage('family')
+      window.history.pushState({ page: 'family', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
     setCurrentUser(user)
     setCurrentPage('home')
     window.history.pushState({ page: 'home', user, edit: null, tab: 'cash', tripId: null }, '', '')
@@ -266,7 +272,7 @@ export default function App() {
         />
       )}
       {currentPage === 'family' && (
-        <FamilyTree onBack={() => goToPage('hub')} />
+        <FamilyTree onBack={switchUser} />
       )}
       {currentPage === 'trips' && (
         <TripList

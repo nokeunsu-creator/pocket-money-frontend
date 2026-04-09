@@ -14,6 +14,7 @@ import {
   resetData,
   getData,
 } from '../utils/budgetStorage'
+import { downloadBudgetPdf } from '../utils/budgetPdf'
 
 function fmt(n) {
   return Number(n).toLocaleString()
@@ -352,6 +353,9 @@ export default function BudgetMain({ onBack }) {
           <button onClick={openSettings} style={styles.secondaryBtn}>
             ⚙️ 설정
           </button>
+          <button onClick={() => downloadBudgetPdf(year, month)} style={styles.pdfBtn}>
+            📄 PDF 다운로드
+          </button>
         </div>
       </div>
     </div>
@@ -560,6 +564,16 @@ const styles = {
     borderRadius: 8,
     backgroundColor: '#E74C3C',
     color: '#fff',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  pdfBtn: {
+    padding: '12px 0',
+    border: '1px solid #bbb',
+    borderRadius: 10,
+    backgroundColor: '#7F8C8D',
+    color: '#fff',
+    fontSize: 15,
     fontWeight: 600,
     cursor: 'pointer',
   },
