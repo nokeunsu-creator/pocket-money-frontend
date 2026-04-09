@@ -203,7 +203,7 @@ export default function ProfileSelect({ onSelect }) {
           onPointerLeave={e => e.currentTarget.style.transform = ''}
         >
           <span style={{ fontSize: 28 }}>💰</span>
-          <span>가계부</span>
+          <span>가계부 · 노성미</span>
         </button>
         <button
           onClick={() => onSelect(null, 'family')}

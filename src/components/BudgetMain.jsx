@@ -15,6 +15,7 @@ import {
   getData,
 } from '../utils/budgetStorage'
 import { downloadBudgetPdf } from '../utils/budgetPdf'
+import { getMemos, addMemo, updateMemo, deleteMemo, togglePin } from '../utils/budgetMemoStorage'
 
 function fmt(n) {
   return Number(n).toLocaleString()
@@ -26,13 +27,14 @@ function getCategoryInfo(key) {
 
 export default function BudgetMain({ onBack }) {
   const now = new Date()
-  const [screen, setScreen] = useState('main') // 'main' | 'add' | 'edit' | 'list' | 'settings'
+  const [screen, setScreen] = useState('main') // 'main' | 'add' | 'edit' | 'list' | 'settings' | 'memo' | 'memoAdd' | 'memoEdit'
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0, byCategory: {} })
   const [recent, setRecent] = useState([])
   const [budget, setBudgetState] = useState(0)
   const [editEntry, setEditEntry] = useState(null)
+  const [editMemo, setEditMemo] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Settings state
@@ -213,6 +215,72 @@ export default function BudgetMain({ onBack }) {
     )
   }
 
+  if (screen === 'memo') {
+    const memos = getMemos()
+    return (
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <div style={styles.headerTop}>
+            <button onClick={() => setScreen('main')} style={styles.backBtn}>←</button>
+            <h1 style={styles.title}>📝 메모</h1>
+          </div>
+        </div>
+        <div style={styles.body}>
+          <button
+            onClick={() => { setEditMemo(null); setScreen('memoAdd') }}
+            style={{ ...styles.primaryBtn, width: '100%', marginBottom: 14 }}
+          >
+            + 메모 추가
+          </button>
+          {memos.length === 0 ? (
+            <div style={styles.card}>
+              <p style={{ color: '#aaa', textAlign: 'center', padding: 16 }}>메모가 없습니다.</p>
+            </div>
+          ) : (
+            memos.map(m => (
+              <div
+                key={m.id}
+                onClick={() => { setEditMemo(m); setScreen('memoEdit') }}
+                style={{ ...styles.card, cursor: 'pointer', position: 'relative' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50', flex: 1 }}>
+                    {m.pinned ? '📌 ' : ''}{m.title || '(제목 없음)'}
+                  </h4>
+                  <span style={{ fontSize: 12, color: '#999', whiteSpace: 'nowrap' }}>{formatRelativeDate(m.updatedAt)}</span>
+                </div>
+                {m.content && (
+                  <p style={{
+                    margin: '6px 0 0',
+                    fontSize: 13,
+                    color: '#666',
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}>
+                    {m.content}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (screen === 'memoAdd' || screen === 'memoEdit') {
+    return (
+      <MemoEditor
+        memo={screen === 'memoEdit' ? editMemo : null}
+        onSave={() => { setEditMemo(null); setScreen('memo') }}
+        onBack={() => { setEditMemo(null); setScreen('memo') }}
+      />
+    )
+  }
+
   // --- Main dashboard ---
   const usageRatio = budget > 0 ? summary.expense / budget : 0
   const usagePercent = Math.min(Math.round(usageRatio * 100), 999)
@@ -350,6 +418,9 @@ export default function BudgetMain({ onBack }) {
           <button onClick={() => setScreen('list')} style={styles.secondaryBtn}>
             📋 전체 목록
           </button>
+          <button onClick={() => setScreen('memo')} style={styles.secondaryBtn}>
+            📝 메모
+          </button>
           <button onClick={openSettings} style={styles.secondaryBtn}>
             ⚙️ 설정
           </button>
@@ -357,6 +428,131 @@ export default function BudgetMain({ onBack }) {
             📄 PDF 다운로드
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function formatRelativeDate(dateStr) {
+  if (!dateStr) return ''
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  const parts = dateStr.split(/[- :]/).map(Number)
+  const target = new Date(parts[0], parts[1] - 1, parts[2])
+  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+
+  if (targetDay.getTime() === today.getTime()) return '오늘'
+  if (targetDay.getTime() === yesterday.getTime()) return '어제'
+  return `${target.getMonth() + 1}월 ${target.getDate()}일`
+}
+
+function MemoEditor({ memo, onSave, onBack }) {
+  const [title, setTitle] = useState(memo ? memo.title : '')
+  const [content, setContent] = useState(memo ? memo.content : '')
+  const [pinned, setPinned] = useState(memo ? memo.pinned : false)
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const handleSave = () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      if (memo) {
+        updateMemo(memo.id, { title, content, pinned })
+      } else {
+        addMemo({ title, content, pinned })
+      }
+      onSave()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    deleteMemo(memo.id)
+    onSave()
+  }
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.headerTop}>
+          <button onClick={onBack} style={styles.backBtn}>←</button>
+          <h1 style={styles.title}>{memo ? '메모 수정' : '새 메모'}</h1>
+        </div>
+      </div>
+      <div style={styles.body}>
+        <div style={styles.card}>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="제목"
+            style={{ ...styles.input, width: '100%', marginBottom: 12, fontWeight: 600, fontSize: 16, boxSizing: 'border-box' }}
+          />
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="내용을 입력하세요"
+            style={{
+              ...styles.input,
+              width: '100%',
+              minHeight: 150,
+              resize: 'vertical',
+              lineHeight: 1.5,
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: 12, gap: 8 }}>
+            <button
+              onClick={() => setPinned(p => !p)}
+              style={{
+                padding: '8px 14px',
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                backgroundColor: pinned ? '#FFF3CD' : '#fff',
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              📌 {pinned ? '고정됨' : '고정하기'}
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            ...styles.primaryBtn,
+            width: '100%',
+            marginBottom: 10,
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? '저장 중...' : '저장'}
+        </button>
+
+        {memo && (
+          <button
+            onClick={handleDelete}
+            style={{
+              ...styles.dangerBtn,
+              width: '100%',
+            }}
+          >
+            {confirmDelete ? '정말 삭제할까요?' : '🗑️ 삭제'}
+          </button>
+        )}
       </div>
     </div>
   )
