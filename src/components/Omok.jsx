@@ -266,15 +266,19 @@ export default function Omok({ onBack }) {
   }
 
   const undo = () => {
-    if (mode === 'online' || mode === 'ai') return
+    if (mode === 'online') return
     if (history.length === 0 || winner) return
-    const prev = history.slice(0, -1)
+    if (mode === 'ai' && aiThinking) return
+
+    // AI 모드: 내 수 + AI 수 2개 되돌리기
+    const stepsBack = (mode === 'ai' && history.length >= 2) ? 2 : 1
+    const prev = history.slice(0, -stepsBack)
     const newBoard = createBoard()
     prev.forEach(m => { newBoard[m.r][m.c] = m.player })
     setBoard(newBoard)
     setHistory(prev)
     setLastMove(prev.length > 0 ? [prev[prev.length - 1].r, prev[prev.length - 1].c] : null)
-    setTurn(history[history.length - 1].player)
+    setTurn(history[history.length - stepsBack].player)
   }
 
   const reset = () => {
@@ -460,7 +464,7 @@ export default function Omok({ onBack }) {
             오목 {mode === 'online' ? '(온라인)' : mode === 'ai' ? '(vs AI)' : ''}
           </span>
           <div style={{ display: 'flex', gap: 6 }}>
-            {mode === 'local' && (
+            {(mode === 'local' || mode === 'ai') && (
               <button onClick={undo}
                 style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
                 ↩ 무르기

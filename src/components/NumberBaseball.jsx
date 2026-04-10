@@ -43,7 +43,7 @@ export default function NumberBaseball({ onBack }) {
   useEffect(() => {
     if (mode !== 'online' || !room.gameState) return
     const s = room.gameState
-    setDigits(s.digits || 4)
+    setDigits(Number(s.digits) || 4)
   }, [room.gameState, mode])
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export default function NumberBaseball({ onBack }) {
 
   const handleSecretSubmit = () => {
     const gs = room.gameState
-    const d = gs.digits || 4
+    const d = Number(gs.digits) || 4
     setError('')
     if (secretInput.length !== d) {
       setError(`${d}자리 숫자를 입력하세요`)
@@ -167,7 +167,7 @@ export default function NumberBaseball({ onBack }) {
   const handleOnlineGuess = () => {
     const gs = room.gameState
     if (!gs) return
-    const d = gs.digits || 4
+    const d = Number(gs.digits) || 4
     setError('')
     if (input.length !== d) {
       setError(`${d}자리 숫자를 입력하세요`)
@@ -249,7 +249,7 @@ export default function NumberBaseball({ onBack }) {
       hostHistory: '[]',
       guestHistory: '[]',
       turn: 'host',
-      digits: gs?.digits || 4,
+      digits: Number(gs?.digits) || 4,
       winner: '',
       phase: 'setup',
     })
@@ -550,7 +550,7 @@ export default function NumberBaseball({ onBack }) {
   //  ONLINE: GAME
   // ========================
   const gs = room.gameState || {}
-  const d = gs.digits || 4
+  const d = Number(gs.digits) || 4
   const phase = gs.phase || 'setup'
   const onlineTurn = gs.turn || 'host'
   const winnerVal = gs.winner || ''

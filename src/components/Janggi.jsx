@@ -635,6 +635,7 @@ export default function Janggi({ onBack }) {
   const [validMoves, setValidMoves] = useState([])
   const [winner, setWinner] = useState(null)
   const [lastMove, setLastMove] = useState(null) // { from: [r,c], to: [r,c] }
+  const [moveHistory, setMoveHistory] = useState([]) // for undo
   const [joinCode, setJoinCode] = useState('')
   const [inCheck, setInCheck] = useState(null) // side that is in check
   const aiThinking = useRef(false)
@@ -669,6 +670,7 @@ export default function Janggi({ onBack }) {
         if (!findKing(newBoard, CHO)) newWinner = HAN
         if (checkBikjang(newBoard)) newWinner = 'draw'
 
+        setMoveHistory(prev => [...prev, { board: board.map(row => row.map(cell => cell ? { ...cell } : null)), turn, lastMove, inCheck }])
         setBoard(newBoard)
         setTurn(newTurn)
         setLastMove({ from: [fr, fc], to: [tr, tc] })
@@ -724,6 +726,7 @@ export default function Janggi({ onBack }) {
             inCheck: check || '',
           })
         } else {
+          setMoveHistory(prev => [...prev, { board: board.map(row => row.map(cell => cell ? { ...cell } : null)), turn, lastMove, inCheck }])
           setBoard(newBoard)
           setTurn(nextTurn)
           setLastMove(moveData)
@@ -753,8 +756,27 @@ export default function Janggi({ onBack }) {
     }
   }, [board, turn, selected, validMoves, winner, mode, room])
 
+  const undo = () => {
+    if (mode === 'online') return
+    if (moveHistory.length === 0 || winner) return
+    if (aiThinking.current) return
+
+    // AI 모드: 내 수 + AI 수 2개 되돌리기
+    const stepsBack = (mode === 'ai' && moveHistory.length >= 2) ? 2 : 1
+    const prev = moveHistory[moveHistory.length - stepsBack]
+    setBoard(prev.board)
+    setTurn(prev.turn)
+    setLastMove(prev.lastMove)
+    setInCheck(prev.inCheck)
+    setWinner(null)
+    setSelected(null)
+    setValidMoves([])
+    setMoveHistory(moveHistory.slice(0, -stepsBack))
+  }
+
   const reset = () => {
     const initial = createInitialBoard()
+    setMoveHistory([])
     if (mode === 'online') {
       room.updateState({
         board: boardToFlat(initial),
@@ -973,10 +995,18 @@ export default function Janggi({ onBack }) {
           <span style={{ fontSize: 16, fontWeight: 700 }}>
             장기 {modeLabel && `(${modeLabel})`}
           </span>
-          <button onClick={reset}
-            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
-            새 게임
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {mode !== 'online' && (
+              <button onClick={undo}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
+                ↩ 무르기
+              </button>
+            )}
+            <button onClick={reset}
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
+              새 게임
+            </button>
+          </div>
         </div>
       </div>
 
