@@ -36,6 +36,7 @@ import QuickMemo from './components/QuickMemo'
 import BudgetMain from './components/BudgetMain'
 import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
+import NonsenseQuiz from './components/NonsenseQuiz'
 import WordSprint from './components/WordSprint'
 import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
@@ -390,6 +391,9 @@ export default function App() {
       )}
       {currentPage === 'game-history' && (
         <HistoryQuiz onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-nonsense' && (
+        <NonsenseQuiz onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}

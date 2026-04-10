@@ -29,6 +29,7 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'math', icon: '📐', title: '수학나라', desc: '연산·도형·분수·시계', color: '#E74C3C' },
         { key: 'science', icon: '🧪', title: '과학 퀴즈', desc: '10주제 200문제', color: '#9B59B6' },
         { key: 'history', icon: '🇰🇷', title: '한국사 퀴즈', desc: '10주제 200문제', color: '#8B4513' },
+        { key: 'nonsense', icon: '🤪', title: '넌센스 퀴즈', desc: '125문제 · 센스 테스트', color: '#F39C12' },
       ],
     },
     {
