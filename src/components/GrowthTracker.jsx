@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'growth-tracker'
 
+const PASSWORDS = {
+  '노건우': '150324',
+  '노승우': '170410',
+}
+
 function getData() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}
@@ -31,6 +36,10 @@ export default function GrowthTracker({ onBack }) {
   const [weight, setWeight] = useState('')
   const [date, setDate] = useState(getToday())
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [pendingPerson, setPendingPerson] = useState(null)
+  const [password, setPassword] = useState('')
+  const [pwError, setPwError] = useState(false)
 
   useEffect(() => {
     if (!person) return
@@ -70,11 +79,33 @@ export default function GrowthTracker({ onBack }) {
     setConfirmDelete(null)
   }
 
-  const selectPerson = (name) => {
-    setPerson(name)
-    const data = getData()
-    setRecords((data[name] || []).sort((a, b) => a.date.localeCompare(b.date)))
-    setScreen('main')
+  const handleProfileClick = (name) => {
+    setPendingPerson(name)
+    setPassword('')
+    setPwError(false)
+    setShowModal(true)
+  }
+
+  const handlePwSubmit = (val) => {
+    const pw = val || password
+    if (pw === PASSWORDS[pendingPerson]) {
+      setShowModal(false)
+      setPerson(pendingPerson)
+      const data = getData()
+      setRecords((data[pendingPerson] || []).sort((a, b) => a.date.localeCompare(b.date)))
+      setScreen('main')
+    } else {
+      setPwError(true)
+    }
+  }
+
+  const handlePwChange = (e) => {
+    const val = e.target.value.replace(/[^0-9]/g, '')
+    setPassword(val)
+    setPwError(false)
+    if (val.length === 6) {
+      setTimeout(() => handlePwSubmit(val), 100)
+    }
   }
 
   // 성장 통계
@@ -104,7 +135,7 @@ export default function GrowthTracker({ onBack }) {
         <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>누구의 성장 기록을 볼까요?</p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
           {profiles.map(p => (
-            <button key={p.name} onClick={() => selectPerson(p.name)}
+            <button key={p.name} onClick={() => handleProfileClick(p.name)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                 padding: '20px 28px', borderRadius: 16, border: 'none', cursor: 'pointer',
@@ -116,6 +147,52 @@ export default function GrowthTracker({ onBack }) {
             </button>
           ))}
         </div>
+
+        {showModal && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.4)', display: 'flex',
+            alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh', zIndex: 200,
+          }} onClick={() => setShowModal(false)}>
+            <div className="card pop-in"
+              style={{ padding: 24, width: 280, textAlign: 'center' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
+              <h3 style={{ fontSize: 16, color: 'var(--brown)', marginBottom: 16 }}>
+                {pendingPerson}의 비밀번호를 입력하세요
+              </h3>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={password}
+                onChange={handlePwChange}
+                onKeyDown={e => e.key === 'Enter' && handlePwSubmit()}
+                autoFocus
+                placeholder="비밀번호 6자리"
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 10,
+                  border: `2px solid ${pwError ? '#EF476F' : '#EEE'}`,
+                  fontSize: 18, textAlign: 'center', letterSpacing: 8,
+                  boxSizing: 'border-box', minWidth: 0,
+                }}
+              />
+              {pwError && (
+                <p style={{ color: '#EF476F', fontSize: 13, marginTop: 8 }}>비밀번호가 틀렸어요!</p>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button onClick={() => setShowModal(false)}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'var(--light-gray)', fontSize: 14, color: 'var(--gray)' }}>
+                  취소
+                </button>
+                <button onClick={() => handlePwSubmit()}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'var(--blue)', fontSize: 14, color: '#FFF' }}>
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
