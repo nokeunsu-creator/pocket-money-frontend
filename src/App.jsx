@@ -50,6 +50,7 @@ import SentenceRush from './components/SentenceRush'
 import WordBattle from './components/WordBattle'
 import EnglishChampionship from './components/EnglishChampionship'
 import FamilyTree from './components/FamilyTree'
+import GrowthTracker from './components/GrowthTracker'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -141,6 +142,12 @@ export default function App() {
       window.history.pushState({ page: 'family', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
+    if (category === 'growth') {
+      setCurrentUser('__common__')
+      setCurrentPage('growth')
+      window.history.pushState({ page: 'growth', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
     setCurrentUser(user)
     setCurrentPage('home')
     window.history.pushState({ page: 'home', user, edit: null, tab: 'cash', tripId: null }, '', '')
@@ -204,6 +211,9 @@ export default function App() {
     } else if (category === 'family') {
       setCurrentPage('family')
       pushState('family')
+    } else if (category === 'growth') {
+      setCurrentPage('growth')
+      pushState('growth')
     }
   }
 
@@ -281,6 +291,9 @@ export default function App() {
       )}
       {currentPage === 'family' && (
         <FamilyTree onBack={switchUser} />
+      )}
+      {currentPage === 'growth' && (
+        <GrowthTracker onBack={switchUser} />
       )}
       {currentPage === 'trips' && (
         <TripList

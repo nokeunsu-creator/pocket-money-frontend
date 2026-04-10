@@ -222,6 +222,23 @@ export default function ProfileSelect({ onSelect }) {
           <span style={{ fontSize: 28 }}>👨‍👩‍👦‍👦</span>
           <span>우리 가족</span>
         </button>
+        <button
+          onClick={() => onSelect(null, 'growth')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '16px 0', borderRadius: 16,
+            background: 'linear-gradient(135deg, #06D6A0, #05B384)',
+            color: '#FFF', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            transition: 'transform 0.1s',
+          }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+          onPointerUp={e => e.currentTarget.style.transform = ''}
+          onPointerLeave={e => e.currentTarget.style.transform = ''}
+        >
+          <span style={{ fontSize: 28 }}>📏</span>
+          <span>성장 기록</span>
+        </button>
       </div>
 
       {showModal && (
