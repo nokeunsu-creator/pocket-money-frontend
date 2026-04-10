@@ -775,6 +775,7 @@ export default function Janggi({ onBack }) {
   }
 
   const reset = () => {
+    if (!window.confirm('현재 게임을 종료하고 새 게임을 시작할까요?')) return
     const initial = createInitialBoard()
     setMoveHistory([])
     if (mode === 'online') {

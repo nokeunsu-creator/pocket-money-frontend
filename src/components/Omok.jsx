@@ -282,6 +282,7 @@ export default function Omok({ onBack }) {
   }
 
   const reset = () => {
+    if (!window.confirm('현재 게임을 종료하고 새 게임을 시작할까요?')) return
     if (mode === 'online') {
       room.updateState({
         board: boardToFlat(createBoard()),
