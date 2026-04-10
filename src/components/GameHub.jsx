@@ -30,6 +30,12 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'science', icon: '🧪', title: '과학 퀴즈', desc: '10주제 200문제', color: '#9B59B6' },
         { key: 'history', icon: '🇰🇷', title: '한국사 퀴즈', desc: '10주제 200문제', color: '#8B4513' },
         { key: 'nonsense', icon: '🤪', title: '넌센스 퀴즈', desc: '125문제 · 센스 테스트', color: '#F39C12' },
+        { key: 'proverb', icon: '📜', title: '사자성어/속담', desc: '3~6학년 · 학년별 퀴즈', color: '#8B4513' },
+        { key: 'spelling', icon: '✏️', title: '맞춤법', desc: '3~6학년 · 헷갈리는 맞춤법', color: '#2C3E50' },
+        { key: 'flag', icon: '🌍', title: '세계 국기/수도', desc: '3~6학년 · 나라 맞추기', color: '#27AE60' },
+        { key: 'hanja', icon: '漢', title: '한자', desc: '3~6학년 · 8급~5급', color: '#C0392B' },
+        { key: 'logic', icon: '🧩', title: '코딩/논리', desc: '3~6학년 · 사고력 퀴즈', color: '#8E44AD' },
+        { key: 'safety', icon: '🛡️', title: '안전/생활상식', desc: '3~6학년 · 생활 안전', color: '#E67E22' },
       ],
     },
     {

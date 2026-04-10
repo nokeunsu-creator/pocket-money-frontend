@@ -37,6 +37,13 @@ import BudgetMain from './components/BudgetMain'
 import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
 import NonsenseQuiz from './components/NonsenseQuiz'
+import GradeQuiz from './components/GradeQuiz'
+import proverbQuiz from './data/proverbQuiz'
+import spellingQuiz from './data/spellingQuiz'
+import flagQuiz from './data/flagQuiz'
+import hanjaQuiz from './data/hanjaQuiz'
+import logicQuiz from './data/logicQuiz'
+import safetyQuiz from './data/safetyQuiz'
 import WordSprint from './components/WordSprint'
 import SpellingTower from './components/SpellingTower'
 import SentenceRush from './components/SentenceRush'
@@ -394,6 +401,24 @@ export default function App() {
       )}
       {currentPage === 'game-nonsense' && (
         <NonsenseQuiz onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-proverb' && (
+        <GradeQuiz quizId="proverb" title="사자성어/속담" icon="📜" color="#8B4513" grades={proverbQuiz} onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-spelling' && (
+        <GradeQuiz quizId="spelling" title="맞춤법" icon="✏️" color="#2C3E50" grades={spellingQuiz} onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-flag' && (
+        <GradeQuiz quizId="flag" title="세계 국기/수도" icon="🌍" color="#27AE60" grades={flagQuiz} onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-hanja' && (
+        <GradeQuiz quizId="hanja" title="한자" icon="漢" color="#C0392B" grades={hanjaQuiz} onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-logic' && (
+        <GradeQuiz quizId="logic" title="코딩/논리" icon="🧩" color="#8E44AD" grades={logicQuiz} onBack={() => goToPage('game')} />
+      )}
+      {currentPage === 'game-safety' && (
+        <GradeQuiz quizId="safety" title="안전/생활상식" icon="🛡️" color="#E67E22" grades={safetyQuiz} onBack={() => goToPage('game')} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
