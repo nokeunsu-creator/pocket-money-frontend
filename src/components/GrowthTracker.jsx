@@ -28,6 +28,54 @@ function formatDate(str) {
   return `${y}년 ${Number(m)}월 ${Number(d)}일`
 }
 
+function LineChart({ data, color, unit }) {
+  if (!data || data.length === 0) return null
+  const W = 320, H = 160
+  const padTop = 24, padBottom = 28, padLeft = 8, padRight = 8
+  const chartW = W - padLeft - padRight
+  const chartH = H - padTop - padBottom
+
+  const values = data.map(d => d.value)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+
+  const points = data.map((d, i) => {
+    const x = padLeft + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW)
+    const y = padTop + chartH - ((d.value - min) / range) * chartH * 0.8 - chartH * 0.1
+    return { x, y, ...d }
+  })
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+  const areaPath = linePath + ` L${points[points.length - 1].x},${H - padBottom} L${points[0].x},${H - padBottom} Z`
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      {/* 배경 가이드라인 */}
+      {[0, 0.25, 0.5, 0.75, 1].map(r => {
+        const y = padTop + chartH - r * chartH * 0.8 - chartH * 0.1
+        return <line key={r} x1={padLeft} y1={y} x2={W - padRight} y2={y} stroke="#F0F0F0" strokeWidth="1" />
+      })}
+      {/* 영역 채우기 */}
+      {data.length > 1 && <path d={areaPath} fill={color} opacity="0.1" />}
+      {/* 라인 */}
+      {data.length > 1 && <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+      {/* 점 + 값 */}
+      {points.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r="5" fill="#FFF" stroke={color} strokeWidth="2.5" />
+          <text x={p.x} y={p.y - 10} textAnchor="middle" fill={color} fontSize="10" fontWeight="700">
+            {p.value}
+          </text>
+          <text x={p.x} y={H - padBottom + 14} textAnchor="middle" fill="#AAA" fontSize="9">
+            {p.label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
 export default function GrowthTracker({ onBack }) {
   const [screen, setScreen] = useState('select') // select | main | add
   const [person, setPerson] = useState(null) // '노건우' | '노승우'
@@ -357,61 +405,31 @@ export default function GrowthTracker({ onBack }) {
           </div>
         )}
 
-        {/* 키 그래프 */}
-        {heightRecords.length >= 2 && (
+        {/* 키 그래프 (SVG 라인) */}
+        {heightRecords.length >= 1 && (
           <div style={{
-            background: '#FFF', borderRadius: 14, padding: '16px 20px',
+            background: '#FFF', borderRadius: 14, padding: '16px 16px 8px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 14,
           }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#333' }}>📏 키 변화</div>
-            <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'flex-end', gap: 2, padding: '0 4px' }}>
-              {heightRecords.map((r, i) => {
-                const pct = heightRange > 0 ? ((r.height - minHeight) / heightRange) * 80 + 20 : 50
-                return (
-                  <div key={r.id || i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 10, color: '#06D6A0', fontWeight: 700 }}>{r.height}</span>
-                    <div style={{
-                      width: '100%', maxWidth: 28, borderRadius: '6px 6px 0 0',
-                      background: 'linear-gradient(180deg, #06D6A0, #05B384)',
-                      height: `${pct}%`, minHeight: 8,
-                      transition: 'height 0.3s',
-                    }} />
-                    <span style={{ fontSize: 9, color: '#AAA', whiteSpace: 'nowrap' }}>
-                      {r.date.slice(5)}
-                    </span>
-                  </div>
-                )
-              })}
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: '#333' }}>📏 키 변화</div>
+            <div style={{ fontSize: 11, color: '#AAA', marginBottom: 8 }}>
+              {minHeight === maxHeight ? `${maxHeight} cm` : `${minHeight} ~ ${maxHeight} cm`}
             </div>
+            <LineChart data={heightRecords.map(r => ({ value: r.height, label: r.date.slice(5) }))} color="#06D6A0" unit="cm" />
           </div>
         )}
 
-        {/* 몸무게 그래프 */}
-        {weightRecords.length >= 2 && (
+        {/* 몸무게 그래프 (SVG 라인) */}
+        {weightRecords.length >= 1 && (
           <div style={{
-            background: '#FFF', borderRadius: 14, padding: '16px 20px',
+            background: '#FFF', borderRadius: 14, padding: '16px 16px 8px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 14,
           }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#333' }}>⚖️ 몸무게 변화</div>
-            <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'flex-end', gap: 2, padding: '0 4px' }}>
-              {weightRecords.map((r, i) => {
-                const pct = weightRange > 0 ? ((r.weight - minWeight) / weightRange) * 80 + 20 : 50
-                return (
-                  <div key={r.id || i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 10, color: '#4895EF', fontWeight: 700 }}>{r.weight}</span>
-                    <div style={{
-                      width: '100%', maxWidth: 28, borderRadius: '6px 6px 0 0',
-                      background: 'linear-gradient(180deg, #4895EF, #3A7BD5)',
-                      height: `${pct}%`, minHeight: 8,
-                      transition: 'height 0.3s',
-                    }} />
-                    <span style={{ fontSize: 9, color: '#AAA', whiteSpace: 'nowrap' }}>
-                      {r.date.slice(5)}
-                    </span>
-                  </div>
-                )
-              })}
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: '#333' }}>⚖️ 몸무게 변화</div>
+            <div style={{ fontSize: 11, color: '#AAA', marginBottom: 8 }}>
+              {minWeight === maxWeight ? `${maxWeight} kg` : `${minWeight} ~ ${maxWeight} kg`}
             </div>
+            <LineChart data={weightRecords.map(r => ({ value: r.weight, label: r.date.slice(5) }))} color="#4895EF" unit="kg" />
           </div>
         )}
 
