@@ -150,8 +150,8 @@ export default function GrowthTracker({ onBack }) {
             <input type="text" inputMode="decimal" value={height}
               onChange={e => setHeight(e.target.value.replace(/[^0-9.]/g, ''))}
               placeholder="예: 135.5"
-              style={{ flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #E0E0E0', fontSize: 20, fontWeight: 700, textAlign: 'center' }} />
-            <span style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>cm</span>
+              style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: 10, border: '2px solid #E0E0E0', fontSize: 18, fontWeight: 700, textAlign: 'center', boxSizing: 'border-box' }} />
+            <span style={{ fontSize: 14, color: '#888', fontWeight: 600, flexShrink: 0 }}>cm</span>
           </div>
         </div>
 
@@ -161,8 +161,8 @@ export default function GrowthTracker({ onBack }) {
             <input type="text" inputMode="decimal" value={weight}
               onChange={e => setWeight(e.target.value.replace(/[^0-9.]/g, ''))}
               placeholder="예: 32.0"
-              style={{ flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #E0E0E0', fontSize: 20, fontWeight: 700, textAlign: 'center' }} />
-            <span style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>kg</span>
+              style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: 10, border: '2px solid #E0E0E0', fontSize: 18, fontWeight: 700, textAlign: 'center', boxSizing: 'border-box' }} />
+            <span style={{ fontSize: 14, color: '#888', fontWeight: 600, flexShrink: 0 }}>kg</span>
           </div>
         </div>
 
