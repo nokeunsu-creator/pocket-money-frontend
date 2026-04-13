@@ -222,6 +222,7 @@ export default function ProfileSelect({ onSelect }) {
         >
           <span style={{ fontSize: 28 }}>👨‍👩‍👦‍👦</span>
           <span>우리 가족</span>
+          <span style={{ fontSize: 10, opacity: 0.85, marginTop: -2 }}>우리가족 가계도</span>
         </button>
         <button
           onClick={() => onSelect(null, 'growth')}
