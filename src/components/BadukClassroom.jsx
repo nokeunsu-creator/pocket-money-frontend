@@ -208,12 +208,12 @@ function BadukBoard({
 // Number Picker for 'count' type puzzles
 // ============================================================
 
-function NumberPicker({ onSelect, selected, disabled }) {
+function NumberPicker({ onSelect, selected, disabled, max = 8 }) {
   return (
     <div style={{
       display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, padding: '12px 0',
     }}>
-      {Array.from({ length: 9 }).map((_, i) => (
+      {Array.from({ length: max + 1 }).map((_, i) => (
         <button
           key={i}
           onClick={() => !disabled && onSelect(i)}
@@ -711,6 +711,7 @@ export default function BadukClassroom({ onBack }) {
               onSelect={handleCountSelect}
               selected={countAnswer}
               disabled={isCorrect}
+              max={20}
             />
           </div>
         )}
