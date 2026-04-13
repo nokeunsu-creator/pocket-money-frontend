@@ -223,8 +223,8 @@ export default function WordBattle({ onBack }) {
 
   // --- Join online room ---
   async function joinOnline() {
-    if (joinCode.length !== 6) {
-      room.setError('6자리 코드를 입력하세요')
+    if (joinCode.length !== 2) {
+      room.setError('2자리 코드를 입력하세요')
       return
     }
     setMode('online')
@@ -288,10 +288,10 @@ export default function WordBattle({ onBack }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
           <input
             value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6))}
-            maxLength={6}
-            inputMode="text"
-            placeholder="방 코드 6자리"
+            onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
+            maxLength={2}
+            inputMode="numeric"
+            placeholder="방 코드 2자리"
             style={styles.codeInput}
           />
           <button

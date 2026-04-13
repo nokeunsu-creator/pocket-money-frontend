@@ -5,3 +5,7 @@ dist/
 .DS_Store
 
 .vercel
+
+# Claude Code 로컬 설정 (작업 이력, 훅 등은 PC별로 관리)
+CLAUDE.md
+.claude/

@@ -865,7 +865,7 @@ export default function Chess({ onBack }) {
   }
 
   const joinOnline = async () => {
-    if (joinCode.length !== 6) { room.setError('6자리 코드를 입력하세요'); return }
+    if (joinCode.length !== 2) { room.setError('2자리 코드를 입력하세요'); return }
     const ok = await room.joinRoom(joinCode)
     if (ok) {
       setOnlineColor('black') // guest = black for chess
@@ -917,11 +917,10 @@ export default function Chess({ onBack }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               value={joinCode}
-              onChange={e => setJoinCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
-              maxLength={6}
-              placeholder="방 코드 6자리"
-              inputMode="text"
-              autoCapitalize="characters"
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={2}
+              placeholder="방 코드 2자리"
+              inputMode="numeric"
               style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
                 fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,

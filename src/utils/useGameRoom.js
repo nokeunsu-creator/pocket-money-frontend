@@ -1,15 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { db, ref, set, onValue, remove, get } from './firebase'
 
-// 6자리 영숫자 코드 (혼동되는 0/O, 1/I/l 제외)
-// 경우의 수 약 30^6 ≈ 7.3억 → 무차별 대입 비현실적
-const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 function generateCode() {
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]
-  }
-  return code
+  return String(Math.floor(10 + Math.random() * 90))
 }
 
 // 1시간 지난 방 자동 정리
@@ -37,6 +30,7 @@ export function useGameRoom(gameType) {
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState('')
   const unsubRef = useRef(null)
+  const guestUnsubRef = useRef(null)
 
   // 방 만들기
   const createRoom = useCallback(async (initialState) => {
@@ -63,9 +57,10 @@ export function useGameRoom(gameType) {
 
     // 상대 접속 감시
     const guestRef = ref(db, `rooms/${gameType}/${code}/guest`)
-    onValue(guestRef, (snap) => {
+    const guestUnsub = onValue(guestRef, (snap) => {
       if (snap.val() === true) setConnected(true)
     })
+    guestUnsubRef.current = guestUnsub
 
     return code
   }, [gameType])
@@ -105,7 +100,8 @@ export function useGameRoom(gameType) {
 
   // 방 나가기
   const leaveRoom = useCallback(async () => {
-    if (unsubRef.current) unsubRef.current()
+    if (unsubRef.current) { unsubRef.current(); unsubRef.current = null }
+    if (guestUnsubRef.current) { guestUnsubRef.current(); guestUnsubRef.current = null }
     if (roomCode) {
       try { await remove(ref(db, `rooms/${gameType}/${roomCode}`)) } catch (e) {}
     }
@@ -120,6 +116,7 @@ export function useGameRoom(gameType) {
   useEffect(() => {
     return () => {
       if (unsubRef.current) unsubRef.current()
+      if (guestUnsubRef.current) guestUnsubRef.current()
     }
   }, [])
 
