@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { CHILD1, CHILD2, MOM } from '../config/names'
 
 const PASSWORDS = {
-  '노건우': '150324',
-  '노승우': '170410',
+  [CHILD1]: '150324',
+  [CHILD2]: '170410',
 }
 
 const MENU_PASSWORDS = {
@@ -12,8 +13,8 @@ const MENU_PASSWORDS = {
 
 export default function ProfileSelect({ onSelect }) {
   const profiles = [
-    { name: '노건우', photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
-    { name: '노승우', photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
+    { name: CHILD1, photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
+    { name: CHILD2, photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
   ]
 
   const [showModal, setShowModal] = useState(false)
@@ -203,7 +204,7 @@ export default function ProfileSelect({ onSelect }) {
           onPointerLeave={e => e.currentTarget.style.transform = ''}
         >
           <span style={{ fontSize: 28 }}>💰</span>
-          <span>가계부 · 노성미</span>
+          <span>가계부 · {MOM}</span>
         </button>
         <button
           onClick={() => onSelect(null, 'family')}

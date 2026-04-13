@@ -261,15 +261,15 @@ export const LESSONS_1 = [
       },
       {
         setup: {
-          black: [[0, 1], [1, 0]],
+          black: [[0, 1]],
           white: [[0, 0]],
         },
         goal: '꼭지점의 백돌을 잡아보세요!',
         type: 'place',
-        answer: [0, 0],
-        hint: '앗, 이 백돌은 이미 활로가 0이에요! 잠깐... 다시 봐요!',
-        correctMsg: '이미 잡혀있는 돌이었어요! 꼭지점은 활로가 적어서 위험해요!',
-        wrongMsg: '백돌 주변을 잘 살펴봐요!',
+        answer: [1, 0],
+        hint: '꼭지점 돌은 활로가 2개뿐이에요. 남은 활로를 찾아 막아봐요!',
+        correctMsg: '잘했어요! 꼭지점은 활로가 적어서 잡기 쉬워요!',
+        wrongMsg: '백돌 주변의 빈칸을 찾아봐요!',
       },
       {
         setup: {
@@ -310,12 +310,12 @@ export const LESSONS_1 = [
       },
       {
         setup: {
-          black: [[0, 1], [0, 3], [1, 0], [1, 2], [2, 1]],
-          white: [[0, 2], [1, 1]],
+          black: [[0, 0], [0, 3], [1, 1]],
+          white: [[0, 1], [0, 2]],
         },
         goal: '연결된 백돌을 잡아보세요!',
         type: 'place',
-        answer: [1, 1],
+        answer: [1, 2],
         hint: '백돌 덩어리의 마지막 숨구멍을 찾아봐요!',
         correctMsg: '와! 연결된 돌을 잡는 감각이 생겼어요!',
         wrongMsg: '백돌의 남은 활로를 찾아봐요!',
@@ -470,12 +470,12 @@ export const LESSONS_1 = [
       },
       {
         setup: {
-          black: [[1, 0], [2, 1], [3, 0]],
+          black: [[1, 0], [2, 1]],
           white: [[2, 0]],
         },
         goal: '왼쪽 변의 백돌을 잡을 수 있어요! 어디에 놓을까요?',
         type: 'place',
-        answer: [2, 0],
+        answer: [3, 0],
         hint: '백돌은 변에 있어서 활로가 적어요. 마지막 하나를 막아요!',
         correctMsg: '와! 변에 있는 돌은 잡기 쉽죠? 잘했어요!',
         wrongMsg: '백돌 주변의 마지막 빈칸을 찾아봐요!',

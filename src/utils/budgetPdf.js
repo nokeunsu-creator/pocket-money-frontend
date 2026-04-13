@@ -1,5 +1,7 @@
 import jsPDF from 'jspdf'
 import { getEntriesForMonth, getMonthSummary, getBudget, CATEGORIES } from './budgetStorage'
+import { escapeHtml } from './htmlEscape'
+import { MOM } from '../config/names'
 
 export function downloadBudgetPdf(year, month) {
   const doc = new jsPDF()
@@ -17,7 +19,7 @@ export function downloadBudgetPdf(year, month) {
   let html = `
     <div style="font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; padding: 20px; font-size: 12px; color: #333;">
       <h1 style="font-size: 20px; text-align: center; margin-bottom: 4px;">💰 가계부 리포트</h1>
-      <p style="text-align: center; color: #888; font-size: 13px; margin-bottom: 20px;">${monthStr} · 노성미</p>
+      <p style="text-align: center; color: #888; font-size: 13px; margin-bottom: 20px;">${escapeHtml(monthStr)} · ${escapeHtml(MOM)}</p>
       <hr style="border: 1px solid #DDD;" />
 
       <div style="margin: 16px 0; padding: 12px; background: #F7F7F7; border-radius: 8px;">
@@ -43,7 +45,7 @@ export function downloadBudgetPdf(year, month) {
             const cat = CATEGORIES.find(c => c.key === key)
             const pct = summary.expense > 0 ? Math.round((amount / summary.expense) * 100) : 0
             return `<tr>
-              <td style="padding: 4px 6px;">${cat ? cat.icon + ' ' + cat.label : key}</td>
+              <td style="padding: 4px 6px;">${cat ? cat.icon + ' ' + escapeHtml(cat.label) : escapeHtml(key)}</td>
               <td style="padding: 4px 6px; text-align: right;">${formatAmt(amount)}</td>
               <td style="padding: 4px 6px; text-align: right;">${pct}%</td>
             </tr>`
@@ -64,10 +66,10 @@ export function downloadBudgetPdf(year, month) {
           const sign = e.type === 'income' ? '+' : '-'
           const color = e.type === 'income' ? '#2ECC71' : '#E74C3C'
           return `<tr>
-            <td style="padding: 3px 4px;">${e.date.slice(5)}</td>
+            <td style="padding: 3px 4px;">${escapeHtml(e.date.slice(5))}</td>
             <td style="padding: 3px 4px;">${e.type === 'income' ? '수입' : '지출'}</td>
-            <td style="padding: 3px 4px;">${cat ? cat.icon + ' ' + cat.label : ''}</td>
-            <td style="padding: 3px 4px;">${e.memo || ''}</td>
+            <td style="padding: 3px 4px;">${cat ? cat.icon + ' ' + escapeHtml(cat.label) : ''}</td>
+            <td style="padding: 3px 4px;">${escapeHtml(e.memo || '')}</td>
             <td style="padding: 3px 4px; text-align: right; color: ${color};">${sign}${formatAmt(e.amount)}</td>
           </tr>`
         }).join('')}

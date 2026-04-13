@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
+import { CHILD1, CHILD2 } from '../config/names'
 
 const STORAGE_KEY = 'growth-tracker'
 
 const PASSWORDS = {
-  '노건우': '150324',
-  '노승우': '170410',
+  [CHILD1]: '150324',
+  [CHILD2]: '170410',
 }
 
 function getData() {
@@ -78,7 +79,7 @@ function LineChart({ data, color, unit }) {
 
 export default function GrowthTracker({ onBack }) {
   const [screen, setScreen] = useState('select') // select | main | add
-  const [person, setPerson] = useState(null) // '노건우' | '노승우'
+  const [person, setPerson] = useState(null) // CHILD1 | CHILD2
   const [records, setRecords] = useState([])
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
@@ -169,8 +170,8 @@ export default function GrowthTracker({ onBack }) {
   // 프로필 선택
   if (screen === 'select') {
     const profiles = [
-      { name: '노건우', photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
-      { name: '노승우', photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
+      { name: CHILD1, photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
+      { name: CHILD2, photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
     ]
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>

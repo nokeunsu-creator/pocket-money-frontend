@@ -1,8 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { db, ref, set, onValue, remove, get } from './firebase'
 
+// 6자리 영숫자 코드 (혼동되는 0/O, 1/I/l 제외)
+// 경우의 수 약 30^6 ≈ 7.3억 → 무차별 대입 비현실적
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 function generateCode() {
-  return String(Math.floor(10 + Math.random() * 90))
+  let code = ''
+  for (let i = 0; i < 6; i++) {
+    code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]
+  }
+  return code
 }
 
 // 1시간 지난 방 자동 정리

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { MOM } from '../config/names'
 import BudgetAdd from './BudgetAdd'
 import BudgetList from './BudgetList'
 import {
@@ -302,7 +303,7 @@ export default function BudgetMain({ onBack }) {
           <h1 style={styles.title}>💰 가계부</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginLeft: 44, marginRight: 4 }}>
-          <span style={{ fontSize: 14, opacity: 0.85 }}>노성미</span>
+          <span style={{ fontSize: 14, opacity: 0.85 }}>{MOM}</span>
           <button
             onClick={() => setScreen('memo')}
             style={{

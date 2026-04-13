@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { HUB_USERS } from './config/names'
 import ProfileSelect from './components/ProfileSelect'
 import MainHub from './components/MainHub'
 import Home from './components/Home'
@@ -96,7 +97,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const HUB_USERS = ['노건우', '노승우']
+  // HUB_USERS는 config/names에서 import
 
   // 프로필 선택
   const selectUser = (user, category) => {

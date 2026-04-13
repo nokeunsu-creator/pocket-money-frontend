@@ -1,6 +1,7 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
+import { escapeHtml } from './htmlEscape'
 
 function buildEntryRows(entries, type) {
   if (!entries || entries.length === 0) {
@@ -19,10 +20,10 @@ function buildEntryRows(entries, type) {
       ? (isPositive ? '수입' : '지출')
       : (isPositive ? '입금' : '출금')
     return `<tr>
-      <td style="padding:8px 6px;border-bottom:1px solid #EEE;text-align:center;">${dateStr}</td>
-      <td style="padding:8px 6px;border-bottom:1px solid #EEE;text-align:center;">${typeLabel}</td>
-      <td style="padding:8px 6px;border-bottom:1px solid #EEE;">${emoji} ${e.category}</td>
-      <td style="padding:8px 6px;border-bottom:1px solid #EEE;color:#666;">${e.memo || ''}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #EEE;text-align:center;">${escapeHtml(dateStr)}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #EEE;text-align:center;">${escapeHtml(typeLabel)}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #EEE;">${emoji} ${escapeHtml(e.category)}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #EEE;color:#666;">${escapeHtml(e.memo || '')}</td>
       <td style="padding:8px 6px;border-bottom:1px solid #EEE;text-align:right;font-weight:bold;color:${c};">${sign}${fmt(e.amount)}원</td>
     </tr>`
   }).join('')
@@ -40,7 +41,7 @@ function buildHtml(user, year, month, stats, entries, bankStats, bankEntries) {
     <div style="font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;padding:30px;width:700px;background:#FFF;color:#333;">
       <!-- 헤더 -->
       <div style="text-align:center;margin-bottom:24px;">
-        <div style="font-size:28px;font-weight:bold;color:#5A3E28;margin-bottom:4px;">🐷 ${user}의 용돈기입장</div>
+        <div style="font-size:28px;font-weight:bold;color:#5A3E28;margin-bottom:4px;">🐷 ${escapeHtml(user)}의 용돈기입장</div>
         <div style="font-size:16px;color:#888;">${year}년 ${month}월 거래내역</div>
       </div>
 
