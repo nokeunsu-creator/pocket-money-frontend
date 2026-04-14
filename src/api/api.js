@@ -198,3 +198,10 @@ export function getTimerRecords(date, from, to) {
 }
 export function addTimerRecord(record) { return request('/api/timer/records', { method: 'POST', body: JSON.stringify(record) }) }
 export function deleteTimerRecord(id) { return request(`/api/timer/records/${id}`, { method: 'DELETE' }) }
+
+// === 프로필 사진 API ===
+
+export function getProfilePhotos() { return request('/api/profile/photos') }
+export function saveProfilePhoto(userName, photoData) {
+  return request('/api/profile/photo', { method: 'PUT', body: JSON.stringify({ userName, photoData }) })
+}

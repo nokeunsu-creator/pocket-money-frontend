@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
-import { getGrowthRecords, upsertGrowthRecord, deleteGrowthRecord } from '../api/api'
+import { getGrowthRecords, upsertGrowthRecord, deleteGrowthRecord, getProfilePhotos } from '../api/api'
 
 const PASSWORDS = {
   [CHILD1]: '150324',
@@ -170,11 +170,19 @@ export default function GrowthTracker({ onBack }) {
     return { first, last, heightDiff, weightDiff }
   }
 
+  const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
+  const [svrPhotos, setSvrPhotos] = useState({})
+  useEffect(() => {
+    getProfilePhotos()
+      .then(list => { const m = {}; for (const p of list) if (p.photoData) m[p.userName] = p.photoData; setSvrPhotos(m) })
+      .catch(() => {})
+  }, [])
+
   // 프로필 선택
   if (screen === 'select') {
     const profiles = [
-      { name: CHILD1, photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
-      { name: CHILD2, photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
+      { name: CHILD1, photo: svrPhotos[CHILD1] || defaultPhotos[CHILD1], color: '#4895EF' },
+      { name: CHILD2, photo: svrPhotos[CHILD2] || defaultPhotos[CHILD2], color: '#EF476F' },
     ]
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>

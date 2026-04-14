@@ -3,6 +3,7 @@ import {
   getStudyDay, checkStudy, uncheckStudy, getStudyHistory,
   getStudySchedule, updateStudySchedule,
   getReadBooks, addReadBook, deleteReadBook,
+  getProfilePhotos,
 } from '../api/api'
 import { CHILD1, CHILD2 } from '../config/names'
 
@@ -49,11 +50,23 @@ export default function StudyMain({ onBack }) {
     if (screen === 'today' && user) loadDay()
   }, [screen, user, loadDay])
 
+  const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
+  const [serverPhotos, setServerPhotos] = useState({})
+  useEffect(() => {
+    getProfilePhotos()
+      .then(list => {
+        const map = {}
+        for (const p of list) if (p.photoData) map[p.userName] = p.photoData
+        setServerPhotos(map)
+      })
+      .catch(() => {})
+  }, [])
+
   // 프로필 선택 화면
   if (!user) {
     const profiles = [
-      { name: CHILD1, photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
-      { name: CHILD2, photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
+      { name: CHILD1, photo: serverPhotos[CHILD1] || defaultPhotos[CHILD1], color: '#4895EF' },
+      { name: CHILD2, photo: serverPhotos[CHILD2] || defaultPhotos[CHILD2], color: '#EF476F' },
     ]
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>

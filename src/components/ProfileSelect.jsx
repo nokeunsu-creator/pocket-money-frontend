@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CHILD1, CHILD2, MOM } from '../config/names'
+import { getProfilePhotos, saveProfilePhoto } from '../api/api'
 
 const PASSWORDS = {
   [CHILD1]: '150324',
@@ -14,19 +15,27 @@ const MENU_PASSWORDS = {
 
 export default function ProfileSelect({ onSelect }) {
   const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
-  const [photos, setPhotos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('profile-photos')) || {} } catch { return {} }
-  })
+  const [photos, setPhotos] = useState({})
   const getPhoto = (name) => photos[name] || defaultPhotos[name] || ''
+
+  useEffect(() => {
+    getProfilePhotos()
+      .then(list => {
+        const map = {}
+        for (const p of list) if (p.photoData) map[p.userName] = p.photoData
+        setPhotos(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const handlePhotoChange = (name, e) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
-      const next = { ...photos, [name]: reader.result }
-      setPhotos(next)
-      localStorage.setItem('profile-photos', JSON.stringify(next))
+    reader.onload = async () => {
+      const data = reader.result
+      setPhotos(prev => ({ ...prev, [name]: data }))
+      try { await saveProfilePhoto(name, data) } catch (err) { console.error(err) }
     }
     reader.readAsDataURL(file)
   }
