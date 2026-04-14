@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { addTodo, updateTodo, deleteTodo, CATEGORIES } from '../utils/todoStorage'
+import { createTodo, updateTodo as apiUpdateTodo, deleteTodo as apiDeleteTodo } from '../api/api'
+import { CATEGORIES } from '../utils/todoStorage'
 
 const REPEAT_OPTIONS = [
   { key: null, label: '안함' },
@@ -31,43 +32,54 @@ export default function TodoAdd({ editTodo, defaultDate, onDone, onCancel }) {
   const [date, setDate] = useState(editTodo?.date || defaultDate || today)
   const [category, setCategory] = useState(editTodo?.category || 'etc')
   const [important, setImportant] = useState(editTodo?.important || false)
-  const [repeat, setRepeat] = useState(editTodo?.repeat || null)
+  const [repeat, setRepeat] = useState(editTodo?.repeatType || null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const tomorrow = addDays(today, 1)
   const endOfWeek = getEndOfWeek(today)
 
-  const handleSave = () => {
-    if (!title.trim()) return
+  const handleSave = async () => {
+    if (!title.trim() || saving) return
+    setSaving(true)
 
-    if (isEdit) {
-      updateTodo(editTodo.id, {
-        title: title.trim(),
-        date,
-        category,
-        important,
-        repeat,
-      })
-    } else {
-      addTodo({
-        title: title.trim(),
-        date,
-        category,
-        important,
-        repeat,
-      })
+    try {
+      if (isEdit) {
+        await apiUpdateTodo(editTodo.id, {
+          title: title.trim(),
+          date,
+          category,
+          important,
+          repeatType: repeat,
+        })
+      } else {
+        await createTodo({
+          title: title.trim(),
+          date,
+          category,
+          important,
+          repeatType: repeat,
+        })
+      }
+      onDone()
+    } catch (e) {
+      console.error('Failed to save todo:', e)
+      setSaving(false)
     }
-    onDone()
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirmDelete) {
       setConfirmDelete(true)
       return
     }
-    deleteTodo(editTodo.id)
-    onDone()
+    try {
+      await apiDeleteTodo(editTodo.id)
+      onDone()
+    } catch (e) {
+      console.error('Failed to delete todo:', e)
+    }
   }
 
   return (
@@ -250,20 +262,20 @@ export default function TodoAdd({ editTodo, defaultDate, onDone, onCancel }) {
       {/* Save button */}
       <button
         onClick={handleSave}
-        disabled={!title.trim()}
+        disabled={!title.trim() || saving}
         style={{
           width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-          background: title.trim()
+          background: title.trim() && !saving
             ? 'linear-gradient(135deg, #06D6A0 0%, #05B384 100%)'
             : '#DDD',
-          color: title.trim() ? '#FFF' : '#AAA',
-          fontSize: 17, fontWeight: 'bold', cursor: title.trim() ? 'pointer' : 'default',
+          color: title.trim() && !saving ? '#FFF' : '#AAA',
+          fontSize: 17, fontWeight: 'bold', cursor: title.trim() && !saving ? 'pointer' : 'default',
           marginBottom: 12,
-          boxShadow: title.trim() ? '0 4px 16px rgba(6,214,160,0.3)' : 'none',
+          boxShadow: title.trim() && !saving ? '0 4px 16px rgba(6,214,160,0.3)' : 'none',
           transition: 'all 0.2s',
         }}
       >
-        {isEdit ? '수정 완료' : '추가하기'}
+        {saving ? '저장 중...' : isEdit ? '수정 완료' : '추가하기'}
       </button>
 
       {/* Delete button (edit mode only) */}

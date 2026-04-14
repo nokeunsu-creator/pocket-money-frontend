@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
-import {
-  getMemos,
-  getMemo,
-  addMemo,
-  updateMemo,
-  deleteMemo,
-  togglePin,
-  searchMemos,
-  MEMO_COLORS,
-} from '../utils/memoStorage'
+import { getMemos, createMemo, updateMemo, deleteMemo } from '../api/api'
+
+const MEMO_COLORS = [
+  { key: 'default', color: '#FFF', border: '#E0E0E0' },
+  { key: 'red', color: '#FFEBEE', border: '#EF9A9A' },
+  { key: 'yellow', color: '#FFF9C4', border: '#FFF176' },
+  { key: 'green', color: '#E8F5E9', border: '#A5D6A7' },
+  { key: 'blue', color: '#E3F2FD', border: '#90CAF9' },
+]
 
 function getRelativeDate(dateStr) {
   if (!dateStr) return ''
@@ -34,6 +33,7 @@ function getColorObj(key) {
 export default function QuickMemo({ onBack }) {
   const [screen, setScreen] = useState('list') // 'list' | 'editor'
   const [memos, setMemos] = useState([])
+  const [allMemos, setAllMemos] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [title, setTitle] = useState('')
@@ -41,32 +41,50 @@ export default function QuickMemo({ onBack }) {
   const [color, setColor] = useState('default')
   const [pinned, setPinned] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [loading, setLoading] = useState(true)
   const textareaRef = useRef(null)
 
   useEffect(() => {
     refreshMemos()
   }, [])
 
-  function refreshMemos() {
-    if (searchQuery.trim()) {
-      setMemos(searchMemos(searchQuery))
-    } else {
-      setMemos(getMemos())
+  async function refreshMemos() {
+    try {
+      const data = await getMemos()
+      setAllMemos(data)
+      if (searchQuery.trim()) {
+        setMemos(filterMemos(data, searchQuery))
+      } else {
+        setMemos(data)
+      }
+    } catch (err) {
+      console.error('메모 로드 실패:', err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  function filterMemos(list, query) {
+    const q = query.trim().toLowerCase()
+    if (!q) return list
+    return list.filter(m =>
+      (m.title || '').toLowerCase().includes(q) ||
+      (m.content || '').toLowerCase().includes(q)
+    )
   }
 
   function handleSearch(q) {
     setSearchQuery(q)
     if (q.trim()) {
-      setMemos(searchMemos(q))
+      setMemos(filterMemos(allMemos, q))
     } else {
-      setMemos(getMemos())
+      setMemos(allMemos)
     }
   }
 
   function openEditor(id) {
     if (id) {
-      const memo = getMemo(id)
+      const memo = allMemos.find(m => m.id === id)
       if (memo) {
         setEditingId(id)
         setTitle(memo.title)
@@ -85,35 +103,49 @@ export default function QuickMemo({ onBack }) {
     setScreen('editor')
   }
 
-  function closeEditor() {
+  async function closeEditor() {
     setScreen('list')
     setEditingId(null)
-    refreshMemos()
+    await refreshMemos()
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!title.trim() && !content.trim()) return
-    if (editingId) {
-      updateMemo(editingId, { title, content, color, pinned })
-    } else {
-      addMemo({ title, content, color, pinned })
+    try {
+      if (editingId) {
+        await updateMemo(editingId, { title, content, color, pinned })
+      } else {
+        await createMemo({ title, content, color, pinned })
+      }
+    } catch (err) {
+      console.error('메모 저장 실패:', err)
     }
     closeEditor()
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!showDeleteConfirm) {
       setShowDeleteConfirm(true)
       return
     }
-    deleteMemo(editingId)
+    try {
+      await deleteMemo(editingId)
+    } catch (err) {
+      console.error('메모 삭제 실패:', err)
+    }
     closeEditor()
   }
 
-  function handleTogglePin(id, e) {
+  async function handleTogglePin(id, e) {
     e.stopPropagation()
-    togglePin(id)
-    refreshMemos()
+    const memo = allMemos.find(m => m.id === id)
+    if (!memo) return
+    try {
+      await updateMemo(id, { pinned: !memo.pinned })
+      await refreshMemos()
+    } catch (err) {
+      console.error('핀 토글 실패:', err)
+    }
   }
 
   function autoGrow() {
@@ -471,12 +503,18 @@ export default function QuickMemo({ onBack }) {
       </div>
 
       <div style={countStyle}>
-        {memos.length}개의 메모
-        {searchQuery && <span> (검색: "{searchQuery}")</span>}
+        {loading ? '불러오는 중...' : (
+          <>{memos.length}개의 메모{searchQuery && <span> (검색: "{searchQuery}")</span>}</>
+        )}
       </div>
 
       <div style={listStyle}>
-        {pinnedMemos.length > 0 && (
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#AAA' }}>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>메모를 불러오는 중...</div>
+          </div>
+        )}
+        {!loading && pinnedMemos.length > 0 && (
           <>
             <div style={sectionLabelStyle}>📌 고정된 메모</div>
             {pinnedMemos.map(memo => (
@@ -499,7 +537,7 @@ export default function QuickMemo({ onBack }) {
           </>
         )}
 
-        {recentMemos.length > 0 && (
+        {!loading && recentMemos.length > 0 && (
           <>
             {pinnedMemos.length > 0 && (
               <div style={{ ...sectionLabelStyle, color: '#888' }}>최근 메모</div>
@@ -518,7 +556,7 @@ export default function QuickMemo({ onBack }) {
           </>
         )}
 
-        {memos.length === 0 && (
+        {!loading && memos.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#AAA' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
             <div style={{ fontSize: 15, fontWeight: 600 }}>

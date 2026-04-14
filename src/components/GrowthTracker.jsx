@@ -1,21 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
-
-const STORAGE_KEY = 'growth-tracker'
+import { getGrowthRecords, upsertGrowthRecord, deleteGrowthRecord } from '../api/api'
 
 const PASSWORDS = {
   [CHILD1]: '150324',
   [CHILD2]: '170410',
-}
-
-function getData() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}
-  } catch { return {} }
-}
-
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
 
 function getToday() {
@@ -89,43 +78,59 @@ export default function GrowthTracker({ onBack }) {
   const [pendingPerson, setPendingPerson] = useState(null)
   const [password, setPassword] = useState('')
   const [pwError, setPwError] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const loadRecords = useCallback(async (name) => {
+    try {
+      setLoading(true)
+      const data = await getGrowthRecords(name)
+      setRecords((data || []).sort((a, b) => a.date.localeCompare(b.date)))
+    } catch (err) {
+      console.error('성장 기록 로딩 실패:', err)
+      setRecords([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!person) return
-    const data = getData()
-    setRecords((data[person] || []).sort((a, b) => a.date.localeCompare(b.date)))
-  }, [person])
+    loadRecords(person)
+  }, [person, loadRecords])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!height && !weight) return
-    const entry = {
-      id: Date.now(),
-      date,
-      height: height ? Number(height) : null,
-      weight: weight ? Number(weight) : null,
+    try {
+      setLoading(true)
+      await upsertGrowthRecord({
+        userName: person,
+        date,
+        height: height ? Number(height) : null,
+        weight: weight ? Number(weight) : null,
+      })
+      await loadRecords(person)
+      setHeight('')
+      setWeight('')
+      setScreen('main')
+    } catch (err) {
+      console.error('성장 기록 저장 실패:', err)
+    } finally {
+      setLoading(false)
     }
-    const data = getData()
-    const list = data[person] || []
-    // 같은 날짜가 있으면 교체
-    const existing = list.findIndex(r => r.date === date)
-    if (existing >= 0) list[existing] = entry
-    else list.push(entry)
-    list.sort((a, b) => a.date.localeCompare(b.date))
-    data[person] = list
-    saveData(data)
-    setRecords([...list])
-    setHeight('')
-    setWeight('')
-    setScreen('main')
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirmDelete !== id) { setConfirmDelete(id); return }
-    const data = getData()
-    data[person] = (data[person] || []).filter(r => r.id !== id)
-    saveData(data)
-    setRecords([...data[person]])
-    setConfirmDelete(null)
+    try {
+      setLoading(true)
+      await deleteGrowthRecord(id)
+      await loadRecords(person)
+      setConfirmDelete(null)
+    } catch (err) {
+      console.error('성장 기록 삭제 실패:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleProfileClick = (name) => {
@@ -140,8 +145,6 @@ export default function GrowthTracker({ onBack }) {
     if (pw === PASSWORDS[pendingPerson]) {
       setShowModal(false)
       setPerson(pendingPerson)
-      const data = getData()
-      setRecords((data[pendingPerson] || []).sort((a, b) => a.date.localeCompare(b.date)))
       setScreen('main')
     } else {
       setPwError(true)
@@ -292,14 +295,14 @@ export default function GrowthTracker({ onBack }) {
           </div>
         </div>
 
-        <button onClick={handleSave} disabled={!height && !weight}
+        <button onClick={handleSave} disabled={(!height && !weight) || loading}
           style={{
             width: '100%', padding: '16px', borderRadius: 14, border: 'none',
-            background: (height || weight) ? 'linear-gradient(135deg, #06D6A0, #05B384)' : '#DDD',
-            color: (height || weight) ? '#FFF' : '#AAA',
-            fontSize: 16, fontWeight: 700, cursor: (height || weight) ? 'pointer' : 'default',
+            background: (height || weight) && !loading ? 'linear-gradient(135deg, #06D6A0, #05B384)' : '#DDD',
+            color: (height || weight) && !loading ? '#FFF' : '#AAA',
+            fontSize: 16, fontWeight: 700, cursor: (height || weight) && !loading ? 'pointer' : 'default',
           }}>
-          저장하기
+          {loading ? '저장 중...' : '저장하기'}
         </button>
       </div>
     )

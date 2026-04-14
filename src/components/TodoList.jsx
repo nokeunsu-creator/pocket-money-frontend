@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
-import { getTodosForDate, getWeekStats, toggleComplete, deleteTodo, CATEGORIES } from '../utils/todoStorage'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { getTodos, updateTodo as apiUpdateTodo, deleteTodo as apiDeleteTodo } from '../api/api'
+import { CATEGORIES } from '../utils/todoStorage'
 import TodoAdd from './TodoAdd'
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
@@ -36,24 +37,90 @@ function getToday() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** Parse completedDates from server (comma-separated string or array) */
+function parseCompletedDates(val) {
+  if (!val) return []
+  if (Array.isArray(val)) return val
+  return val.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+/** Filter all todos for a specific date (mirrors old getTodosForDate logic) */
+function filterTodosForDate(allTodos, dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dayOfWeek = new Date(y, m - 1, d).getDay()
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5
+
+  return allTodos.filter(todo => {
+    if (todo.repeatType === 'daily') return true
+    if (todo.repeatType === 'weekday') return isWeekday
+    return todo.date === dateStr
+  }).map(todo => {
+    if (todo.repeatType) {
+      const dates = parseCompletedDates(todo.completedDates)
+      const isCompleted = dates.includes(dateStr)
+      return { ...todo, completed: isCompleted, _forDate: dateStr }
+    }
+    return { ...todo, _forDate: dateStr }
+  })
+}
+
+/** Compute week stats from allTodos (mirrors old getWeekStats logic) */
+function computeWeekStats(allTodos) {
+  const today = new Date()
+  const dayOfWeek = today.getDay()
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset)
+
+  const stats = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const todos = filterTodosForDate(allTodos, dateStr)
+    stats.push({
+      date: dateStr,
+      total: todos.length,
+      completed: todos.filter(t => t.completed).length,
+    })
+  }
+  return stats
+}
+
 export default function TodoList({ onBack }) {
   const today = getToday()
   const [selectedDate, setSelectedDate] = useState(today)
   const [showAdd, setShowAdd] = useState(false)
   const [editTodo, setEditTodo] = useState(null)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [allTodos, setAllTodos] = useState([])
+  const [loading, setLoading] = useState(true)
   const [collapsed, setCollapsed] = useState({ tomorrow: true, week: true, stats: true })
   const [animatingId, setAnimatingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
 
-  const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
+  const fetchTodos = useCallback(async () => {
+    try {
+      const data = await getTodos()
+      setAllTodos(data || [])
+    } catch (e) {
+      console.error('Failed to fetch todos:', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTodos()
+  }, [fetchTodos])
+
+  const refresh = useCallback(() => {
+    fetchTodos()
+  }, [fetchTodos])
 
   // Memoize heavy calculations
   const { sortedToday, completedCount, totalCount, progressPct, tomorrowDate, tomorrowTodos, weekTodos, weekStats, weekTotal, weekCompleted, weekPct, perfectStreak } = useMemo(() => {
     try {
-      const todayList = getTodosForDate(selectedDate)
+      const todayList = filterTodosForDate(allTodos, selectedDate)
       const tmrDate = addDays(selectedDate, 1)
-      const tmrTodos = getTodosForDate(tmrDate)
+      const tmrTodos = filterTodosForDate(allTodos, tmrDate)
       const eow = getEndOfWeek(selectedDate)
 
       const wTodos = []
@@ -61,7 +128,7 @@ export default function TodoList({ onBack }) {
       if (dat <= eow) {
         let d = dat
         for (let i = 0; i < 7 && d <= eow; i++) {
-          const todos = getTodosForDate(d)
+          const todos = filterTodosForDate(allTodos, d)
           if (todos.length > 0) wTodos.push({ date: d, todos })
           d = addDays(d, 1)
         }
@@ -78,7 +145,7 @@ export default function TodoList({ onBack }) {
       const tot = todayList.length
       const pct = tot > 0 ? (comp / tot) * 100 : 0
 
-      const ws = getWeekStats()
+      const ws = computeWeekStats(allTodos)
       const wt = ws.reduce((s, d) => s + d.total, 0)
       const wc = ws.reduce((s, d) => s + d.completed, 0)
       const wp = wt > 0 ? Math.round((wc / wt) * 100) : 0
@@ -96,21 +163,48 @@ export default function TodoList({ onBack }) {
       console.error('TodoList calc error:', e)
       return { sortedToday: [], completedCount: 0, totalCount: 0, progressPct: 0, tomorrowDate: addDays(selectedDate, 1), tomorrowTodos: [], weekTodos: [], weekStats: [], weekTotal: 0, weekCompleted: 0, weekPct: 0, perfectStreak: 0 }
     }
-  }, [selectedDate, refreshKey])
+  }, [selectedDate, allTodos])
 
-  const handleToggle = (id, dateStr) => {
+  const handleToggle = async (id, dateStr) => {
     setAnimatingId(id)
-    toggleComplete(id, dateStr)
-    refresh()
+    try {
+      const todo = allTodos.find(t => t.id === id)
+      if (!todo) return
+
+      if (todo.repeatType) {
+        const dates = parseCompletedDates(todo.completedDates)
+        const dateIdx = dates.indexOf(dateStr)
+        let newDates
+        if (dateIdx >= 0) {
+          newDates = dates.filter((_, i) => i !== dateIdx)
+        } else {
+          newDates = [...dates, dateStr]
+        }
+        await apiUpdateTodo(id, { completedDates: newDates.join(',') })
+      } else {
+        const newCompleted = !todo.completed
+        await apiUpdateTodo(id, {
+          completed: newCompleted,
+          completedAt: newCompleted ? new Date().toISOString() : null,
+        })
+      }
+      await fetchTodos()
+    } catch (e) {
+      console.error('Failed to toggle todo:', e)
+    }
     setTimeout(() => setAnimatingId(null), 400)
   }
 
   const handleDelete = (id) => {
     setDeletingId(id)
-    setTimeout(() => {
-      deleteTodo(id)
+    setTimeout(async () => {
+      try {
+        await apiDeleteTodo(id)
+        await fetchTodos()
+      } catch (e) {
+        console.error('Failed to delete todo:', e)
+      }
       setDeletingId(null)
-      refresh()
     }, 300)
   }
 
@@ -129,6 +223,14 @@ export default function TodoList({ onBack }) {
         onDone={() => { setShowAdd(false); setEditTodo(null); refresh() }}
         onCancel={() => { setShowAdd(false); setEditTodo(null) }}
       />
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="page fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <p style={{ color: 'var(--gray)', fontSize: 16 }}>불러오는 중...</p>
+      </div>
     )
   }
 
@@ -439,7 +541,7 @@ function TodoItem({ todo, animating, deleting, onToggle, onDelete, onEdit, dimme
 
       {/* Badges */}
       {todo.important && <span style={{ fontSize: 14 }}>⭐</span>}
-      {todo.repeat && <span style={{ fontSize: 13 }}>🔁</span>}
+      {todo.repeatType && <span style={{ fontSize: 13 }}>🔁</span>}
 
       {/* Delete button */}
       <button

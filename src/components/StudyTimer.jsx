@@ -1,12 +1,51 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  SUBJECTS,
-  getTodayTotal,
-  getTodayRecords,
-  getWeekStats,
-  getSubjectStats,
-  addRecord,
-} from '../utils/studyStorage'
+import { SUBJECTS } from '../utils/studyStorage'
+import { getTimerRecords, addTimerRecord } from '../api/api'
+
+function getLocalDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function toDateStr(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+function getWeekRange() {
+  const today = new Date()
+  const dayOfWeek = today.getDay() // 0=Sun
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset)
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
+  return { monday, sunday }
+}
+
+function buildWeekStats(records) {
+  const { monday } = getWeekRange()
+  const stats = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
+    const dateStr = toDateStr(d)
+    const dayRecords = records.filter(r => r.date === dateStr)
+    const total = dayRecords.reduce((sum, r) => sum + r.minutes, 0)
+    const bySubject = {}
+    for (const r of dayRecords) {
+      bySubject[r.subject] = (bySubject[r.subject] || 0) + r.minutes
+    }
+    stats.push({ date: dateStr, total, bySubject })
+  }
+  return stats
+}
+
+function buildSubjectStats(weekStats) {
+  const totals = {}
+  for (const day of weekStats) {
+    for (const [subject, minutes] of Object.entries(day.bySubject)) {
+      totals[subject] = (totals[subject] || 0) + minutes
+    }
+  }
+  return totals
+}
 
 const POMODORO_WORK = 25 * 60
 const POMODORO_BREAK = 5 * 60
@@ -59,15 +98,35 @@ export default function StudyTimer({ onBack }) {
   const [todayRecords, setTodayRecords] = useState([])
   const [weekStats, setWeekStats] = useState([])
   const [subjectStats, setSubjectStats] = useState({})
+  const [loading, setLoading] = useState(true)
 
   const timerRef = useRef(null)
   const workedRef = useRef(0)
 
-  const refreshStats = useCallback(() => {
-    setTodayTotal(getTodayTotal())
-    setTodayRecords(getTodayRecords())
-    setWeekStats(getWeekStats())
-    setSubjectStats(getSubjectStats())
+  const refreshStats = useCallback(async () => {
+    try {
+      setLoading(true)
+      const today = getLocalDateStr()
+      const { monday, sunday } = getWeekRange()
+      const weekFrom = toDateStr(monday)
+      const weekTo = toDateStr(sunday)
+
+      const [todayRecs, weekRecs] = await Promise.all([
+        getTimerRecords(today),
+        getTimerRecords(null, weekFrom, weekTo),
+      ])
+
+      setTodayRecords(todayRecs)
+      setTodayTotal(todayRecs.reduce((sum, r) => sum + r.minutes, 0))
+
+      const ws = buildWeekStats(weekRecs)
+      setWeekStats(ws)
+      setSubjectStats(buildSubjectStats(ws))
+    } catch (err) {
+      console.error('Failed to load timer stats:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -95,7 +154,7 @@ export default function StudyTimer({ onBack }) {
     return () => clearInterval(timerRef.current)
   }, [isRunning, isPaused, phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleTimerEnd = useCallback(() => {
+  const handleTimerEnd = useCallback(async () => {
     // Vibrate if available
     if (navigator.vibrate) {
       navigator.vibrate([200, 100, 200, 100, 200])
@@ -105,7 +164,11 @@ export default function StudyTimer({ onBack }) {
       // Free timer done - save and show complete
       const minutes = Math.round(workedRef.current / 60)
       if (minutes > 0) {
-        addRecord(subject, minutes)
+        try {
+          await addTimerRecord({ subject, minutes, date: getLocalDateStr() })
+        } catch (err) {
+          console.error('Failed to save timer record:', err)
+        }
       }
       setIsRunning(false)
       setScreen('complete')
@@ -122,7 +185,11 @@ export default function StudyTimer({ onBack }) {
         // All sets done - save and show complete
         const minutes = Math.round(workedRef.current / 60)
         if (minutes > 0) {
-          addRecord(subject, minutes)
+          try {
+            await addTimerRecord({ subject, minutes, date: getLocalDateStr() })
+          } catch (err) {
+            console.error('Failed to save timer record:', err)
+          }
         }
         setIsRunning(false)
         setScreen('complete')
@@ -218,6 +285,10 @@ export default function StudyTimer({ onBack }) {
           <button onClick={onBack} style={styles.backBtn}>&#8592;</button>
           <h2 style={styles.headerTitle}>&#x23F1; 공부 타이머</h2>
         </div>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>불러오는 중...</div>
+        )}
 
         {/* Today summary */}
         <div style={styles.todaySummary}>

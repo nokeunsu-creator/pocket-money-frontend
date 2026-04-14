@@ -166,3 +166,35 @@ export function addReadBook(book) {
 export function deleteReadBook(id) {
   return request(`/api/study/books/${id}`, { method: 'DELETE' });
 }
+
+// === 할 일 API ===
+
+export function getTodos() { return request('/api/todos') }
+export function createTodo(todo) { return request('/api/todos', { method: 'POST', body: JSON.stringify(todo) }) }
+export function updateTodo(id, data) { return request(`/api/todos/${id}`, { method: 'PUT', body: JSON.stringify(data) }) }
+export function deleteTodo(id) { return request(`/api/todos/${id}`, { method: 'DELETE' }) }
+
+// === 메모 API ===
+
+export function getMemos() { return request('/api/memos') }
+export function createMemo(memo) { return request('/api/memos', { method: 'POST', body: JSON.stringify(memo) }) }
+export function updateMemo(id, data) { return request(`/api/memos/${id}`, { method: 'PUT', body: JSON.stringify(data) }) }
+export function deleteMemo(id) { return request(`/api/memos/${id}`, { method: 'DELETE' }) }
+
+// === 성장 기록 API ===
+
+export function getGrowthRecords(user) { return request(`/api/growth?user=${encodeURIComponent(user)}`) }
+export function upsertGrowthRecord(record) { return request('/api/growth', { method: 'POST', body: JSON.stringify(record) }) }
+export function deleteGrowthRecord(id) { return request(`/api/growth/${id}`, { method: 'DELETE' }) }
+
+// === 공부 타이머 API ===
+
+export function getTimerRecords(date, from, to) {
+  const params = new URLSearchParams()
+  if (date) params.set('date', date)
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  return request(`/api/timer/records?${params}`)
+}
+export function addTimerRecord(record) { return request('/api/timer/records', { method: 'POST', body: JSON.stringify(record) }) }
+export function deleteTimerRecord(id) { return request(`/api/timer/records/${id}`, { method: 'DELETE' }) }
