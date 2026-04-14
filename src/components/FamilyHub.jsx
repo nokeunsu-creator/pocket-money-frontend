@@ -2,13 +2,30 @@
 // 가계도 / 할 일 / 공부 타이머 / 공부 기록 / 메모 / 성장 기록
 
 export default function FamilyHub({ onBack, onSelect }) {
-  const items = [
-    { key: 'familyTree', label: '가계도', emoji: '🌳', color: 'linear-gradient(135deg, #2D6A4F, #52B788)' },
-    { key: 'todo', label: '할 일', emoji: '✅', color: 'linear-gradient(135deg, #06D6A0, #05B384)' },
-    { key: 'study', label: '공부 기록', emoji: '📋', color: 'linear-gradient(135deg, #3498DB, #2980B9)' },
-    { key: 'memo', label: '메모', emoji: '📝', color: 'linear-gradient(135deg, #F39C12, #E67E22)' },
-    { key: 'growth', label: '성장 기록', emoji: '📏', color: 'linear-gradient(135deg, #06D6A0, #05B384)' },
-  ]
+  const btn = (key, label, emoji, color, wide) => (
+    <button
+      key={key}
+      onClick={() => onSelect(key)}
+      style={{
+        gridColumn: wide ? '1 / -1' : undefined,
+        display: 'flex', flexDirection: wide ? 'row' : 'column',
+        alignItems: 'center', justifyContent: wide ? 'center' : undefined,
+        gap: wide ? 14 : 8,
+        padding: wide ? '20px 12px' : '24px 12px', borderRadius: 16,
+        background: color,
+        color: '#FFF', border: 'none', cursor: 'pointer',
+        fontSize: wide ? 18 : 14, fontWeight: 700,
+        boxShadow: wide ? '0 4px 14px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.1)',
+        transition: 'transform 0.1s',
+      }}
+      onPointerDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onPointerUp={e => e.currentTarget.style.transform = ''}
+      onPointerLeave={e => e.currentTarget.style.transform = ''}
+    >
+      <span style={{ fontSize: wide ? 40 : 36 }}>{emoji}</span>
+      <span>{label}</span>
+    </button>
+  )
 
   return (
     <div className="fade-in" style={{ minHeight: '100vh', background: '#FEFCF6', padding: '1rem' }}>
@@ -26,30 +43,14 @@ export default function FamilyHub({ onBack, onSelect }) {
       <div style={{
         maxWidth: 480, margin: '0 auto',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gridTemplateColumns: '1fr 1fr',
         gap: 12,
       }}>
-        {items.map(item => (
-          <button
-            key={item.key}
-            onClick={() => onSelect(item.key)}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              padding: '24px 12px', borderRadius: 16,
-              background: item.color,
-              color: '#FFF', border: 'none', cursor: 'pointer',
-              fontSize: 14, fontWeight: 700,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              transition: 'transform 0.1s',
-            }}
-            onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-            onPointerUp={e => e.currentTarget.style.transform = ''}
-            onPointerLeave={e => e.currentTarget.style.transform = ''}
-          >
-            <span style={{ fontSize: 36 }}>{item.emoji}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
+        {btn('familyTree', '가계도', '🌳', 'linear-gradient(135deg, #2D6A4F, #52B788)')}
+        {btn('growth', '성장 기록', '📏', 'linear-gradient(135deg, #06D6A0, #05B384)')}
+        {btn('study', '공부 기록', '📋', 'linear-gradient(135deg, #3498DB, #2980B9)', true)}
+        {btn('memo', '메모', '📝', 'linear-gradient(135deg, #F39C12, #E67E22)')}
+        {btn('todo', '할 일', '✅', 'linear-gradient(135deg, #06D6A0, #05B384)')}
       </div>
     </div>
   )
