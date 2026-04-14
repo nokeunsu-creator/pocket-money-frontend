@@ -13,9 +13,27 @@ const MENU_PASSWORDS = {
 }
 
 export default function ProfileSelect({ onSelect }) {
+  const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
+  const [photos, setPhotos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('profile-photos')) || {} } catch { return {} }
+  })
+  const getPhoto = (name) => photos[name] || defaultPhotos[name] || ''
+
+  const handlePhotoChange = (name, e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const next = { ...photos, [name]: reader.result }
+      setPhotos(next)
+      localStorage.setItem('profile-photos', JSON.stringify(next))
+    }
+    reader.readAsDataURL(file)
+  }
+
   const profiles = [
-    { name: CHILD1, photo: '/profiles/nogunwoo.jpg', color: '#4895EF' },
-    { name: CHILD2, photo: '/profiles/noseungwoo.jpg', color: '#EF476F' },
+    { name: CHILD1, color: '#4895EF' },
+    { name: CHILD2, color: '#EF476F' },
   ]
 
   const [showModal, setShowModal] = useState(false)
@@ -78,24 +96,34 @@ export default function ProfileSelect({ onSelect }) {
       <h1 className="profile-title" style={{ marginBottom: 8 }}>우리집 보물상자</h1>
       <div className="profile-cards">
         {profiles.map((p, i) => (
-          <button
-            key={p.name}
-            className="profile-card"
-            onClick={() => handleClick(p.name)}
-            style={{ animationDelay: `${i * 0.1}s` }}
-          >
-            <img
-              src={p.photo}
-              alt={p.name}
-              style={{
-                width: 80, height: 80, borderRadius: '50%',
-                objectFit: 'cover', border: `3px solid ${p.color}`,
-                animation: 'float 3s ease-in-out infinite',
-                animationDelay: `${i * 0.5}s`,
-              }}
-            />
-            <div className="name">{p.name}</div>
-          </button>
+          <div key={p.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button
+              className="profile-card"
+              onClick={() => handleClick(p.name)}
+              style={{ animationDelay: `${i * 0.1}s` }}
+            >
+              <img
+                src={getPhoto(p.name)}
+                alt={p.name}
+                style={{
+                  width: 80, height: 80, borderRadius: '50%',
+                  objectFit: 'cover', border: `3px solid ${p.color}`,
+                  animation: 'float 3s ease-in-out infinite',
+                  animationDelay: `${i * 0.5}s`,
+                }}
+              />
+              <div className="name">{p.name}</div>
+              <div style={{ fontSize: 11, color: '#999', marginTop: -2 }}>용돈기입장</div>
+            </button>
+            <label style={{
+              fontSize: 11, color: '#AAA', cursor: 'pointer', padding: '2px 8px',
+              borderRadius: 8, background: '#F0F0F0',
+            }}>
+              📷 사진변경
+              <input type="file" accept="image/*" hidden
+                onChange={(e) => handlePhotoChange(p.name, e)} />
+            </label>
+          </div>
         ))}
       </div>
 
