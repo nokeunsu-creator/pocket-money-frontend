@@ -306,7 +306,7 @@ export default function App() {
       )}
       {currentPage === 'familyHub' && (
         <FamilyHub
-          onBack={switchUser}
+          onBack={goBack}
           onSelect={(key) => {
             const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth' }
             const nextPage = pageMap[key]
@@ -318,17 +318,17 @@ export default function App() {
         />
       )}
       {currentPage === 'family' && (
-        <FamilyTree onBack={() => goToPage('familyHub')} />
+        <FamilyTree onBack={goBack} />
       )}
       {currentPage === 'growth' && (
-        <GrowthTracker onBack={() => goToPage('familyHub')} />
+        <GrowthTracker onBack={goBack} />
       )}
       {currentPage === 'study' && (
-        <StudyMain onBack={() => goToPage('familyHub')} />
+        <StudyMain onBack={goBack} />
       )}
       {currentPage === 'trips' && (
         <TripList
-          onBack={switchUser}
+          onBack={goBack}
           onView={goToTripDetail}
           onAdd={() => goToTripEdit(null)}
         />
@@ -336,7 +336,7 @@ export default function App() {
       {currentPage === 'tripDetail' && (
         <TripDetail
           tripId={tripId}
-          onBack={() => goToPage('trips')}
+          onBack={goBack}
           onEdit={goToTripEdit}
         />
       )}
@@ -348,121 +348,121 @@ export default function App() {
         />
       )}
       {currentPage === 'game' && (
-        <GameHub onBack={switchUser} onSelectGame={(g) => goToPage('game-' + g)} />
+        <GameHub onBack={goBack} onSelectGame={(g) => goToPage('game-' + g)} />
       )}
       {currentPage === 'game-baseball' && (
-        <NumberBaseball onBack={() => goToPage('game')} />
+        <NumberBaseball onBack={goBack} />
       )}
       {currentPage === 'game-memory' && (
-        <MemoryCard onBack={() => goToPage('game')} />
+        <MemoryCard onBack={goBack} />
       )}
       {currentPage === 'game-multiply' && (
-        <MultiplyChallenge onBack={() => goToPage('game')} />
+        <MultiplyChallenge onBack={goBack} />
       )}
       {currentPage === 'game-mathquiz' && (
-        <MathSpeedQuiz onBack={() => goToPage('game')} />
+        <MathSpeedQuiz onBack={goBack} />
       )}
       {currentPage === 'game-onecard' && (
-        <OneCard onBack={() => goToPage('game')} />
+        <OneCard onBack={goBack} />
       )}
       {currentPage === 'game-hula' && (
-        <Hula onBack={() => goToPage('game')} />
+        <Hula onBack={goBack} />
       )}
       {currentPage === 'game-chess' && (
-        <Chess onBack={() => goToPage('game')} />
+        <Chess onBack={goBack} />
       )}
       {currentPage === 'game-janggi' && (
-        <Janggi onBack={() => goToPage('game')} />
+        <Janggi onBack={goBack} />
       )}
       {currentPage === 'game-omok' && (
-        <Omok onBack={() => goToPage('game')} />
+        <Omok onBack={goBack} />
       )}
       {currentPage === 'game-baduk' && (
-        <Baduk onBack={() => goToPage('game')} />
+        <Baduk onBack={goBack} />
       )}
       {currentPage === 'game-baduk-classroom' && (
-        <BadukClassroom onBack={() => goToPage('game')} />
+        <BadukClassroom onBack={goBack} />
       )}
       {currentPage === 'game-english' && (
-        <EnglishHub onBack={() => goToPage('game')} onSelectGame={(g) => goToPage('game-eng-' + g)} />
+        <EnglishHub onBack={goBack} onSelectGame={(g) => goToPage('game-eng-' + g)} />
       )}
       {currentPage === 'game-eng-wordSprint' && (
-        <WordSprint onBack={() => goToPage('game-english')} />
+        <WordSprint onBack={goBack} />
       )}
       {currentPage === 'game-eng-spellingTower' && (
-        <SpellingTower onBack={() => goToPage('game-english')} />
+        <SpellingTower onBack={goBack} />
       )}
       {currentPage === 'game-eng-sentenceRush' && (
-        <SentenceRush onBack={() => goToPage('game-english')} />
+        <SentenceRush onBack={goBack} />
       )}
       {currentPage === 'game-eng-wordBattle' && (
-        <WordBattle onBack={() => goToPage('game-english')} />
+        <WordBattle onBack={goBack} />
       )}
       {currentPage === 'game-eng-championship' && (
-        <EnglishChampionship onBack={() => goToPage('game-english')} />
+        <EnglishChampionship onBack={goBack} />
       )}
       {currentPage === 'game-math' && (
-        <MathHub onBack={() => goToPage('game')} onSelectGame={(g) => goToPage('game-math-' + g)} />
+        <MathHub onBack={goBack} onSelectGame={(g) => goToPage('game-math-' + g)} />
       )}
       {currentPage === 'game-math-arithmeticSprint' && (
-        <ArithmeticSprint onBack={() => goToPage('game-math')} />
+        <ArithmeticSprint onBack={goBack} />
       )}
       {currentPage === 'game-math-fractionMaster' && (
-        <FractionMaster onBack={() => goToPage('game-math')} />
+        <FractionMaster onBack={goBack} />
       )}
       {currentPage === 'game-math-shapeQuiz' && (
-        <ShapeQuiz onBack={() => goToPage('game-math')} />
+        <ShapeQuiz onBack={goBack} />
       )}
       {currentPage === 'game-math-unitConvert' && (
-        <UnitConvert onBack={() => goToPage('game-math')} />
+        <UnitConvert onBack={goBack} />
       )}
       {currentPage === 'game-math-clockReading' && (
-        <ClockReading onBack={() => goToPage('game-math')} />
+        <ClockReading onBack={goBack} />
       )}
       {currentPage === 'game-math-championship' && (
-        <MathChampionship onBack={() => goToPage('game-math')} />
+        <MathChampionship onBack={goBack} />
       )}
       {currentPage === 'game-achievements' && (
-        <AchievementList onBack={() => goToPage('game')} />
+        <AchievementList onBack={goBack} />
       )}
       {currentPage === 'todo' && (
-        <TodoList onBack={() => goToPage('familyHub')} />
+        <TodoList onBack={goBack} />
       )}
       {currentPage === 'timer' && (
-        <StudyTimer onBack={() => goToPage('familyHub')} />
+        <StudyTimer onBack={goBack} />
       )}
       {currentPage === 'memo' && (
-        <QuickMemo onBack={() => goToPage('familyHub')} />
+        <QuickMemo onBack={goBack} />
       )}
       {currentPage === 'budget' && (
-        <BudgetMain onBack={switchUser} />
+        <BudgetMain onBack={goBack} />
       )}
       {currentPage === 'game-science' && (
-        <ScienceQuiz onBack={() => goToPage('game')} />
+        <ScienceQuiz onBack={goBack} />
       )}
       {currentPage === 'game-history' && (
-        <HistoryQuiz onBack={() => goToPage('game')} />
+        <HistoryQuiz onBack={goBack} />
       )}
       {currentPage === 'game-nonsense' && (
-        <NonsenseQuiz onBack={() => goToPage('game')} />
+        <NonsenseQuiz onBack={goBack} />
       )}
       {currentPage === 'game-proverb' && (
-        <GradeQuiz quizId="proverb" title="사자성어/속담" icon="📜" color="#8B4513" grades={proverbQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="proverb" title="사자성어/속담" icon="📜" color="#8B4513" grades={proverbQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-spelling' && (
-        <GradeQuiz quizId="spelling" title="맞춤법" icon="✏️" color="#2C3E50" grades={spellingQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="spelling" title="맞춤법" icon="✏️" color="#2C3E50" grades={spellingQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-flag' && (
-        <GradeQuiz quizId="flag" title="세계 국기/수도" icon="🌍" color="#27AE60" grades={flagQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="flag" title="세계 국기/수도" icon="🌍" color="#27AE60" grades={flagQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-hanja' && (
-        <GradeQuiz quizId="hanja" title="한자" icon="漢" color="#C0392B" grades={hanjaQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="hanja" title="한자" icon="漢" color="#C0392B" grades={hanjaQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-logic' && (
-        <GradeQuiz quizId="logic" title="코딩/논리" icon="🧩" color="#8E44AD" grades={logicQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="logic" title="코딩/논리" icon="🧩" color="#8E44AD" grades={logicQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-safety' && (
-        <GradeQuiz quizId="safety" title="안전/생활상식" icon="🛡️" color="#E67E22" grades={safetyQuiz} onBack={() => goToPage('game')} />
+        <GradeQuiz quizId="safety" title="안전/생활상식" icon="🛡️" color="#E67E22" grades={safetyQuiz} onBack={goBack} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
