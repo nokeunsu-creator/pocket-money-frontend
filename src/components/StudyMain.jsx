@@ -282,15 +282,28 @@ function ScheduleEditor({ user, onBack }) {
   const [editingDay, setEditingDay] = useState(null)
   const [editValue, setEditValue] = useState('')
 
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
   useEffect(() => {
-    getStudySchedule(user).then(setSchedules)
+    getStudySchedule(user)
+      .then(setSchedules)
+      .catch(() => setError('스케줄을 불러올 수 없어요. 서버를 확인해주세요.'))
   }, [user])
 
   const saveDay = async (day) => {
-    await updateStudySchedule(user, day, editValue)
-    const updated = await getStudySchedule(user)
-    setSchedules(updated)
-    setEditingDay(null)
+    setSaving(true)
+    setError('')
+    try {
+      await updateStudySchedule(user, day, editValue)
+      const updated = await getStudySchedule(user)
+      setSchedules(updated)
+      setEditingDay(null)
+    } catch (e) {
+      setError('저장에 실패했어요. 서버 연결을 확인해주세요.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getSchedule = (day) => schedules.find(s => s.dayOfWeek === day)
@@ -307,6 +320,15 @@ function ScheduleEditor({ user, onBack }) {
           <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>쉼표로 구분 (예: 수학,영어,독서)</div>
         </div>
       </div>
+
+      {error && (
+        <div style={{
+          background: '#FDEDEC', border: '1px solid #F5B7B1', borderRadius: 10,
+          padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#E74C3C', textAlign: 'center',
+        }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {DAYS_ORDER.map(day => {
@@ -348,12 +370,13 @@ function ScheduleEditor({ user, onBack }) {
                 )}
                 {isEditing ? (
                   <>
-                    <button onClick={() => saveDay(day)}
+                    <button onClick={() => saveDay(day)} disabled={saving}
                       style={{
-                        background: '#27AE60', color: '#FFF', border: 'none',
-                        borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                        background: saving ? '#95A5A6' : '#27AE60', color: '#FFF', border: 'none',
+                        borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700,
+                        cursor: saving ? 'wait' : 'pointer',
                       }}>
-                      저장
+                      {saving ? '저장중...' : '저장'}
                     </button>
                     <button onClick={() => setEditingDay(null)}
                       style={{
