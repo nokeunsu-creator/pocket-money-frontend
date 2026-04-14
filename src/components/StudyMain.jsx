@@ -510,6 +510,7 @@ function BookLog({ user, onBack }) {
 function HistoryView({ user, onBack }) {
   const [checks, setChecks] = useState([])
   const [books, setBooks] = useState([])
+  const [filter, setFilter] = useState('all') // 'all' | 'books'
   const [from, setFrom] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() - 30)
@@ -570,7 +571,12 @@ function HistoryView({ user, onBack }) {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ flex: 1, background: '#EBF5FB', borderRadius: 12, padding: '12px', textAlign: 'center' }}>
+        <div onClick={() => setFilter('all')}
+          style={{
+            flex: 1, borderRadius: 12, padding: '12px', textAlign: 'center', cursor: 'pointer',
+            background: filter === 'all' ? '#EBF5FB' : '#F8F9FA',
+            border: filter === 'all' ? '2px solid #3498DB' : '2px solid transparent',
+          }}>
           <div style={{ fontSize: 11, color: '#3498DB', fontWeight: 700 }}>공부한 날</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalDays}일</div>
         </div>
@@ -578,52 +584,64 @@ function HistoryView({ user, onBack }) {
           <div style={{ fontSize: 11, color: '#E67E22', fontWeight: 700 }}>총 시간</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalMinutes}분</div>
         </div>
-        <div style={{ flex: 1, background: '#F0E6F6', borderRadius: 12, padding: '12px', textAlign: 'center' }}>
+        <div onClick={() => setFilter(filter === 'books' ? 'all' : 'books')}
+          style={{
+            flex: 1, borderRadius: 12, padding: '12px', textAlign: 'center', cursor: 'pointer',
+            background: filter === 'books' ? '#F0E6F6' : '#F8F9FA',
+            border: filter === 'books' ? '2px solid #8E44AD' : '2px solid transparent',
+          }}>
           <div style={{ fontSize: 11, color: '#8E44AD', fontWeight: 700 }}>읽은 책</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalBooks}권</div>
         </div>
       </div>
 
-      {dates.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>이 기간에 기록이 없어요</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {dates.map(date => {
-            const day = grouped[date]
-            return (
-              <div key={date} style={{
-                background: '#FFF', borderRadius: 12, padding: '12px 16px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-              }}>
-                <div style={{ fontSize: 13, color: '#888', marginBottom: 8, fontWeight: 600 }}>
-                  {formatKoreanDate(date)}
+      {(() => {
+        const filtered = filter === 'books'
+          ? dates.filter(d => grouped[d].books.length > 0)
+          : dates
+        return filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+            {filter === 'books' ? '이 기간에 읽은 책이 없어요' : '이 기간에 기록이 없어요'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {filtered.map(date => {
+              const day = grouped[date]
+              return (
+                <div key={date} style={{
+                  background: '#FFF', borderRadius: 12, padding: '12px 16px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                }}>
+                  <div style={{ fontSize: 13, color: '#888', marginBottom: 8, fontWeight: 600 }}>
+                    {formatKoreanDate(date)}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {filter !== 'books' && day.checks.map(c => (
+                      <div key={'c' + c.id} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        fontSize: 14, padding: '4px 0',
+                      }}>
+                        <span style={{ color: '#2C3E50', fontWeight: 600 }}>✓ {c.subject}</span>
+                        {c.durationMinutes ? (
+                          <span style={{ color: '#888', fontSize: 13 }}>{c.durationMinutes}분</span>
+                        ) : null}
+                      </div>
+                    ))}
+                    {day.books.map(b => (
+                      <div key={'b' + b.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        fontSize: 14, padding: '4px 0',
+                      }}>
+                        <span style={{ color: '#8E44AD', fontWeight: 600 }}>📖 {b.title}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {day.checks.map(c => (
-                    <div key={'c' + c.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      fontSize: 14, padding: '4px 0',
-                    }}>
-                      <span style={{ color: '#2C3E50', fontWeight: 600 }}>✓ {c.subject}</span>
-                      {c.durationMinutes ? (
-                        <span style={{ color: '#888', fontSize: 13 }}>{c.durationMinutes}분</span>
-                      ) : null}
-                    </div>
-                  ))}
-                  {day.books.map(b => (
-                    <div key={'b' + b.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      fontSize: 14, padding: '4px 0',
-                    }}>
-                      <span style={{ color: '#8E44AD', fontWeight: 600 }}>📖 {b.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )
+      })()}
     </div>
   )
 }
