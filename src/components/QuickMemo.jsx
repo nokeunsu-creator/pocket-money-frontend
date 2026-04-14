@@ -11,7 +11,7 @@ const MEMO_COLORS = [
 
 function getRelativeDate(dateStr) {
   if (!dateStr) return ''
-  const [datePart] = dateStr.split(' ')
+  const [datePart] = dateStr.split(/[T ]/)
   const [y, m, d] = datePart.split('-').map(Number)
 
   const now = new Date()
