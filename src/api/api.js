@@ -106,3 +106,63 @@ export function getDeletedEntries(user) {
 export function getDeletedBankEntries(user) {
   return request(`/api/bank/entries/deleted?user=${encodeURIComponent(user)}`);
 }
+
+// === 공부 기록 API ===
+
+/** 요일별 스케줄 조회 (7개) */
+export function getStudySchedule(user) {
+  return request(`/api/study/schedule?user=${encodeURIComponent(user)}`);
+}
+
+/** 특정 요일 스케줄 저장 */
+export function updateStudySchedule(user, day, subjects) {
+  const params = new URLSearchParams({ user, day });
+  return request(`/api/study/schedule?${params}`, {
+    method: 'PUT',
+    body: JSON.stringify({ subjects }),
+  });
+}
+
+/** 특정 날짜의 과목 + 체크 상태 */
+export function getStudyDay(user, date) {
+  const params = new URLSearchParams({ user, date });
+  return request(`/api/study/day?${params}`);
+}
+
+/** 체크 (또는 시간 업데이트) */
+export function checkStudy(user, date, subject, durationMinutes) {
+  return request('/api/study/check', {
+    method: 'POST',
+    body: JSON.stringify({ user, date, subject, durationMinutes }),
+  });
+}
+
+/** 체크 해제 */
+export function uncheckStudy(user, date, subject) {
+  const params = new URLSearchParams({ user, date, subject });
+  return request(`/api/study/check?${params}`, { method: 'DELETE' });
+}
+
+/** 기간 히스토리 */
+export function getStudyHistory(user, from, to) {
+  const params = new URLSearchParams({ user, from, to });
+  return request(`/api/study/history?${params}`);
+}
+
+/** 읽은 책 목록 */
+export function getReadBooks(user) {
+  return request(`/api/study/books?user=${encodeURIComponent(user)}`);
+}
+
+/** 책 추가 */
+export function addReadBook(book) {
+  return request('/api/study/books', {
+    method: 'POST',
+    body: JSON.stringify(book),
+  });
+}
+
+/** 책 삭제 */
+export function deleteReadBook(id) {
+  return request(`/api/study/books/${id}`, { method: 'DELETE' });
+}

@@ -9,6 +9,7 @@ const PASSWORDS = {
 const MENU_PASSWORDS = {
   'budget': '1219',
   'game': '5431',
+  'familyHub': '3396',
 }
 
 export default function ProfileSelect({ onSelect }) {
@@ -137,59 +138,6 @@ export default function ProfileSelect({ onSelect }) {
       </div>
       <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
         <button
-          onClick={() => onSelect(null, 'todo')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #06D6A0, #05B384)',
-            color: '#FFF', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            transition: 'transform 0.1s',
-          }}
-          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onPointerUp={e => e.currentTarget.style.transform = ''}
-          onPointerLeave={e => e.currentTarget.style.transform = ''}
-        >
-          <span style={{ fontSize: 28 }}>✅</span>
-          <span>할 일</span>
-        </button>
-        <button
-          onClick={() => onSelect(null, 'timer')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #E74C3C, #C0392B)',
-            color: '#FFF', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            transition: 'transform 0.1s',
-          }}
-          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onPointerUp={e => e.currentTarget.style.transform = ''}
-          onPointerLeave={e => e.currentTarget.style.transform = ''}
-        >
-          <span style={{ fontSize: 28 }}>⏱</span>
-          <span>공부 타이머</span>
-        </button>
-        <button
-          onClick={() => onSelect(null, 'memo')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #F39C12, #E67E22)',
-            color: '#FFF', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            transition: 'transform 0.1s',
-          }}
-          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onPointerUp={e => e.currentTarget.style.transform = ''}
-          onPointerLeave={e => e.currentTarget.style.transform = ''}
-        >
-          <span style={{ fontSize: 28 }}>📝</span>
-          <span>메모</span>
-        </button>
-      </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
-        <button
           onClick={() => handleMenuClick('budget')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -207,7 +155,7 @@ export default function ProfileSelect({ onSelect }) {
           <span>가계부 · {MOM}</span>
         </button>
         <button
-          onClick={() => onSelect(null, 'family')}
+          onClick={() => handleMenuClick('familyHub')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '16px 0', borderRadius: 16,
@@ -222,24 +170,6 @@ export default function ProfileSelect({ onSelect }) {
         >
           <span style={{ fontSize: 28 }}>👨‍👩‍👦‍👦</span>
           <span>우리 가족</span>
-          <span style={{ fontSize: 10, opacity: 0.85, marginTop: -2 }}>우리가족 가계도</span>
-        </button>
-        <button
-          onClick={() => onSelect(null, 'growth')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #06D6A0, #05B384)',
-            color: '#FFF', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            transition: 'transform 0.1s',
-          }}
-          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onPointerUp={e => e.currentTarget.style.transform = ''}
-          onPointerLeave={e => e.currentTarget.style.transform = ''}
-        >
-          <span style={{ fontSize: 28 }}>📏</span>
-          <span>성장 기록</span>
         </button>
       </div>
 
@@ -259,7 +189,7 @@ export default function ProfileSelect({ onSelect }) {
             <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
             <h3 style={{ fontSize: 16, color: 'var(--brown)', marginBottom: 16 }}>
               {selectedMenu
-                ? (selectedMenu === 'budget' ? '가계부' : '게임') + ' 비밀번호를 입력하세요'
+                ? ({ budget: '가계부', game: '게임', familyHub: '우리 가족' }[selectedMenu] || '') + ' 비밀번호를 입력하세요'
                 : selectedUser + '의 비밀번호를 입력하세요'}
             </h3>
             <input

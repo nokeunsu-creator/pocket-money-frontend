@@ -34,6 +34,8 @@ import AchievementList from './components/AchievementList'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
 import QuickMemo from './components/QuickMemo'
+import StudyMain from './components/StudyMain'
+import FamilyHub from './components/FamilyHub'
 import BudgetMain from './components/BudgetMain'
 import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
@@ -141,6 +143,18 @@ export default function App() {
       setCurrentUser('__common__')
       setCurrentPage('family')
       window.history.pushState({ page: 'family', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'familyHub') {
+      setCurrentUser('__common__')
+      setCurrentPage('familyHub')
+      window.history.pushState({ page: 'familyHub', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+      return
+    }
+    if (category === 'study') {
+      setCurrentUser('__common__')
+      setCurrentPage('study')
+      window.history.pushState({ page: 'study', user: '__common__', edit: null, tab: null, tripId: null }, '', '')
       return
     }
     if (category === 'growth') {
@@ -290,11 +304,27 @@ export default function App() {
           onBack={goBack}
         />
       )}
+      {currentPage === 'familyHub' && (
+        <FamilyHub
+          onBack={switchUser}
+          onSelect={(key) => {
+            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth' }
+            const nextPage = pageMap[key]
+            if (nextPage) {
+              setCurrentPage(nextPage)
+              window.history.pushState({ page: nextPage, user: '__common__', edit: null, tab: null, tripId: null }, '', '')
+            }
+          }}
+        />
+      )}
       {currentPage === 'family' && (
-        <FamilyTree onBack={switchUser} />
+        <FamilyTree onBack={() => goToPage('familyHub')} />
       )}
       {currentPage === 'growth' && (
-        <GrowthTracker onBack={switchUser} />
+        <GrowthTracker onBack={() => goToPage('familyHub')} />
+      )}
+      {currentPage === 'study' && (
+        <StudyMain onBack={() => goToPage('familyHub')} />
       )}
       {currentPage === 'trips' && (
         <TripList
@@ -396,13 +426,13 @@ export default function App() {
         <AchievementList onBack={() => goToPage('game')} />
       )}
       {currentPage === 'todo' && (
-        <TodoList onBack={switchUser} />
+        <TodoList onBack={() => goToPage('familyHub')} />
       )}
       {currentPage === 'timer' && (
-        <StudyTimer onBack={switchUser} />
+        <StudyTimer onBack={() => goToPage('familyHub')} />
       )}
       {currentPage === 'memo' && (
-        <QuickMemo onBack={switchUser} />
+        <QuickMemo onBack={() => goToPage('familyHub')} />
       )}
       {currentPage === 'budget' && (
         <BudgetMain onBack={switchUser} />
