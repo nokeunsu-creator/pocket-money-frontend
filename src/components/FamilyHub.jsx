@@ -5,7 +5,6 @@ export default function FamilyHub({ onBack, onSelect }) {
   const items = [
     { key: 'familyTree', label: '가계도', emoji: '🌳', color: 'linear-gradient(135deg, #2D6A4F, #52B788)' },
     { key: 'todo', label: '할 일', emoji: '✅', color: 'linear-gradient(135deg, #06D6A0, #05B384)' },
-    { key: 'timer', label: '공부 타이머', emoji: '⏱', color: 'linear-gradient(135deg, #E74C3C, #C0392B)' },
     { key: 'study', label: '공부 기록', emoji: '📋', color: 'linear-gradient(135deg, #3498DB, #2980B9)' },
     { key: 'memo', label: '메모', emoji: '📝', color: 'linear-gradient(135deg, #F39C12, #E67E22)' },
     { key: 'growth', label: '성장 기록', emoji: '📏', color: 'linear-gradient(135deg, #06D6A0, #05B384)' },

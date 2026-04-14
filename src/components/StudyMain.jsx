@@ -509,6 +509,7 @@ function BookLog({ user, onBack }) {
 // ========== 히스토리 ==========
 function HistoryView({ user, onBack }) {
   const [checks, setChecks] = useState([])
+  const [books, setBooks] = useState([])
   const [from, setFrom] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() - 30)
@@ -517,22 +518,34 @@ function HistoryView({ user, onBack }) {
   const [to, setTo] = useState(todayStr())
 
   const load = useCallback(async () => {
-    const data = await getStudyHistory(user, from, to)
-    setChecks(data)
+    try {
+      const [checkData, bookData] = await Promise.all([
+        getStudyHistory(user, from, to),
+        getReadBooks(user),
+      ])
+      setChecks(checkData)
+      // 기간 내 책만 필터
+      setBooks((bookData || []).filter(b => b.readDate >= from && b.readDate <= to))
+    } catch (e) { console.error(e) }
   }, [user, from, to])
 
   useEffect(() => { load() }, [load])
 
-  // 날짜별 그룹핑
+  // 날짜별 그룹핑 (공부 + 책)
   const grouped = {}
   for (const c of checks) {
-    if (!grouped[c.date]) grouped[c.date] = []
-    grouped[c.date].push(c)
+    if (!grouped[c.date]) grouped[c.date] = { checks: [], books: [] }
+    grouped[c.date].checks.push(c)
+  }
+  for (const b of books) {
+    if (!grouped[b.readDate]) grouped[b.readDate] = { checks: [], books: [] }
+    grouped[b.readDate].books.push(b)
   }
   const dates = Object.keys(grouped).sort().reverse()
 
   const totalDays = dates.length
   const totalMinutes = checks.reduce((s, c) => s + (c.durationMinutes || 0), 0)
+  const totalBooks = books.length
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1rem' }}>
@@ -556,9 +569,7 @@ function HistoryView({ user, onBack }) {
           style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', border: '1px solid #DDD', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
       </div>
 
-      <div style={{
-        display: 'flex', gap: 10, marginBottom: 16,
-      }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <div style={{ flex: 1, background: '#EBF5FB', borderRadius: 12, padding: '12px', textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: '#3498DB', fontWeight: 700 }}>공부한 날</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalDays}일</div>
@@ -567,35 +578,50 @@ function HistoryView({ user, onBack }) {
           <div style={{ fontSize: 11, color: '#E67E22', fontWeight: 700 }}>총 시간</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalMinutes}분</div>
         </div>
+        <div style={{ flex: 1, background: '#F0E6F6', borderRadius: 12, padding: '12px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: '#8E44AD', fontWeight: 700 }}>읽은 책</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50' }}>{totalBooks}권</div>
+        </div>
       </div>
 
       {dates.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>이 기간에 기록이 없어요</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {dates.map(date => (
-            <div key={date} style={{
-              background: '#FFF', borderRadius: 12, padding: '12px 16px',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-            }}>
-              <div style={{ fontSize: 13, color: '#888', marginBottom: 8, fontWeight: 600 }}>
-                {formatKoreanDate(date)}
+          {dates.map(date => {
+            const day = grouped[date]
+            return (
+              <div key={date} style={{
+                background: '#FFF', borderRadius: 12, padding: '12px 16px',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+              }}>
+                <div style={{ fontSize: 13, color: '#888', marginBottom: 8, fontWeight: 600 }}>
+                  {formatKoreanDate(date)}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {day.checks.map(c => (
+                    <div key={'c' + c.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      fontSize: 14, padding: '4px 0',
+                    }}>
+                      <span style={{ color: '#2C3E50', fontWeight: 600 }}>✓ {c.subject}</span>
+                      {c.durationMinutes ? (
+                        <span style={{ color: '#888', fontSize: 13 }}>{c.durationMinutes}분</span>
+                      ) : null}
+                    </div>
+                  ))}
+                  {day.books.map(b => (
+                    <div key={'b' + b.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      fontSize: 14, padding: '4px 0',
+                    }}>
+                      <span style={{ color: '#8E44AD', fontWeight: 600 }}>📖 {b.title}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {grouped[date].map(c => (
-                  <div key={c.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    fontSize: 14, padding: '4px 0',
-                  }}>
-                    <span style={{ color: '#2C3E50', fontWeight: 600 }}>✓ {c.subject}</span>
-                    {c.durationMinutes ? (
-                      <span style={{ color: '#888', fontSize: 13 }}>{c.durationMinutes}분</span>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
