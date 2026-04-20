@@ -41,6 +41,7 @@ import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
 import NonsenseQuiz from './components/NonsenseQuiz'
 import GradeQuiz from './components/GradeQuiz'
+import badukQuiz from './data/badukQuiz'
 import proverbQuiz from './data/proverbQuiz'
 import spellingQuiz from './data/spellingQuiz'
 import flagQuiz from './data/flagQuiz'
@@ -445,6 +446,18 @@ export default function App() {
       )}
       {currentPage === 'game-nonsense' && (
         <NonsenseQuiz onBack={goBack} />
+      )}
+      {currentPage === 'game-baduk-quiz' && (
+        <GradeQuiz
+          quizId="baduk"
+          title="바둑 퀴즈"
+          icon="❓"
+          color="#1a1a1a"
+          grades={badukQuiz}
+          gradeLabels={{ 1: '입문', 2: '기초', 3: '중급', 4: '고급' }}
+          gradeCaption="난이도를 선택하세요"
+          onBack={goBack}
+        />
       )}
       {currentPage === 'game-proverb' && (
         <GradeQuiz quizId="proverb" title="사자성어/속담" icon="📜" color="#8B4513" grades={proverbQuiz} onBack={goBack} />

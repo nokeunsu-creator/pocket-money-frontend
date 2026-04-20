@@ -25,6 +25,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     {
       label: '📚 학습', games: [
         { key: 'baduk-classroom', icon: '🎓', title: '바둑 교실', desc: '50레슨 · 초보→실전', color: '#2D6A4F' },
+        { key: 'baduk-quiz', icon: '❓', title: '바둑 퀴즈', desc: '입문·기초·중급·고급 · 100문제', color: '#1a1a1a' },
         { key: 'english', icon: '🔤', title: '영어나라', desc: '단어·스펠링·문장·대전', color: '#4895EF' },
         { key: 'math', icon: '📐', title: '수학나라', desc: '연산·도형·분수·시계', color: '#E74C3C' },
         { key: 'science', icon: '🧪', title: '과학 퀴즈', desc: '10주제 200문제', color: '#9B59B6' },
