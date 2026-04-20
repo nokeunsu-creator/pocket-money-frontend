@@ -3,16 +3,24 @@ import { getTrips, deleteTrip } from '../utils/tripStorage'
 
 export default function TripList({ onBack, onView, onAdd }) {
   const [trips, setTrips] = useState([])
+  const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
-  useEffect(() => {
-    setTrips(getTrips())
-  }, [])
+  const load = async () => {
+    try {
+      const data = await getTrips()
+      setTrips(data)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const handleDelete = (id) => {
-    deleteTrip(id)
-    setTrips(getTrips())
+  useEffect(() => { load() }, [])
+
+  const handleDelete = async (id) => {
+    await deleteTrip(id)
     setDeleteTarget(null)
+    await load()
   }
 
   const getDday = (startDate) => {
@@ -51,7 +59,11 @@ export default function TripList({ onBack, onView, onAdd }) {
         </button>
       </div>
 
-      {trips.length === 0 ? (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--gray)', fontSize: 14 }}>
+          불러오는 중...
+        </div>
+      ) : trips.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--gray)' }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>✈️</div>
           <p style={{ fontFamily: 'Gaegu, cursive', fontSize: 17 }}>

@@ -3,10 +3,27 @@ import { getTrip } from '../utils/tripStorage'
 
 export default function TripDetail({ tripId, onBack, onEdit }) {
   const [trip, setTrip] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setTrip(getTrip(tripId))
+    let cancelled = false
+    setLoading(true)
+    getTrip(tripId).then(data => {
+      if (!cancelled) {
+        setTrip(data)
+        setLoading(false)
+      }
+    })
+    return () => { cancelled = true }
   }, [tripId])
+
+  if (loading) {
+    return (
+      <div className="page fade-in" style={{ textAlign: 'center', padding: '60px 0', color: 'var(--gray)' }}>
+        불러오는 중...
+      </div>
+    )
+  }
 
   if (!trip) {
     return (
@@ -77,7 +94,7 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
 
       <div style={{ padding: '0 1rem' }}>
         {/* 일자별 카드 */}
-        {trip.days.map(day => (
+        {(trip.days || []).map(day => (
           <div key={day.dayNum} style={{
             background: '#FFF',
             borderRadius: 14,
@@ -118,14 +135,14 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
 
             {/* 일정 아이템 */}
             <div style={{ padding: '4px 0' }}>
-              {day.items.map((item, idx) => (
+              {(day.items || []).map((item, idx) => (
                 <div key={idx} style={{
                   display: 'grid',
                   gridTemplateColumns: '56px 1fr auto',
                   gap: 6,
                   padding: '10px 16px',
                   alignItems: 'start',
-                  borderBottom: idx < day.items.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
+                  borderBottom: idx < (day.items || []).length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
                 }}>
                   <span style={{ fontSize: 12, color: '#888780', fontWeight: 500, paddingTop: 1 }}>
                     {item.time}
@@ -223,12 +240,12 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
             )}
 
             <div style={{ padding: '4px 16px' }}>
-              {trip.budget.items.map((item, idx) => (
+              {(trip.budget.items || []).map((item, idx) => (
                 <div key={idx}>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '10px 0',
-                    borderBottom: idx < trip.budget.items.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
+                    borderBottom: idx < (trip.budget.items || []).length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
                     fontSize: 13,
                   }}>
                     <span style={{ color: '#888780', flex: 1 }}>{item.label}</span>

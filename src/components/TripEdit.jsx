@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getTrip, saveTrip, generateId } from '../utils/tripStorage'
+import { getTrip, saveTrip } from '../utils/tripStorage'
 
 const emptyItem = () => ({ time: '', name: '', desc: '', cost: '', costType: 'normal', tag: '' })
 const emptyDay = (num) => ({ dayNum: num, title: '', date: '', weather: '', items: [emptyItem()] })
@@ -8,7 +8,7 @@ const emptyBudgetItem = () => ({ label: '', value: '', detail: '', type: '' })
 export default function TripEdit({ tripId, onDone, onCancel }) {
   const isNew = !tripId
   const [trip, setTrip] = useState({
-    id: generateId(),
+    id: null,
     title: '',
     subtitle: '',
     startDate: '',
@@ -24,11 +24,23 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
   })
   const [openDay, setOpenDay] = useState(0) // 열린 일자 인덱스
   const [section, setSection] = useState('info') // 'info' | 'days' | 'budget'
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (tripId) {
-      const existing = getTrip(tripId)
-      if (existing) setTrip(existing)
+      getTrip(tripId).then(existing => {
+        if (existing) {
+          // 서버에서 null로 올 수 있는 필드 보정
+          setTrip({
+            ...existing,
+            days: existing.days && existing.days.length ? existing.days : [emptyDay(1)],
+            budget: existing.budget || {
+              distance: '', fuelEff: '', fuelPrice: '', fuelTotal: '',
+              items: [emptyBudgetItem()], total: '',
+            },
+          })
+        }
+      })
     }
   }, [tripId])
 
@@ -128,7 +140,7 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
     })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!trip.title.trim()) {
       alert('여행 제목을 입력해 주세요.')
       return
@@ -137,8 +149,15 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
       alert('날짜를 입력해 주세요.')
       return
     }
-    saveTrip(trip)
-    onDone()
+    setSaving(true)
+    try {
+      await saveTrip(trip)
+      onDone()
+    } catch (e) {
+      alert('저장 실패: ' + (e.message || e))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const inputStyle = {
@@ -170,12 +189,13 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
             {isNew ? '✈️ 새 여행' : '✏️ 여행 수정'}
           </h1>
         </div>
-        <button onClick={handleSave}
+        <button onClick={handleSave} disabled={saving}
           style={{
             background: 'linear-gradient(135deg, #4A3F8A 0%, #6B5FBF 100%)',
             color: '#FFF', padding: '8px 20px', borderRadius: 20, fontSize: 14, border: 'none',
+            opacity: saving ? 0.6 : 1,
           }}>
-          저장
+          {saving ? '저장 중...' : '저장'}
         </button>
       </div>
 

@@ -205,3 +205,17 @@ export function getProfilePhotos() { return request('/api/profile/photos') }
 export function saveProfilePhoto(userName, photoData) {
   return request('/api/profile/photo', { method: 'PUT', body: JSON.stringify({ userName, photoData }) })
 }
+
+// === 여행 API ===
+
+export function getTripsApi() { return request('/api/trips') }
+export function getTripApi(id) { return request(`/api/trips/${id}`) }
+export function createTripApi(trip) {
+  return request('/api/trips', { method: 'POST', body: JSON.stringify(trip) })
+}
+export function updateTripApi(id, trip) {
+  return request(`/api/trips/${id}`, { method: 'PUT', body: JSON.stringify(trip) })
+}
+export function deleteTripApi(id) {
+  return request(`/api/trips/${id}`, { method: 'DELETE' })
+}
