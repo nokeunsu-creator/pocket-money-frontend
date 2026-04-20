@@ -3,8 +3,9 @@ import { LESSONS_1 } from '../data/badukLessons1'
 import { LESSONS_2 } from '../data/badukLessons2'
 import { LESSONS_3 } from '../data/badukLessons3'
 import { LESSONS_4 } from '../data/badukLessons4'
+import { LESSONS_5 } from '../data/badukLessons5'
 
-const ALL_LESSONS = [...LESSONS_1, ...LESSONS_2, ...LESSONS_3, ...LESSONS_4]
+const ALL_LESSONS = [...LESSONS_1, ...LESSONS_2, ...LESSONS_3, ...LESSONS_4, ...LESSONS_5]
 
 const STORAGE_KEY = 'baduk-classroom-progress'
 
@@ -14,10 +15,10 @@ const CATEGORIES = [
   { name: '연결', emoji: '🔗', color: '#3498DB' },
   { name: '영토', emoji: '🏠', color: '#8E44AD' },
   { name: '눈', emoji: '👁️', color: '#1ABC9C' },
-  { name: '사활', emoji: '💀', color: '#E74C3C' },
+  { name: '사활 기초', emoji: '💀', color: '#E74C3C' },
   { name: '규칙', emoji: '📖', color: '#2C3E50' },
-  { name: '전략', emoji: '🎯', color: '#E67E22' },
-  { name: '중급사활', emoji: '🔥', color: '#C0392B' },
+  { name: '기본 전략', emoji: '🎯', color: '#E67E22' },
+  { name: '중급 사활', emoji: '🔥', color: '#C0392B' },
   { name: '실전', emoji: '🏆', color: '#D4AC0D' },
 ]
 
