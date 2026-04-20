@@ -164,6 +164,7 @@ export default function TripEdit({ tripId, onDone, onCancel }) {
     width: '100%', padding: '10px 12px', borderRadius: 10,
     border: '2px solid #EEE', fontSize: 14, outline: 'none',
     fontFamily: 'inherit',
+    minWidth: 0, boxSizing: 'border-box',
   }
 
   const labelStyle = {

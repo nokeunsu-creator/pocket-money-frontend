@@ -8,12 +8,19 @@ export default function TripDetail({ tripId, onBack, onEdit }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    getTrip(tripId).then(data => {
-      if (!cancelled) {
-        setTrip(data)
-        setLoading(false)
-      }
-    })
+    getTrip(tripId)
+      .then(data => {
+        if (!cancelled) {
+          setTrip(data)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTrip(null)
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   }, [tripId])
 
