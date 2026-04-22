@@ -230,6 +230,16 @@ export function getStudyStreak(user) {
   return request(`/api/study/streak?user=${encodeURIComponent(user)}`)
 }
 
+// === 월별 퀴즈 리더보드 API ===
+
+export function submitQuizScore(data) {
+  return request('/api/quiz-scores', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function getQuizLeaderboard(month) {
+  return request(`/api/quiz-scores/leaderboard?month=${encodeURIComponent(month)}`)
+}
+
 // === 여행 API ===
 
 export function getTripsApi() { return request('/api/trips') }

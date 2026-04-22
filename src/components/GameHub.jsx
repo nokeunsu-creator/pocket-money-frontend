@@ -42,6 +42,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     {
       label: '🏅 기타', games: [
         { key: 'achievements', icon: '🏅', title: '업적', desc: '도전 과제 달성하기', color: '#F1C40F' },
+        { key: 'leaderboard', icon: '🏆', title: '퀴즈 리더보드', desc: '월별 순위·형제 대결', color: '#E67E22' },
       ],
     },
   ]

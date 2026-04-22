@@ -31,6 +31,7 @@ import UnitConvert from './components/UnitConvert'
 import ClockReading from './components/ClockReading'
 import MathChampionship from './components/MathChampionship'
 import AchievementList, { AchievementToast } from './components/AchievementList'
+import QuizLeaderboard from './components/QuizLeaderboard'
 import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
@@ -434,6 +435,9 @@ export default function App() {
       )}
       {currentPage === 'game-achievements' && (
         <AchievementList onBack={goBack} />
+      )}
+      {currentPage === 'game-leaderboard' && (
+        <QuizLeaderboard onBack={goBack} />
       )}
       {currentPage === 'todo' && (
         <TodoList onBack={goBack} />

@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import { CHILD1, CHILD2 } from '../config/names'
+import { submitQuizScore } from '../api/api'
 
 const STORAGE_PREFIX = 'grade-quiz-'
+const PLAYER_KEY = 'grade-quiz-player'
+
+function thisYearMonth() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 function shuffle(arr) {
   const a = [...arr]
@@ -31,11 +39,19 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
   const [showResult, setShowResult] = useState(false)
   const [wrong, setWrong] = useState([])
   const [progress, setProgressState] = useState({})
+  const [player, setPlayer] = useState(() => {
+    try { return localStorage.getItem(PLAYER_KEY) } catch { return null }
+  })
   const timerRef = useRef(null)
 
   useEffect(() => {
     setProgressState(getProgress(quizId))
   }, [quizId])
+
+  const choosePlayer = (name) => {
+    setPlayer(name)
+    try { localStorage.setItem(PLAYER_KEY, name) } catch (_) {}
+  }
 
   const startQuiz = (g) => {
     const gradeData = grades[g]
@@ -68,6 +84,17 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
           saveProgress(quizId, prog)
           setProgressState(prog)
         }
+        // 서버에 점수 기록 (플레이어 선택한 경우만)
+        if (player) {
+          submitQuizScore({
+            userName: player,
+            quizId,
+            grade: String(grade),
+            score: finalScore,
+            maxScore: questions.length,
+            yearMonth: thisYearMonth(),
+          }).catch(() => { /* 기록 실패해도 UX 방해 안 함 */ })
+        }
         setPhase('result')
       } else {
         setQIndex(qIndex + 1)
@@ -87,15 +114,51 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
     onBack()
   }
 
-  // Grade selection
-  if (phase === 'grades') {
-    const gradeKeys = Object.keys(grades).sort((a, b) => a - b)
+  // Player selection (first time)
+  if (!player) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={onBack}
           style={{ alignSelf: 'flex-start', background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
+        <div style={{ fontSize: 56, marginBottom: 12 }}>{icon}</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{title}</h2>
+        <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>누가 풀고 있나요?</p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          {[CHILD1, CHILD2].map((name, i) => (
+            <button key={name} onClick={() => choosePlayer(name)}
+              style={{
+                padding: '18px 28px', borderRadius: 16, border: 'none', cursor: 'pointer',
+                background: i === 0 ? 'linear-gradient(135deg, #4895EF, #3A7BD5)' : 'linear-gradient(135deg, #EF476F, #D63B5C)',
+                color: '#FFF', fontSize: 17, fontWeight: 700, minWidth: 120,
+              }}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: '#BBB', marginTop: 20 }}>
+          선택한 이름으로 점수가 월별 순위에 기록돼요 🏅
+        </p>
+      </div>
+    )
+  }
+
+  // Grade selection
+  if (phase === 'grades') {
+    const gradeKeys = Object.keys(grades).sort((a, b) => a - b)
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <button onClick={onBack}
+            style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer' }}>
+            ← 돌아가기
+          </button>
+          <button onClick={() => { try { localStorage.removeItem(PLAYER_KEY) } catch (_) {}; setPlayer(null) }}
+            style={{ background: '#F5F5F5', border: 'none', borderRadius: 12, fontSize: 12, padding: '5px 12px', cursor: 'pointer', color: '#666' }}>
+            👤 {player} (바꾸기)
+          </button>
+        </div>
         <div style={{ fontSize: 56, marginBottom: 12 }}>{icon}</div>
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{title}</h2>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>{gradeCaption || '학년을 선택하세요'}</p>
