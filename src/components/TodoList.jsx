@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getTodos, updateTodo as apiUpdateTodo, deleteTodo as apiDeleteTodo } from '../api/api'
 import { CATEGORIES } from '../utils/todoStorage'
 import TodoAdd from './TodoAdd'
+import {
+  isPushSupported, getPushStatus,
+  subscribeToPush, unsubscribeFromPush, triggerTodoReminderNow,
+} from '../utils/pushNotifications'
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 const DAY_NAMES_SHORT = ['월', '화', '수', '목', '금', '토', '일']
@@ -95,6 +99,50 @@ export default function TodoList({ onBack }) {
   const [collapsed, setCollapsed] = useState({ tomorrow: true, week: true, stats: true })
   const [animatingId, setAnimatingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [pushStatus, setPushStatus] = useState('loading')
+  const [pushBusy, setPushBusy] = useState(false)
+  const [showPushPanel, setShowPushPanel] = useState(false)
+
+  const refreshPushStatus = useCallback(async () => {
+    const s = await getPushStatus()
+    setPushStatus(s)
+  }, [])
+
+  useEffect(() => { refreshPushStatus() }, [refreshPushStatus])
+
+  const togglePushSubscription = async () => {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      if (pushStatus === 'subscribed') {
+        await unsubscribeFromPush()
+      } else {
+        await subscribeToPush(null)
+      }
+      await refreshPushStatus()
+    } catch (e) {
+      alert(e.message || String(e))
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const sendTestNotification = async () => {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      const result = await triggerTodoReminderNow()
+      if (result.sent > 0) {
+        alert(`알림 ${result.sent}건 발송됐어요!`)
+      } else {
+        alert(result.message || '오늘 할 일이 없어서 알림을 건너뛰었어요.')
+      }
+    } catch (e) {
+      alert(e.message || String(e))
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const fetchTodos = useCallback(async () => {
     try {
@@ -260,8 +308,55 @@ export default function TodoList({ onBack }) {
             background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 12,
             padding: '4px 10px', fontSize: 16, color: '#FFF', cursor: 'pointer',
           }}>←</button>
-          <h1 style={{ fontSize: 20, fontWeight: 'bold' }}>✅ 할 일</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 'bold', flex: 1 }}>✅ 할 일</h1>
+          {isPushSupported() && (
+            <button onClick={() => setShowPushPanel(v => !v)} style={{
+              background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 12,
+              padding: '4px 10px', fontSize: 16, color: '#FFF', cursor: 'pointer',
+            }} title="알림 설정">
+              {pushStatus === 'subscribed' ? '🔔' : '🔕'}
+            </button>
+          )}
         </div>
+
+        {showPushPanel && (
+          <div style={{
+            background: 'rgba(255,255,255,0.15)', borderRadius: 12,
+            padding: '10px 14px', marginBottom: 12, fontSize: 13,
+          }}>
+            <div style={{ marginBottom: 8 }}>
+              {pushStatus === 'unsupported' && '⚠️ 이 브라우저는 푸시 알림을 지원하지 않아요.'}
+              {pushStatus === 'denied' && '🚫 알림이 차단됨 — 브라우저 설정에서 허용해주세요.'}
+              {pushStatus === 'default' && '❓ 알림 받기를 눌러 허용해주세요.'}
+              {pushStatus === 'not-subscribed' && '🔕 알림 꺼져있어요.'}
+              {pushStatus === 'subscribed' && '🔔 알림 켜짐 — 매일 오전 8시에 오늘 할 일 알림이 와요.'}
+              {pushStatus === 'loading' && '...'}
+            </div>
+            {pushStatus !== 'unsupported' && pushStatus !== 'denied' && pushStatus !== 'loading' && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={togglePushSubscription} disabled={pushBusy}
+                  style={{
+                    background: pushStatus === 'subscribed' ? '#EF476F' : '#06D6A0',
+                    color: '#FFF', border: 'none', borderRadius: 10,
+                    padding: '6px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    opacity: pushBusy ? 0.5 : 1,
+                  }}>
+                  {pushStatus === 'subscribed' ? '알림 끄기' : '알림 받기'}
+                </button>
+                {pushStatus === 'subscribed' && (
+                  <button onClick={sendTestNotification} disabled={pushBusy}
+                    style={{
+                      background: 'rgba(255,255,255,0.25)', color: '#FFF', border: 'none',
+                      borderRadius: 10, padding: '6px 14px', fontSize: 13, cursor: 'pointer',
+                      opacity: pushBusy ? 0.5 : 1,
+                    }}>
+                    테스트 알림 보내기
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Date navigation */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
