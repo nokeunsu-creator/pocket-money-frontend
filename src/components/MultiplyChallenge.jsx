@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 function generateQuestion(range) {
   const a = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0]
@@ -29,6 +30,8 @@ export default function MultiplyChallenge({ onBack }) {
   const [question, setQuestion] = useState(null)
   const [input, setInput] = useState('')
   const [score, setScore] = useState(0)
+
+  useEffect(() => { if (score >= 30) unlock('multiply_30') }, [score])
   const [timeLeft, setTimeLeft] = useState(0)
   const [gameOver, setGameOver] = useState(false)
   const [feedback, setFeedback] = useState(null)

@@ -64,6 +64,7 @@ export default function StudyMain({ onBack }) {
 
   const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
   const [serverPhotos, setServerPhotos] = useState({})
+  const [allStreaks, setAllStreaks] = useState({})  // { userName: { current, longest, badges } }
   useEffect(() => {
     getProfilePhotos()
       .then(list => {
@@ -74,12 +75,30 @@ export default function StudyMain({ onBack }) {
       .catch(() => {})
   }, [])
 
+  // 프로필 선택 화면에서 보여줄 두 자녀의 streak 동시 로드
+  useEffect(() => {
+    if (user) return
+    Promise.all([
+      getStudyStreak(CHILD1).catch(() => null),
+      getStudyStreak(CHILD2).catch(() => null),
+    ]).then(([s1, s2]) => {
+      setAllStreaks({ [CHILD1]: s1, [CHILD2]: s2 })
+    })
+  }, [user])
+
   // 프로필 선택 화면
   if (!user) {
     const profiles = [
       { name: CHILD1, photo: serverPhotos[CHILD1] || defaultPhotos[CHILD1], color: '#4895EF' },
       { name: CHILD2, photo: serverPhotos[CHILD2] || defaultPhotos[CHILD2], color: '#EF476F' },
     ]
+    // streak 비교: 현재 연속일 기준 더 많은 쪽이 리더
+    const s1 = allStreaks[CHILD1]
+    const s2 = allStreaks[CHILD2]
+    const leader = s1 && s2
+      ? (s1.current > s2.current ? CHILD1 : s2.current > s1.current ? CHILD2 : null)
+      : null
+
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={onBack}
@@ -90,19 +109,62 @@ export default function StudyMain({ onBack }) {
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>공부 기록</h2>
         <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>누구의 공부 기록을 볼까요?</p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-          {profiles.map(p => (
-            <button key={p.name} onClick={() => setUser(p.name)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                padding: '20px 28px', borderRadius: 16, border: 'none', cursor: 'pointer',
-                background: '#FFF', boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-              }}>
-              <img src={p.photo} alt={p.name}
-                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${p.color}` }} />
-              <span style={{ fontSize: 15, fontWeight: 700 }}>{p.name}</span>
-            </button>
-          ))}
+          {profiles.map(p => {
+            const s = allStreaks[p.name]
+            const isLeader = leader === p.name
+            return (
+              <button key={p.name} onClick={() => setUser(p.name)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  padding: '18px 22px', borderRadius: 16, border: 'none', cursor: 'pointer',
+                  background: '#FFF',
+                  boxShadow: isLeader
+                    ? '0 0 0 3px #F1C40F, 0 4px 16px rgba(241,196,15,0.3)'
+                    : '0 2px 12px rgba(0,0,0,0.08)',
+                  minWidth: 140, position: 'relative',
+                }}>
+                {isLeader && (
+                  <div style={{
+                    position: 'absolute', top: -10, right: -8,
+                    background: '#F1C40F', color: '#FFF',
+                    borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    padding: '3px 8px', boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                  }}>
+                    👑 리더
+                  </div>
+                )}
+                <img src={p.photo} alt={p.name}
+                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${p.color}` }} />
+                <span style={{ fontSize: 16, fontWeight: 700 }}>{p.name}</span>
+                {s ? (
+                  <>
+                    <div style={{
+                      fontSize: 12, color: s.current > 0 ? '#E67E22' : '#BBB',
+                      fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3,
+                    }}>
+                      🔥 {s.current}일 연속
+                    </div>
+                    {s.longest > 0 && (
+                      <div style={{ fontSize: 10, color: '#999' }}>
+                        최장 {s.longest}일
+                        {s.badges && s.badges.length > 0 && (
+                          <span style={{ marginLeft: 4 }}>· {s.badges.length}개 🏅</span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 11, color: '#BBB' }}>...</div>
+                )}
+              </button>
+            )
+          })}
         </div>
+        {leader && (
+          <div style={{ marginTop: 20, fontSize: 13, color: '#999' }}>
+            이번 주 공부왕은 <b style={{ color: '#E67E22' }}>{leader}</b>! 🏆
+          </div>
+        )}
       </div>
     )
   }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 function generateQuestion(level) {
   const ops = ['+', '-', '×', '÷']
@@ -61,6 +62,8 @@ export default function MathSpeedQuiz({ onBack }) {
   const [input, setInput] = useState('')
   const [score, setScore] = useState(0)
   const [total, setTotal] = useState(0)
+
+  useEffect(() => { if (score >= 30) unlock('math_30') }, [score])
   const [timeLeft, setTimeLeft] = useState(0)
   const [gameOver, setGameOver] = useState(false)
   const [feedback, setFeedback] = useState(null)

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 const PIECES = {
   K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
@@ -477,6 +478,11 @@ export default function Chess({ onBack }) {
   const [castling, setCastling] = useState({ whiteK: true, whiteQ: true, blackK: true, blackQ: true })
   const [gameOver, setGameOver] = useState(null) // 'checkmate-white' | 'checkmate-black' | 'stalemate'
   const [inCheck, setInCheck] = useState(false)
+
+  // 업적: AI 모드에서 플레이어(흰색)가 이기면 (상대 흑 체크메이트)
+  useEffect(() => {
+    if (mode === 'ai' && gameOver === 'checkmate-black') unlock('chess_ai_win')
+  }, [mode, gameOver])
   const [lastMove, setLastMove] = useState(null)
   const [promotion, setPromotion] = useState(null) // { r, c, from: [r,c] }
   const [history, setHistory] = useState([])

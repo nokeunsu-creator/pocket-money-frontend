@@ -30,7 +30,8 @@ import ShapeQuiz from './components/ShapeQuiz'
 import UnitConvert from './components/UnitConvert'
 import ClockReading from './components/ClockReading'
 import MathChampionship from './components/MathChampionship'
-import AchievementList from './components/AchievementList'
+import AchievementList, { AchievementToast } from './components/AchievementList'
+import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
 import QuickMemo from './components/QuickMemo'
@@ -63,6 +64,7 @@ export default function App() {
   const [editEntry, setEditEntry] = useState(null)
   const [activeTab, setActiveTab] = useState('cash') // 'cash' | 'bank'
   const [tripId, setTripId] = useState(null)
+  const [achievementQueue, setAchievementQueue] = useState([])
 
   const refresh = () => setRefreshKey(k => k + 1)
 
@@ -98,6 +100,13 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  // 업적 해금 시 토스트 큐에 추가
+  useEffect(() => {
+    return onAchievementUnlock(ach => {
+      setAchievementQueue(q => [...q, ach])
+    })
   }, [])
 
   // HUB_USERS는 config/names에서 import
@@ -511,6 +520,15 @@ export default function App() {
             <span>기록목록</span>
           </button>
         </nav>
+      )}
+
+      {/* 업적 해금 토스트 (큐의 첫 번째) */}
+      {achievementQueue[0] && (
+        <AchievementToast
+          key={achievementQueue[0].id + '-' + achievementQueue.length}
+          achievement={achievementQueue[0]}
+          onDone={() => setAchievementQueue(q => q.slice(1))}
+        />
       )}
     </div>
   )

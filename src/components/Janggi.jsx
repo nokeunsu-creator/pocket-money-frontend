@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const ROWS = 10
@@ -688,6 +689,10 @@ export default function Janggi({ onBack }) {
   useEffect(() => {
     if (mode === 'ai' && winner === CHO && aiLevel) {
       saveWin(aiLevel)
+      // 업적 해금
+      if (aiLevel >= 1) unlock('janggi_lv1')
+      if (aiLevel >= 5) unlock('janggi_lv5')
+      if (aiLevel >= 10) unlock('janggi_lv10')
     }
   }, [mode, winner, aiLevel])
 

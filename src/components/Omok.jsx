@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 const SIZE = 15
 
@@ -183,6 +184,13 @@ export default function Omok({ onBack }) {
   const playerColor = aiColor === 'black' ? 'white' : 'black'
 
   const room = useGameRoom('omok')
+
+  // 업적: AI 모드에서 사람이 이기면 'omok_ai_win' 해금
+  useEffect(() => {
+    if (mode === 'ai' && winner && aiColor && winner !== aiColor) {
+      unlock('omok_ai_win')
+    }
+  }, [winner, mode, aiColor])
 
   // 온라인: 게임 상태 수신
   useEffect(() => {

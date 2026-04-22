@@ -50,17 +50,30 @@ export function getUnlocked() {
   return load()
 }
 
-/** Unlock an achievement by id. Returns true if newly unlocked, false if already unlocked. */
+// 업적 해금 시 호출될 리스너 (App.jsx가 등록해 토스트 표시)
+let listeners = []
+export function onAchievementUnlock(fn) {
+  listeners.push(fn)
+  return () => { listeners = listeners.filter(l => l !== fn) }
+}
+
+/** Unlock an achievement by id.
+ * 새로 해금되면 해당 achievement 객체 반환(리스너도 호출), 이미 해금돼 있으면 null.
+ */
 export function unlock(id) {
-  const valid = ACHIEVEMENTS.some(a => a.id === id)
-  if (!valid) return false
+  const ach = ACHIEVEMENTS.find(a => a.id === id)
+  if (!ach) return null
 
   const data = load()
-  if (data[id]) return false
+  if (data[id]) return null
 
   data[id] = Date.now()
   save(data)
-  return true
+  // 비동기로 호출해 React setState 중 실행되지 않도록
+  setTimeout(() => listeners.forEach(fn => {
+    try { fn(ach) } catch (_) { /* skip */ }
+  }), 0)
+  return ach
 }
 
 /** Check if a specific achievement is unlocked */

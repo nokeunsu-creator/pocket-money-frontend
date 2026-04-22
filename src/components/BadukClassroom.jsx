@@ -5,6 +5,7 @@ import { LESSONS_3 } from '../data/badukLessons3'
 import { LESSONS_4 } from '../data/badukLessons4'
 import { LESSONS_5 } from '../data/badukLessons5'
 import { useViewportWidth } from '../utils/useViewportWidth'
+import { unlock } from '../utils/achievements'
 
 const ALL_LESSONS = [...LESSONS_1, ...LESSONS_2, ...LESSONS_3, ...LESSONS_4, ...LESSONS_5]
 
@@ -317,6 +318,9 @@ export default function BadukClassroom({ onBack }) {
       if (prev.includes(lessonId)) return prev
       const next = [...prev, lessonId]
       saveProgress(next)
+      // 업적: 레슨 10개·50개 완료
+      if (next.length >= 10) unlock('baduk_class_10')
+      if (next.length >= 50) unlock('baduk_class_50')
       return next
     })
   }, [])

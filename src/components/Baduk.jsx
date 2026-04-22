@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { useViewportWidth } from '../utils/useViewportWidth'
+import { unlock } from '../utils/achievements'
 
 function createBoard(size) {
   return Array.from({ length: size }, () => Array(size).fill(null))
@@ -451,6 +452,14 @@ export default function Baduk({ onBack }) {
 
   const room = useGameRoom('baduk')
   const vw = useViewportWidth()
+
+  // 업적: AI 모드에서 승리 (바둑에서 플레이어는 흑)
+  useEffect(() => {
+    if (mode === 'ai' && gameOver && score && score.black > score.white) {
+      unlock('baduk_ai_win')
+      if (aiLevel === 10) unlock('baduk_lv10')
+    }
+  }, [gameOver, mode, score, aiLevel])
   const aiTimerRef = useRef(null)
 
   const opponent = turn === 'black' ? 'white' : 'black'

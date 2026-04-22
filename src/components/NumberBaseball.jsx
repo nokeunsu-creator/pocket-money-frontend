@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { unlock } from '../utils/achievements'
 
 function generateAnswer(digits) {
   const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -26,6 +27,8 @@ export default function NumberBaseball({ onBack }) {
   const [history, setHistory] = useState([])
   const [input, setInput] = useState('')
   const [won, setWon] = useState(false)
+
+  useEffect(() => { if (won) unlock('baseball_solve') }, [won])
   const [error, setError] = useState('')
   const [joinCode, setJoinCode] = useState('')
 
