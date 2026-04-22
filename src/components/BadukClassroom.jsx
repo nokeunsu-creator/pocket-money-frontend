@@ -4,6 +4,7 @@ import { LESSONS_2 } from '../data/badukLessons2'
 import { LESSONS_3 } from '../data/badukLessons3'
 import { LESSONS_4 } from '../data/badukLessons4'
 import { LESSONS_5 } from '../data/badukLessons5'
+import { useViewportWidth } from '../utils/useViewportWidth'
 
 const ALL_LESSONS = [...LESSONS_1, ...LESSONS_2, ...LESSONS_3, ...LESSONS_4, ...LESSONS_5]
 
@@ -60,8 +61,13 @@ function BadukBoard({
   playerColor = 'black',
 }) {
   const size = boardSize
-  const maxCell = size <= 5 ? 56 : size <= 7 ? 44 : 36
-  const cellSize = Math.min(Math.floor((Math.min(window.innerWidth, 480) - 48) / size), maxCell)
+  const vw = useViewportWidth()
+  const isPC = vw >= 768
+  const maxCell = isPC
+    ? (size <= 5 ? 90 : size <= 7 ? 72 : 60)     // PC: 더 크게
+    : (size <= 5 ? 56 : size <= 7 ? 44 : 36)     // 모바일: 기존 크기
+  const effectiveWidth = isPC ? Math.min(vw - 40, 900) : Math.min(vw, 480) - 48
+  const cellSize = Math.min(Math.floor(effectiveWidth / size), maxCell)
   const boardPx = cellSize * (size - 1)
   const padding = cellSize
   const stoneRadius = cellSize * 0.44

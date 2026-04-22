@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { useViewportWidth } from '../utils/useViewportWidth'
 
 function createBoard(size) {
   return Array.from({ length: size }, () => Array(size).fill(null))
@@ -449,6 +450,7 @@ export default function Baduk({ onBack }) {
   const [aiThinking, setAiThinking] = useState(false)
 
   const room = useGameRoom('baduk')
+  const vw = useViewportWidth()
   const aiTimerRef = useRef(null)
 
   const opponent = turn === 'black' ? 'white' : 'black'
@@ -953,8 +955,12 @@ export default function Baduk({ onBack }) {
   }
 
   const isMyTurn = mode === 'local' || mode === 'ai' ? turn === 'black' || mode === 'local' : turn === room.myColor
-  const maxCell = size === 19 ? 20 : size === 13 ? 28 : 38
-  const cellSize = Math.min(Math.floor((window.innerWidth - 32) / size), maxCell)
+  const isPC = vw >= 768
+  const maxCell = isPC
+    ? (size === 19 ? 36 : size === 13 ? 50 : 64)  // PC: 약 1.8x
+    : (size === 19 ? 20 : size === 13 ? 28 : 38)
+  const effectiveWidth = isPC ? Math.min(vw - 40, 900) : vw - 32
+  const cellSize = Math.min(Math.floor(effectiveWidth / size), maxCell)
   const boardPx = cellSize * (size - 1)
   const padding = cellSize
 
