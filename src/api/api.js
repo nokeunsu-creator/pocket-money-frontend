@@ -206,6 +206,30 @@ export function saveProfilePhoto(userName, photoData) {
   return request('/api/profile/photo', { method: 'PUT', body: JSON.stringify({ userName, photoData }) })
 }
 
+// === 저축 목표 API ===
+
+export function getSavingsGoals(user) {
+  return request(`/api/savings-goals?user=${encodeURIComponent(user)}`)
+}
+export function createSavingsGoal(goal) {
+  return request('/api/savings-goals', { method: 'POST', body: JSON.stringify(goal) })
+}
+export function updateSavingsGoal(id, goal) {
+  return request(`/api/savings-goals/${id}`, { method: 'PUT', body: JSON.stringify(goal) })
+}
+export function addSavingsAmount(id, delta) {
+  return request(`/api/savings-goals/${id}/add`, { method: 'POST', body: JSON.stringify({ delta }) })
+}
+export function deleteSavingsGoal(id) {
+  return request(`/api/savings-goals/${id}`, { method: 'DELETE' })
+}
+
+// === 공부 연속일 API ===
+
+export function getStudyStreak(user) {
+  return request(`/api/study/streak?user=${encodeURIComponent(user)}`)
+}
+
 // === 여행 API ===
 
 export function getTripsApi() { return request('/api/trips') }

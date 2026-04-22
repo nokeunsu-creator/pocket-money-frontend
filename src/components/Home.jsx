@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getStats, getEntries, getBankStats, getBankEntries } from '../api/api'
 import { generatePdf } from '../utils/generatePdf'
 import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
+import SavingsGoals from './SavingsGoals'
 
 const PIGGY = ['😊', '😄', '🤩', '😍', '🥳']
 function piggyFace(balance) {
@@ -122,6 +123,9 @@ export default function Home({ user, refreshKey, onSwitchUser, onEdit, onBankEdi
           {loading ? '...' : `${fmt(bankBalance)}원`}
         </div>
       </div>
+
+      {/* 저축 목표 */}
+      <SavingsGoals user={user} key={`savings-${refreshKey}`} />
 
       {/* 월 선택 */}
       <div style={{

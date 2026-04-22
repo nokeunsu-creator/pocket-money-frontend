@@ -3,7 +3,7 @@ import {
   getStudyDay, checkStudy, uncheckStudy, getStudyHistory,
   getStudySchedule, updateStudySchedule,
   getReadBooks, addReadBook, deleteReadBook,
-  getProfilePhotos,
+  getProfilePhotos, getStudyStreak,
 } from '../api/api'
 import { CHILD1, CHILD2 } from '../config/names'
 
@@ -33,6 +33,7 @@ export default function StudyMain({ onBack }) {
   const [dayData, setDayData] = useState(null) // { subjects, checks }
   const [loading, setLoading] = useState(false)
   const [durationInput, setDurationInput] = useState({}) // subject -> minutes string
+  const [streak, setStreak] = useState(null)
 
   const loadDay = useCallback(async () => {
     setLoading(true)
@@ -46,9 +47,20 @@ export default function StudyMain({ onBack }) {
     }
   }, [user, selectedDate])
 
+  const loadStreak = useCallback(async () => {
+    if (!user) return
+    try {
+      const s = await getStudyStreak(user)
+      setStreak(s)
+    } catch (_) { /* skip */ }
+  }, [user])
+
   useEffect(() => {
-    if (screen === 'today' && user) loadDay()
-  }, [screen, user, loadDay])
+    if (screen === 'today' && user) {
+      loadDay()
+      loadStreak()
+    }
+  }, [screen, user, loadDay, loadStreak])
 
   const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
   const [serverPhotos, setServerPhotos] = useState({})
@@ -111,6 +123,7 @@ export default function StudyMain({ onBack }) {
       setDurationInput(prev => ({ ...prev, [subject]: '' }))
     }
     loadDay()
+    loadStreak()
   }
 
   const updateDuration = async (subject, minutesStr) => {
@@ -133,6 +146,11 @@ export default function StudyMain({ onBack }) {
             <div style={{ fontSize: 18, fontWeight: 800, color: '#2C3E50' }}>📋 {user}의 공부 기록</div>
           </div>
         </div>
+
+        {/* Streak 위젯 */}
+        {streak && (streak.current > 0 || streak.longest > 0) && (
+          <StreakWidget streak={streak} />
+        )}
 
         {/* 날짜 선택 */}
         <div style={{
@@ -655,6 +673,52 @@ function HistoryView({ user, onBack }) {
           </div>
         )
       })()}
+    </div>
+  )
+}
+
+function StreakWidget({ streak }) {
+  const { current, longest, badges } = streak
+  const fire = current >= 7 ? '🔥' : current >= 3 ? '✨' : '📚'
+  return (
+    <div style={{
+      background: current > 0
+        ? 'linear-gradient(135deg, #FFB74D 0%, #FF7043 100%)'
+        : 'linear-gradient(135deg, #90A4AE 0%, #607D8B 100%)',
+      borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+      color: '#FFF', boxShadow: '0 3px 12px rgba(255,112,67,0.25)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ fontSize: 36 }}>{fire}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, opacity: 0.9, letterSpacing: 1, textTransform: 'uppercase' }}>
+            연속 공부일
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+            {current}일 {current > 0 && '째 도전 중!'}
+          </div>
+          {longest > current && (
+            <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>
+              최장 기록: {longest}일
+            </div>
+          )}
+        </div>
+      </div>
+      {badges && badges.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10,
+          paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.25)',
+        }}>
+          {badges.map(b => (
+            <span key={b} style={{
+              background: 'rgba(255,255,255,0.25)', borderRadius: 10,
+              padding: '2px 8px', fontSize: 11, fontWeight: 700,
+            }}>
+              {b}일 🏅
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
