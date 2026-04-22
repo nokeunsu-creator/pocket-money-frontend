@@ -82,11 +82,14 @@ export async function unsubscribeFromPush() {
   return true
 }
 
-/** 테스트용: 즉시 오늘 할일 알림 트리거 */
+/** 테스트용: 즉시 오늘 할일 알림 트리거 (dev 환경만 작동) */
 export async function triggerTodoReminderNow() {
   const res = await fetch(`${BASE_URL}/api/push/trigger-todo-reminder`, { method: 'POST' })
-  if (!res.ok) throw new Error('알림 전송 실패')
-  return res.json()
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(body.message || '알림 전송 실패 (status ' + res.status + ')')
+  }
+  return body
 }
 
 function urlBase64ToUint8Array(base64) {
