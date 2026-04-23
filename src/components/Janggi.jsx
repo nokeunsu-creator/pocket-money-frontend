@@ -974,9 +974,9 @@ export default function Janggi({ onBack }) {
     [SOLDIER]: 0.65,
   }
 
-  // 팔각형 경로 생성
+  // 팔각형 경로 생성 — 실제 장기알 비율 (모서리 컷 약 38%로 납작한 팔각형)
   function octagonPath(cx, cy, w, h) {
-    const cut = Math.min(w, h) * 0.25
+    const cut = Math.min(w, h) * 0.38
     return `M${cx - w + cut},${cy - h} L${cx + w - cut},${cy - h} L${cx + w},${cy - h + cut} L${cx + w},${cy + h - cut} L${cx + w - cut},${cy + h} L${cx - w + cut},${cy + h} L${cx - w},${cy + h - cut} L${cx - w},${cy - h + cut} Z`
   }
   const svgW = boardW + pad * 2
@@ -1167,9 +1167,9 @@ export default function Janggi({ onBack }) {
             const pw = baseR * scale  // half width
             const ph = baseR * scale * 1.1 // half height (slightly taller)
             const strokeColor = isCho ? '#C0392B' : '#1A6B4A'
-            const textColor = isCho ? '#C0392B' : '#1A6B4A'
+            const textColor = isCho ? '#A32424' : '#0E5A3A'
             const name = PIECE_NAMES[piece.type][piece.side]
-            const fontSize = baseR * scale * 1.05
+            const fontSize = baseR * scale * 1.15
 
             const isKing = piece.type === KING
             return (
@@ -1196,14 +1196,23 @@ export default function Janggi({ onBack }) {
                   fill="none" stroke={strokeColor} strokeWidth={1.8} opacity={0.85} />
                 <path d={octagonPath(cx, cy, pw * 0.73, ph * 0.73)}
                   fill="none" stroke={strokeColor} strokeWidth={0.6} opacity={0.4} />
-                {/* 한자 - 서예체 */}
+                {/* 한자 - 서예체, 선명하게 (흰 광택 + 진한 글자) */}
+                {/* 아래 흰 아우트라인으로 나무 위에서도 또렷하게 */}
                 <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
                   fontSize={fontSize} fontWeight={900}
-                  fill={isKing ? (isCho ? '#A93226' : '#0E6655') : textColor}
+                  stroke="rgba(255, 245, 220, 0.85)" strokeWidth={fontSize * 0.08}
+                  fill="none"
+                  fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
+                  style={{ userSelect: 'none', pointerEvents: 'none' }}>
+                  {name}
+                </text>
+                <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
+                  fontSize={fontSize} fontWeight={900}
+                  fill={isKing ? (isCho ? '#8B0000' : '#004D2E') : textColor}
                   fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
                   style={{
                     userSelect: 'none', pointerEvents: 'none',
-                    paintOrder: 'stroke fill',
+                    textRendering: 'geometricPrecision',
                   }}>
                   {name}
                 </text>
