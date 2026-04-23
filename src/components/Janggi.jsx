@@ -1049,6 +1049,39 @@ export default function Janggi({ onBack }) {
       {/* SVG Board */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0', overflow: 'auto' }}>
         <svg width={svgW} height={svgH} style={{ borderRadius: 8 }}>
+          <defs>
+            {/* 고급 장기알 - 나무 질감 (광택+그늘) */}
+            <radialGradient id="woodPiece" cx="32%" cy="28%" r="85%">
+              <stop offset="0%" stopColor="#FFF2D6" />
+              <stop offset="30%" stopColor="#F2D9AA" />
+              <stop offset="70%" stopColor="#D4A56A" />
+              <stop offset="100%" stopColor="#8B5A2B" />
+            </radialGradient>
+            {/* 상단 하이라이트 */}
+            <linearGradient id="pieceHighlight" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
+              <stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.1" />
+              <stop offset="60%" stopColor="#000000" stopOpacity="0" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.15" />
+            </linearGradient>
+            {/* 그림자 */}
+            <filter id="pieceShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.2" />
+              <feOffset dx="0.5" dy="2" result="offsetblur" />
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.5" />
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            {/* 왕용 금빛 테두리 */}
+            <radialGradient id="kingGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="70%" stopColor="#F1C40F" stopOpacity="0" />
+              <stop offset="100%" stopColor="#F1C40F" stopOpacity="0.8" />
+            </radialGradient>
+          </defs>
           {/* Board background */}
           <rect x={0} y={0} width={svgW} height={svgH} fill="#DCB35C" rx={8} />
 
@@ -1138,20 +1171,40 @@ export default function Janggi({ onBack }) {
             const name = PIECE_NAMES[piece.type][piece.side]
             const fontSize = baseR * scale * 1.05
 
+            const isKing = piece.type === KING
             return (
               <g key={`p-${r}-${c}`} style={{ cursor: 'pointer' }}>
-                {/* Shadow */}
-                <path d={octagonPath(cx + 1, cy + 2, pw, ph)} fill="rgba(0,0,0,0.12)" />
-                {/* Body - wood color */}
+                {/* 왕이면 금빛 후광 */}
+                {isKing && (
+                  <path d={octagonPath(cx, cy, pw * 1.15, ph * 1.15)}
+                    fill="url(#kingGlow)" opacity={0.8} />
+                )}
+                {/* 바닥 그림자 (타원 블러) */}
+                <ellipse cx={cx} cy={cy + ph + 1} rx={pw * 0.85} ry={ph * 0.15}
+                  fill="rgba(0,0,0,0.35)" filter="blur(1.2px)" />
+                {/* 외곽 진한 테두리 (어두운 나무) */}
                 <path d={octagonPath(cx, cy, pw, ph)}
-                  fill="#DEB887" stroke={strokeColor} strokeWidth={2} />
-                {/* Inner border */}
-                <path d={octagonPath(cx, cy, pw * 0.82, ph * 0.82)}
-                  fill="none" stroke={strokeColor} strokeWidth={0.8} opacity={0.6} />
-                {/* Text */}
-                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
-                  fontSize={fontSize} fontWeight="bold" fill={textColor}
-                  style={{ userSelect: 'none', pointerEvents: 'none' }}>
+                  fill="#6B3A1A" stroke="none" />
+                {/* 본체 - 프리미엄 나무 그라데이션 */}
+                <path d={octagonPath(cx, cy, pw * 0.95, ph * 0.95)}
+                  fill="url(#woodPiece)" />
+                {/* 상단 하이라이트 오버레이 */}
+                <path d={octagonPath(cx, cy, pw * 0.95, ph * 0.95)}
+                  fill="url(#pieceHighlight)" />
+                {/* 안쪽 이중 테두리 (조각 홈) */}
+                <path d={octagonPath(cx, cy, pw * 0.78, ph * 0.78)}
+                  fill="none" stroke={strokeColor} strokeWidth={1.8} opacity={0.85} />
+                <path d={octagonPath(cx, cy, pw * 0.73, ph * 0.73)}
+                  fill="none" stroke={strokeColor} strokeWidth={0.6} opacity={0.4} />
+                {/* 한자 - 서예체 */}
+                <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
+                  fontSize={fontSize} fontWeight={900}
+                  fill={isKing ? (isCho ? '#A93226' : '#0E6655') : textColor}
+                  fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
+                  style={{
+                    userSelect: 'none', pointerEvents: 'none',
+                    paintOrder: 'stroke fill',
+                  }}>
                   {name}
                 </text>
               </g>
