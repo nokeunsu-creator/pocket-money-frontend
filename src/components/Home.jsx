@@ -1,8 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getStats, getEntries, getBankStats, getBankEntries } from '../api/api'
 import { generatePdf } from '../utils/generatePdf'
 import { EMOJI_MAP, BANK_EMOJI_MAP, fmt } from '../constants'
 import SavingsGoals from './SavingsGoals'
+
+/**
+ * 각 기록에 대해 "기록 직후의 잔액"을 맵으로 계산.
+ * currentBalance = 모든 내역 반영된 현재 잔액
+ * entries = 이번 달 내역 (내돈/통장 공용)
+ * 반환: { [entryId]: balanceAfterThisEntry }
+ */
+function computeRunningBalance(entries, currentBalance, isBank) {
+  if (!entries || entries.length === 0) return {}
+  const incomeType = isBank ? 'DEPOSIT' : 'INCOME'
+  const sorted = [...entries].sort((a, b) => {
+    const d = (a.entryDate || '').localeCompare(b.entryDate || '')
+    if (d !== 0) return d
+    return (a.id || 0) - (b.id || 0)
+  })
+  // 이번 달 순증감 합계
+  const monthNet = sorted.reduce((sum, e) =>
+    sum + (e.type === incomeType ? e.amount : -e.amount), 0)
+  // 이번 달 시작 전 잔액
+  let running = currentBalance - monthNet
+  const map = {}
+  for (const e of sorted) {
+    running += (e.type === incomeType ? e.amount : -e.amount)
+    map[e.id] = running
+  }
+  return map
+}
 
 const PIGGY = ['😊', '😄', '🤩', '😍', '🥳']
 function piggyFace(balance) {
@@ -57,6 +84,15 @@ export default function Home({ user, refreshKey, onSwitchUser, onEdit, onBankEdi
   const bankBalance = bankStats?.totalBalance ?? 0
   const deposit = bankStats?.monthDeposit ?? 0
   const withdraw = bankStats?.monthWithdraw ?? 0
+
+  const runningBalances = useMemo(
+    () => computeRunningBalance(entries, balance, false),
+    [entries, balance]
+  )
+  const bankRunningBalances = useMemo(
+    () => computeRunningBalance(bankEntries, bankBalance, true),
+    [bankEntries, bankBalance]
+  )
 
   const [pdfLoading, setPdfLoading] = useState(false)
   const handlePdf = async () => {
@@ -270,8 +306,14 @@ export default function Home({ user, refreshKey, onSwitchUser, onEdit, onBankEdi
                     <div style={{
                       fontSize: 15, fontWeight: 'bold', flexShrink: 0,
                       color: isIncome ? 'var(--blue)' : 'var(--pink)',
+                      textAlign: 'right',
                     }}>
                       {isIncome ? '+' : '-'}{fmt(entry.amount)}원
+                      {runningBalances[entry.id] != null && (
+                        <div style={{ fontSize: 10, color: 'var(--gray)', fontWeight: 400, marginTop: 2 }}>
+                          잔액 {fmt(runningBalances[entry.id])}원
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -355,8 +397,14 @@ export default function Home({ user, refreshKey, onSwitchUser, onEdit, onBankEdi
                     <div style={{
                       fontSize: 15, fontWeight: 'bold', flexShrink: 0,
                       color: isDeposit ? '#2D6A4F' : '#E76F51',
+                      textAlign: 'right',
                     }}>
                       {isDeposit ? '+' : '-'}{fmt(entry.amount)}원
+                      {bankRunningBalances[entry.id] != null && (
+                        <div style={{ fontSize: 10, color: 'var(--gray)', fontWeight: 400, marginTop: 2 }}>
+                          잔액 {fmt(bankRunningBalances[entry.id])}원
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
