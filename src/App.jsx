@@ -34,6 +34,7 @@ import AchievementList, { AchievementToast } from './components/AchievementList'
 import QuizLeaderboard from './components/QuizLeaderboard'
 import WhackAMole from './components/WhackAMole'
 import TwentyFour from './components/TwentyFour'
+import Sudoku from './components/Sudoku'
 import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
@@ -447,6 +448,9 @@ export default function App() {
       )}
       {currentPage === 'game-24' && (
         <TwentyFour onBack={goBack} />
+      )}
+      {currentPage === 'game-sudoku' && (
+        <Sudoku onBack={goBack} />
       )}
       {currentPage === 'todo' && (
         <TodoList onBack={goBack} />

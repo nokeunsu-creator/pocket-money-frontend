@@ -22,6 +22,7 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'mathquiz', icon: '🧮', title: '사칙연산 퀴즈', desc: '1인 · 온라인 대결', color: '#EF476F' },
         { key: 'whackmole', icon: '🐹', title: '두더지 게임', desc: '30초 반사·리더보드', color: '#D35400' },
         { key: '24', icon: '🔢', title: '24점 퍼즐', desc: '숫자 4개로 24 만들기', color: '#4895EF' },
+        { key: 'sudoku', icon: '🧩', title: '스도쿠', desc: '4×4 · 6×6 · 9×9', color: '#9B59B6' },
       ],
     },
     {
