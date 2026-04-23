@@ -84,7 +84,7 @@ export default function NumberMemory({ onBack }) {
         quizId: 'num-memory',
         grade: null,
         score: finalLevel,
-        maxScore: 20,
+        maxScore: Math.max(20, finalLevel),
         yearMonth: thisYearMonth(),
       }).catch(() => {})
     }
