@@ -12,7 +12,7 @@ export default function GameHub({ onBack, onSelectGame }) {
       label: '🃏 카드게임', games: [
         { key: 'onecard', icon: '🃏', title: '원카드', desc: 'AI · 온라인 대전', color: '#4A3F8A' },
         { key: 'hula', icon: '♠️', title: '훌라', desc: 'AI · 온라인 대전', color: '#2D6A4F' },
-        { key: 'memory', icon: '🧠', title: '카드 뒤집기', desc: '기억력 게임', color: '#06D6A0' },
+        { key: 'memory', icon: '🂠', title: '카드 뒤집기', desc: '기억력 게임', color: '#06D6A0' },
       ],
     },
     {
