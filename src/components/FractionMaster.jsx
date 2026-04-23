@@ -193,7 +193,7 @@ export default function FractionMaster({ onBack }) {
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>분수 마스터</h2>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 8, lineHeight: 1.6 }}>
           20문제를 풀고 최고 점수를 세워보세요!<br/>
-          문제당 15초, 빨리 풀수록 보너스 점수!
+          문제당 20초, 빨리 풀수록 보너스 점수!
         </p>
         {bestRecord > 0 && (
           <div style={{ fontSize: 13, color: '#F39C12', fontWeight: 600, marginBottom: 16 }}>

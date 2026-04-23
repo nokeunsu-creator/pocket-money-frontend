@@ -280,7 +280,7 @@ export default function ShapeQuiz({ onBack }) {
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>도형 퀴즈</h2>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 32, lineHeight: 1.6 }}>
           도형의 이름, 변의 수, 둘레, 넓이를 맞춰보세요!<br />
-          문제당 15초, 총 15문제입니다.
+          문제당 20초, 총 15문제입니다.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 280, margin: '0 auto' }}>
           {LEVELS.map(lv => (

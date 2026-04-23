@@ -152,16 +152,16 @@ export default function Sudoku({ onBack }) {
     })
     // 오답 체크
     const key = `${r},${c}`
+    const wasWrong = !!wrongCells[key]
+    const isWrong = n !== 0 && n !== solution[r][c]
     setWrongCells(prev => {
       const nxt = { ...prev }
-      if (n !== 0 && n !== solution[r][c]) {
-        nxt[key] = true
-      } else {
-        delete nxt[key]
-      }
+      if (isWrong) nxt[key] = true
+      else delete nxt[key]
       return nxt
     })
-    if (n !== 0 && n !== solution[r][c]) {
+    // 같은 셀에 오답 → 정답 → 오답 반복해도 처음 틀렸을 때만 카운트하려면 아래 조건 유지
+    if (isWrong && !wasWrong) {
       setMistakes(m => m + 1)
     }
   }

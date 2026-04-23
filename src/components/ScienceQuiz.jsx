@@ -104,8 +104,8 @@ export default function ScienceQuiz({ onBack }) {
   useEffect(() => {
     if (phase !== 'playing' || feedback) return
 
-    setTimeLeft(15)
-    timeLeftRef.current = 15
+    setTimeLeft(20)
+    timeLeftRef.current = 20
 
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
