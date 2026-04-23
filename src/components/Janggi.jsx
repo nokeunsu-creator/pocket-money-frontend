@@ -1154,9 +1154,9 @@ export default function Janggi({ onBack }) {
             const scale = PIECE_SIZE[piece.type] || 0.8
             const pw = baseR * scale  // half width
             const ph = baseR * scale * 1.1 // half height (slightly taller)
-            // 초(楚)=청색, 한(漢)=빨강 — 전통 한국 장기 색
-            const strokeColor = isCho ? '#1F4E8A' : '#A32424'
-            const textColor = isCho ? '#0D3D7A' : '#8B0000'
+            // 초(楚)=청색, 한(漢)=빨강 — 전통 한국 장기 색 (진하게)
+            const strokeColor = isCho ? '#0D2F5C' : '#6B0000'
+            const textColor = isCho ? '#001F4D' : '#4A0000'
             const name = PIECE_NAMES[piece.type][piece.side]
             const fontSize = baseR * scale * 1.15
 
@@ -1185,19 +1185,13 @@ export default function Janggi({ onBack }) {
                   fill="none" stroke={strokeColor} strokeWidth={1.8} opacity={0.85} />
                 <path d={octagonPath(cx, cy, pw * 0.73, ph * 0.73)}
                   fill="none" stroke={strokeColor} strokeWidth={0.6} opacity={0.4} />
-                {/* 한자 - 서예체, 선명하게 (흰 광택 + 진한 글자) */}
-                {/* 아래 흰 아우트라인으로 나무 위에서도 또렷하게 */}
+                {/* 한자 - 진한 글자 + 자체 윤곽으로 대비 강화 */}
                 <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
                   fontSize={fontSize} fontWeight={900}
-                  stroke="rgba(255, 245, 220, 0.85)" strokeWidth={fontSize * 0.08}
-                  fill="none"
-                  fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
-                  style={{ userSelect: 'none', pointerEvents: 'none' }}>
-                  {name}
-                </text>
-                <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
-                  fontSize={fontSize} fontWeight={900}
-                  fill={isKing ? (isCho ? '#002A6A' : '#600000') : textColor}
+                  fill={isKing ? (isCho ? '#000A2E' : '#300000') : textColor}
+                  stroke={isKing ? (isCho ? '#000A2E' : '#300000') : textColor}
+                  strokeWidth={fontSize * 0.06}
+                  paintOrder="stroke fill"
                   fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
                   style={{
                     userSelect: 'none', pointerEvents: 'none',
