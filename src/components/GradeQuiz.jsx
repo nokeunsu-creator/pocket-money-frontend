@@ -73,35 +73,35 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
     const correct = idx === questions[qIndex].answer
     if (correct) setScore(s => s + 1)
     else setWrong(w => [...w, { ...questions[qIndex], selectedIdx: idx }])
+  }
 
-    timerRef.current = setTimeout(() => {
-      if (qIndex + 1 >= questions.length) {
-        const finalScore = correct ? score + 1 : score
-        const prog = getProgress(quizId)
-        const key = `grade${grade}`
-        if (!prog[key] || finalScore > prog[key]) {
-          prog[key] = finalScore
-          saveProgress(quizId, prog)
-          setProgressState(prog)
-        }
-        // 서버에 점수 기록 (플레이어 선택한 경우만)
-        if (player) {
-          submitQuizScore({
-            userName: player,
-            quizId,
-            grade: String(grade),
-            score: finalScore,
-            maxScore: questions.length,
-            yearMonth: thisYearMonth(),
-          }).catch(() => { /* 기록 실패해도 UX 방해 안 함 */ })
-        }
-        setPhase('result')
-      } else {
-        setQIndex(qIndex + 1)
-        setSelected(null)
-        setShowResult(false)
+  const handleNextQ = () => {
+    if (qIndex + 1 >= questions.length) {
+      const finalScore = score
+      const prog = getProgress(quizId)
+      const key = `grade${grade}`
+      if (!prog[key] || finalScore > prog[key]) {
+        prog[key] = finalScore
+        saveProgress(quizId, prog)
+        setProgressState(prog)
       }
-    }, 1200)
+      // 서버에 점수 기록 (플레이어 선택한 경우만)
+      if (player) {
+        submitQuizScore({
+          userName: player,
+          quizId,
+          grade: String(grade),
+          score: finalScore,
+          maxScore: questions.length,
+          yearMonth: thisYearMonth(),
+        }).catch(() => { /* 기록 실패해도 UX 방해 안 함 */ })
+      }
+      setPhase('result')
+    } else {
+      setQIndex(qIndex + 1)
+      setSelected(null)
+      setShowResult(false)
+    }
   }
 
   const handleBack = () => {
@@ -305,11 +305,35 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
 
         {selected !== null && current.explanation && (
           <div style={{
-            marginTop: 12, padding: '12px 14px', borderRadius: 10,
-            background: '#F8F9FA', fontSize: 13, color: '#666', lineHeight: 1.5,
+            marginTop: 14, padding: '16px 18px', borderRadius: 14,
+            background: selected === current.answer
+              ? 'linear-gradient(135deg, #F0FFF4, #E8F8F0)'
+              : 'linear-gradient(135deg, #FFF9E6, #FFF3CD)',
+            border: `2px solid ${selected === current.answer ? '#A9DFBF' : '#F9E79F'}`,
           }}>
-            💡 {current.explanation}
+            <div style={{
+              fontSize: 13, fontWeight: 700,
+              color: selected === current.answer ? '#27AE60' : '#B7950B',
+              marginBottom: 8,
+              letterSpacing: 0.5,
+            }}>
+              💡 자세한 설명
+            </div>
+            <div style={{ fontSize: 15, color: '#333', lineHeight: 1.75, whiteSpace: 'pre-line' }}>
+              {current.explanation}
+            </div>
           </div>
+        )}
+
+        {selected !== null && (
+          <button onClick={handleNextQ}
+            style={{
+              width: '100%', marginTop: 14, padding: '14px 0',
+              borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: color, color: '#FFF', fontSize: 16, fontWeight: 700,
+            }}>
+            {qIndex + 1 >= questions.length ? '결과 보기 →' : '다음 문제 →'}
+          </button>
         )}
       </div>
     </div>

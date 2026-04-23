@@ -1,5 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import nonsenseQuiz from '../data/nonsenseQuiz'
+
+// 다른 문제들의 답을 풀(pool)로 오답 보기 3개 섞어 4지선다 생성
+function buildChoices(current, pool) {
+  const otherAnswers = pool
+    .map(q => q.a)
+    .filter(a => a !== current.a)
+  const distractors = shuffle(otherAnswers).slice(0, 3)
+  const options = shuffle([current.a, ...distractors])
+  const correctIdx = options.indexOf(current.a)
+  return { options, correctIdx }
+}
 
 const STORAGE_KEY = 'nonsense-quiz-progress'
 
@@ -35,6 +46,8 @@ export default function NonsenseQuiz({ onBack }) {
   const [score, setScore] = useState(0)
   const [results, setResults] = useState([]) // { q, a, correct, usedHint }
   const [progress, setProgressState] = useState(getProgress())
+  const [selectedIdx, setSelectedIdx] = useState(null)
+  const [choiceData, setChoiceData] = useState(null) // { options, correctIdx }
 
   useEffect(() => {
     setProgressState(getProgress())
@@ -64,6 +77,15 @@ export default function NonsenseQuiz({ onBack }) {
 
   const current = questions[qIndex]
 
+  // 문제가 바뀌면 4지선다 보기 재생성
+  useEffect(() => {
+    if (!current) return
+    setChoiceData(buildChoices(current, nonsenseQuiz))
+    setSelectedIdx(null)
+    setShowHint(false)
+    setShowAnswer(false)
+  }, [current])
+
   const handleNext = () => {
     if (qIndex + 1 >= questions.length) {
       if (mode === 'challenge') {
@@ -85,19 +107,21 @@ export default function NonsenseQuiz({ onBack }) {
     setUserInput('')
   }
 
-  const handleCorrect = () => {
-    const newStreak = streak + 1
-    setStreak(newStreak)
-    if (newStreak > bestStreak) setBestStreak(newStreak)
-    setScore(s => s + (showHint ? 50 : 100))
-    setResults(r => [...r, { q: current.q, a: current.a, correct: true, usedHint: showHint }])
-    handleNext()
-  }
-
-  const handleWrong = () => {
-    setStreak(0)
-    setResults(r => [...r, { q: current.q, a: current.a, correct: false, usedHint: showHint }])
-    handleNext()
+  const handleChoose = (idx) => {
+    if (selectedIdx !== null || !choiceData) return
+    setSelectedIdx(idx)
+    const correct = idx === choiceData.correctIdx
+    if (mode === 'challenge') {
+      if (correct) {
+        const newStreak = streak + 1
+        setStreak(newStreak)
+        if (newStreak > bestStreak) setBestStreak(newStreak)
+        setScore(s => s + (showHint ? 50 : 100))
+      } else {
+        setStreak(0)
+      }
+      setResults(r => [...r, { q: current.q, a: current.a, correct, usedHint: showHint }])
+    }
   }
 
   const handleBack = () => {
@@ -267,8 +291,8 @@ export default function NonsenseQuiz({ onBack }) {
           </div>
         </div>
 
-        {/* Hint */}
-        {!showAnswer && (
+        {/* Hint button (선택 전까지만) */}
+        {selectedIdx === null && (
           <button
             onClick={() => setShowHint(true)}
             disabled={showHint}
@@ -284,59 +308,72 @@ export default function NonsenseQuiz({ onBack }) {
           </button>
         )}
 
-        {/* Show/Hide answer */}
-        {!showAnswer ? (
-          <button
-            onClick={() => setShowAnswer(true)}
-            style={{
-              width: '100%', padding: '16px 0', borderRadius: 14, border: 'none',
-              background: 'linear-gradient(135deg, #4895EF, #3A7BD5)',
-              color: '#FFF', fontSize: 16, fontWeight: 700, cursor: 'pointer',
-              marginBottom: 12,
-            }}
-          >
-            정답 보기
-          </button>
-        ) : (
+        {/* 4지선다 */}
+        {choiceData && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+            {choiceData.options.map((opt, idx) => {
+              let bg = '#FFF', border = '2px solid #E0E0E0', textColor = '#333'
+              if (selectedIdx !== null) {
+                if (idx === choiceData.correctIdx) {
+                  bg = '#F0FFF4'; border = '2px solid #06D6A0'; textColor = '#2D6A4F'
+                } else if (idx === selectedIdx) {
+                  bg = '#FFF5F5'; border = '2px solid #EF476F'; textColor = '#C0392B'
+                }
+              }
+              return (
+                <button key={idx} onClick={() => handleChoose(idx)}
+                  disabled={selectedIdx !== null}
+                  style={{
+                    padding: '14px 16px', borderRadius: 12, border, background: bg,
+                    fontSize: 15, fontWeight: 600, color: textColor,
+                    cursor: selectedIdx !== null ? 'default' : 'pointer',
+                    textAlign: 'left', transition: 'all 0.15s',
+                  }}>
+                  {String.fromCharCode(0x2460 + idx)} {opt}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* 선택 후 피드백 + 설명 + 다음 버튼 */}
+        {selectedIdx !== null && (
           <>
-            {/* Answer */}
             <div style={{
-              background: '#F0FFF4', borderRadius: 14, padding: '20px',
-              border: '2px solid #06D6A0', marginBottom: 16, textAlign: 'center',
+              background: selectedIdx === choiceData.correctIdx ? '#F0FFF4' : '#FFF5F5',
+              borderRadius: 14, padding: '18px 20px',
+              border: `2px solid ${selectedIdx === choiceData.correctIdx ? '#06D6A0' : '#EF476F'}`,
+              marginBottom: 14,
             }}>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 6 }}>정답</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#2D6A4F' }}>
+              <div style={{
+                fontSize: 16, fontWeight: 700,
+                color: selectedIdx === choiceData.correctIdx ? '#2D6A4F' : '#C0392B',
+                marginBottom: 8,
+              }}>
+                {selectedIdx === choiceData.correctIdx ? '🎉 정답!' : '😅 틀렸어요'}
+              </div>
+              <div style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>정답:</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#2C3E50', marginBottom: 10 }}>
                 {current.a}
               </div>
+              {current.hint && (
+                <div style={{
+                  marginTop: 10, padding: '12px 14px',
+                  background: 'rgba(0,0,0,0.04)', borderRadius: 10,
+                  fontSize: 14, lineHeight: 1.7, color: '#555',
+                }}>
+                  💡 <strong>설명:</strong> {current.hint}
+                </div>
+              )}
             </div>
 
-            {/* Correct/Wrong buttons */}
-            {mode === 'challenge' ? (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={handleCorrect}
-                  style={{
-                    flex: 1, padding: '14px 0', borderRadius: 12, border: 'none',
-                    background: '#06D6A0', color: '#FFF', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                  }}>
-                  ✅ 맞췄어요!
-                </button>
-                <button onClick={handleWrong}
-                  style={{
-                    flex: 1, padding: '14px 0', borderRadius: 12, border: 'none',
-                    background: '#EF476F', color: '#FFF', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                  }}>
-                  ❌ 틀렸어요
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleNext}
-                style={{
-                  width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
-                  background: '#F39C12', color: '#FFF', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                }}>
-                다음 문제 →
-              </button>
-            )}
+            <button onClick={handleNext}
+              style={{
+                width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
+                background: '#F39C12', color: '#FFF', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+              }}>
+              {mode === 'challenge' && qIndex + 1 >= questions.length ? '결과 보기 →' : '다음 문제 →'}
+            </button>
           </>
         )}
       </div>
