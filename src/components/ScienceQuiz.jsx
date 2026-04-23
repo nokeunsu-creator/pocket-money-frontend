@@ -57,7 +57,7 @@ export default function ScienceQuiz({ onBack }) {
   // Game state
   const [questionIndex, setQuestionIndex] = useState(0)
   const [questions, setQuestions] = useState([])
-  const [timeLeft, setTimeLeft] = useState(15)
+  const [timeLeft, setTimeLeft] = useState(20)
   const [score, setScore] = useState(0)
   const [feedback, setFeedback] = useState(null) // null | { type: 'correct'|'wrong', correctIdx, selectedIdx, explanation }
   const [wrongAnswers, setWrongAnswers] = useState([])
@@ -65,7 +65,7 @@ export default function ScienceQuiz({ onBack }) {
   const timerRef = useRef(null)
   const feedbackTimeoutRef = useRef(null)
   const scoreRef = useRef(0)
-  const timeLeftRef = useRef(15)
+  const timeLeftRef = useRef(20)
 
   // Load scores on mount
   useEffect(() => {
@@ -90,8 +90,8 @@ export default function ScienceQuiz({ onBack }) {
       setQuestionIndex(0)
       setScore(0)
       scoreRef.current = 0
-      setTimeLeft(15)
-      timeLeftRef.current = 15
+      setTimeLeft(20)
+      timeLeftRef.current = 20
       setFeedback(null)
       setWrongAnswers([])
       return
@@ -444,7 +444,7 @@ export default function ScienceQuiz({ onBack }) {
   const q = questions[questionIndex]
   if (!q) return null
 
-  const timerPct = (timeLeft / 15) * 100
+  const timerPct = (timeLeft / 20) * 100
   const timerColor = getTimerColor(timeLeft)
 
   return (

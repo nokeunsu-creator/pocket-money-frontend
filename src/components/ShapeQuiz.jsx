@@ -136,7 +136,7 @@ const LEVELS = [
 ]
 
 const TOTAL_QUESTIONS = 15
-const TIME_PER_QUESTION = 15
+const TIME_PER_QUESTION = 20
 
 export default function ShapeQuiz({ onBack }) {
   const [phase, setPhase] = useState('select') // 'select' | 'playing' | 'results'

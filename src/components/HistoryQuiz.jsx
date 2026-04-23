@@ -3,7 +3,7 @@ import { HISTORY_TOPICS } from '../data/historyQuiz'
 
 const STORAGE_KEY = 'history-quiz-progress'
 const TOTAL_QUESTIONS = 20
-const TIME_PER_QUESTION = 15
+const TIME_PER_QUESTION = 20
 
 function shuffle(arr) {
   const a = [...arr]

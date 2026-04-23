@@ -9,7 +9,7 @@ const DIFFICULTIES = [
 ]
 
 const TOTAL_QUESTIONS = 20
-const TIME_PER_QUESTION = 15
+const TIME_PER_QUESTION = 20
 const POINTS_PER_CORRECT = 50
 
 function getMedal(score) {

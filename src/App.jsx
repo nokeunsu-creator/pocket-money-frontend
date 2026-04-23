@@ -32,6 +32,8 @@ import ClockReading from './components/ClockReading'
 import MathChampionship from './components/MathChampionship'
 import AchievementList, { AchievementToast } from './components/AchievementList'
 import QuizLeaderboard from './components/QuizLeaderboard'
+import WhackAMole from './components/WhackAMole'
+import TwentyFour from './components/TwentyFour'
 import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
@@ -47,6 +49,7 @@ import badukQuiz from './data/badukQuiz'
 import proverbQuiz from './data/proverbQuiz'
 import spellingQuiz from './data/spellingQuiz'
 import flagQuiz from './data/flagQuiz'
+import continentQuiz from './data/continentQuiz'
 import hanjaQuiz from './data/hanjaQuiz'
 import logicQuiz from './data/logicQuiz'
 import safetyQuiz from './data/safetyQuiz'
@@ -439,6 +442,12 @@ export default function App() {
       {currentPage === 'game-leaderboard' && (
         <QuizLeaderboard onBack={goBack} />
       )}
+      {currentPage === 'game-whackmole' && (
+        <WhackAMole onBack={goBack} />
+      )}
+      {currentPage === 'game-24' && (
+        <TwentyFour onBack={goBack} />
+      )}
       {currentPage === 'todo' && (
         <TodoList onBack={goBack} />
       )}
@@ -480,6 +489,9 @@ export default function App() {
       )}
       {currentPage === 'game-flag' && (
         <GradeQuiz quizId="flag" title="세계 국기/수도" icon="🌍" color="#27AE60" grades={flagQuiz} onBack={goBack} />
+      )}
+      {currentPage === 'game-continent' && (
+        <GradeQuiz quizId="continent" title="지도 나라 찾기" icon="🗺️" color="#16A085" grades={continentQuiz} onBack={goBack} />
       )}
       {currentPage === 'game-hanja' && (
         <GradeQuiz quizId="hanja" title="한자" icon="漢" color="#C0392B" grades={hanjaQuiz} onBack={goBack} />

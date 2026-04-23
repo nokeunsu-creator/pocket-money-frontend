@@ -82,6 +82,7 @@ export default function ProfileSelect({ onSelect }) {
         onSelect(null, selectedMenu)
       } else {
         setError(true)
+        setPassword('')
       }
     } else if (selectedUser) {
       if (password === PASSWORDS[selectedUser]) {
@@ -89,6 +90,7 @@ export default function ProfileSelect({ onSelect }) {
         onSelect(selectedUser, 'money')
       } else {
         setError(true)
+        setPassword('')
       }
     }
   }
@@ -248,6 +250,7 @@ export default function ProfileSelect({ onSelect }) {
                         onSelect(null, selectedMenu)
                       } else {
                         setError(true)
+                        setPassword('')
                       }
                     } else if (selectedUser) {
                       if (val === PASSWORDS[selectedUser]) {
@@ -255,6 +258,7 @@ export default function ProfileSelect({ onSelect }) {
                         onSelect(selectedUser, 'money')
                       } else {
                         setError(true)
+                        setPassword('')
                       }
                     }
                   }, 100)

@@ -20,6 +20,8 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'baseball', icon: '⚾', title: '숫자 야구', desc: '1인 · 온라인 대결', color: '#4895EF' },
         { key: 'multiply', icon: '✖️', title: '구구단 챌린지', desc: '1인 · 온라인 대결', color: '#F39C12' },
         { key: 'mathquiz', icon: '🧮', title: '사칙연산 퀴즈', desc: '1인 · 온라인 대결', color: '#EF476F' },
+        { key: 'whackmole', icon: '🐹', title: '두더지 게임', desc: '30초 반사·리더보드', color: '#D35400' },
+        { key: '24', icon: '🔢', title: '24점 퍼즐', desc: '숫자 4개로 24 만들기', color: '#4895EF' },
       ],
     },
     {
@@ -34,6 +36,7 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'proverb', icon: '📜', title: '사자성어/속담', desc: '3~6학년 · 학년별 퀴즈', color: '#8B4513' },
         { key: 'spelling', icon: '✏️', title: '맞춤법', desc: '3~6학년 · 헷갈리는 맞춤법', color: '#2C3E50' },
         { key: 'flag', icon: '🌍', title: '세계 국기/수도', desc: '3~6학년 · 나라 맞추기', color: '#27AE60' },
+        { key: 'continent', icon: '🗺️', title: '지도 나라 찾기', desc: '국기 → 대륙 맞추기', color: '#16A085' },
         { key: 'hanja', icon: '漢', title: '한자', desc: '3~6학년 · 8급~5급', color: '#C0392B' },
         { key: 'logic', icon: '🧩', title: '코딩/논리', desc: '3~6학년 · 사고력 퀴즈', color: '#8E44AD' },
         { key: 'safety', icon: '🛡️', title: '안전/생활상식', desc: '3~6학년 · 생활 안전', color: '#E67E22' },

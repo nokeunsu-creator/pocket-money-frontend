@@ -860,13 +860,26 @@ export default function Janggi({ onBack }) {
                     setInCheck(null)
                   }}
                   style={{
-                    padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    padding: '14px 0', borderRadius: 12,
+                    border: wins[lv] ? '3px solid #F1C40F' : 'none',
+                    cursor: 'pointer',
                     fontSize: 14, fontWeight: 700, color: '#FFF',
                     background: getLevelColor(lv),
                     position: 'relative',
+                    boxShadow: wins[lv] ? '0 0 12px rgba(241,196,15,0.5)' : 'none',
                   }}>
                   Lv.{lv} {getLevelLabel(lv)}
-                  {wins[lv] && <span style={{ position: 'absolute', top: 4, right: 8, fontSize: 12 }}>🏆</span>}
+                  {wins[lv] && (
+                    <span style={{
+                      position: 'absolute', top: -8, right: -6,
+                      background: '#F1C40F', color: '#FFF',
+                      borderRadius: 12, fontSize: 10, fontWeight: 800,
+                      padding: '2px 7px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    }}>
+                      🏆 승리
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

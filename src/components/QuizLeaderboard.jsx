@@ -9,6 +9,7 @@ const QUIZ_LABELS = {
   logic: { icon: '🧩', title: '코딩/논리' },
   safety: { icon: '🛡️', title: '안전/생활상식' },
   baduk: { icon: '❓', title: '바둑 퀴즈' },
+  'whack-mole': { icon: '🐹', title: '두더지 게임' },
 }
 
 const RANK_COLORS = ['#F1C40F', '#95A5A6', '#D35400']

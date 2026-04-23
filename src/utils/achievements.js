@@ -18,6 +18,8 @@ export const ACHIEVEMENTS = [
   { id: 'baseball_solve', icon: '⚾', title: '숫자 탐정', desc: '숫자야구 정답 맞추기', category: 'brain' },
   { id: 'multiply_30', icon: '✖️', title: '구구단 마스터', desc: '구구단 30개 이상 정답', category: 'brain' },
   { id: 'math_30', icon: '🧮', title: '연산 달인', desc: '사칙연산 30개 이상 정답', category: 'brain' },
+  { id: 'whack_mole_20', icon: '🐹', title: '두더지 사냥꾼', desc: '두더지 게임 20점 달성', category: 'brain' },
+  { id: 'whack_mole_40', icon: '🏆', title: '두더지 왕', desc: '두더지 게임 40점 달성', category: 'brain' },
 
   // Learning
   { id: 'baduk_class_10', icon: '🎓', title: '바둑 학생', desc: '바둑 교실 10레슨 완료', category: 'learn' },
