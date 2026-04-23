@@ -982,7 +982,7 @@ export default function Janggi({ onBack }) {
   const svgW = boardW + pad * 2
   const svgH = boardH + pad * 2
 
-  const turnLabel = turn === CHO ? '초 (빨강)' : '한 (파랑)'
+  const turnLabel = turn === CHO ? '초 (청)' : '한 (빨강)'
   const modeLabel = mode === 'ai' ? 'vs AI' : mode === 'online' ? '온라인' : ''
 
   const statusText = winner
@@ -990,7 +990,7 @@ export default function Janggi({ onBack }) {
       ? '무승부 (빅장)!'
       : mode === 'ai'
         ? (winner === CHO ? `🏆 Lv.${aiLevel} 승리!` : `Lv.${aiLevel} AI 승리...`)
-        : `${winner === CHO ? '초 (빨강)' : '한 (파랑)'} 승리!`
+        : `${winner === CHO ? '초 (청)' : '한 (빨강)'} 승리!`
     : mode === 'online'
       ? isMyTurn
         ? `내 차례 (${mySide === CHO ? '초' : '한'})`
@@ -1042,7 +1042,7 @@ export default function Janggi({ onBack }) {
 
       {mode === 'online' && (
         <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
-          방 코드: <strong>{room.roomCode}</strong> · 나는 {mySide === CHO ? '초 (빨강)' : '한 (파랑)'}
+          방 코드: <strong>{room.roomCode}</strong> · 나는 {mySide === CHO ? '초 (청)' : '한 (빨강)'}
         </div>
       )}
 
@@ -1082,15 +1082,16 @@ export default function Janggi({ onBack }) {
               <stop offset="100%" stopColor="#F1C40F" stopOpacity="0.8" />
             </radialGradient>
           </defs>
-          {/* Board background */}
-          <rect x={0} y={0} width={svgW} height={svgH} fill="#DCB35C" rx={8} />
+          {/* Board background - 하얀 바탕 */}
+          <rect x={0} y={0} width={svgW} height={svgH} fill="#FAFAF5" rx={8}
+            stroke="#8B6914" strokeWidth={1.5} />
 
           {/* Grid lines - horizontal */}
           {Array.from({ length: ROWS }).map((_, i) => (
             <line key={`h-${i}`}
               x1={pad} y1={pad + i * cellSize}
               x2={pad + boardW} y2={pad + i * cellSize}
-              stroke="#8B6914" strokeWidth={1} />
+              stroke="#2C3E50" strokeWidth={1.2} />
           ))}
 
           {/* Grid lines - vertical */}
@@ -1098,30 +1099,23 @@ export default function Janggi({ onBack }) {
             <line key={`v-${i}`}
               x1={pad + i * cellSize} y1={pad}
               x2={pad + i * cellSize} y2={pad + boardH}
-              stroke="#8B6914" strokeWidth={1} />
+              stroke="#2C3E50" strokeWidth={1.2} />
           ))}
 
-          {/* River (gap between row 4 and 5 visual indicator) */}
-          <rect x={pad + 1} y={pad + 4 * cellSize + 1} width={boardW - 2} height={cellSize - 2} fill="#DCB35C" />
-          {/* Redraw top/bottom river lines */}
-          <line x1={pad} y1={pad + 4 * cellSize} x2={pad + boardW} y2={pad + 4 * cellSize} stroke="#8B6914" strokeWidth={1} />
-          <line x1={pad} y1={pad + 5 * cellSize} x2={pad + boardW} y2={pad + 5 * cellSize} stroke="#8B6914" strokeWidth={1} />
-          {/* River left/right borders */}
-          <line x1={pad} y1={pad + 4 * cellSize} x2={pad} y2={pad + 5 * cellSize} stroke="#8B6914" strokeWidth={1} />
-          <line x1={pad + boardW} y1={pad + 4 * cellSize} x2={pad + boardW} y2={pad + 5 * cellSize} stroke="#8B6914" strokeWidth={1} />
-          {/* River text */}
+          {/* 강 영역에 전통 장기판 글자 (연속 그리드 유지) */}
           <text x={pad + boardW / 2} y={pad + 4.55 * cellSize} textAnchor="middle" dominantBaseline="middle"
-            fontSize={cellSize * 0.35} fill="#8B6914" fontWeight="bold" opacity={0.5}>
+            fontSize={cellSize * 0.42} fill="#444" fontWeight="bold" opacity={0.25}
+            fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'Batang', serif">
             楚 河 漢 界
           </text>
 
           {/* Palace diagonals - HAN (top) */}
-          <line x1={pad + 3 * cellSize} y1={pad + 0 * cellSize} x2={pad + 5 * cellSize} y2={pad + 2 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
-          <line x1={pad + 5 * cellSize} y1={pad + 0 * cellSize} x2={pad + 3 * cellSize} y2={pad + 2 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
+          <line x1={pad + 3 * cellSize} y1={pad + 0 * cellSize} x2={pad + 5 * cellSize} y2={pad + 2 * cellSize} stroke="#2C3E50" strokeWidth={1} />
+          <line x1={pad + 5 * cellSize} y1={pad + 0 * cellSize} x2={pad + 3 * cellSize} y2={pad + 2 * cellSize} stroke="#2C3E50" strokeWidth={1} />
 
           {/* Palace diagonals - CHO (bottom) */}
-          <line x1={pad + 3 * cellSize} y1={pad + 7 * cellSize} x2={pad + 5 * cellSize} y2={pad + 9 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
-          <line x1={pad + 5 * cellSize} y1={pad + 7 * cellSize} x2={pad + 3 * cellSize} y2={pad + 9 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
+          <line x1={pad + 3 * cellSize} y1={pad + 7 * cellSize} x2={pad + 5 * cellSize} y2={pad + 9 * cellSize} stroke="#2C3E50" strokeWidth={1} />
+          <line x1={pad + 5 * cellSize} y1={pad + 7 * cellSize} x2={pad + 3 * cellSize} y2={pad + 9 * cellSize} stroke="#2C3E50" strokeWidth={1} />
 
           {/* Last move indicators */}
           {lastMove && (
@@ -1166,8 +1160,9 @@ export default function Janggi({ onBack }) {
             const scale = PIECE_SIZE[piece.type] || 0.8
             const pw = baseR * scale  // half width
             const ph = baseR * scale * 1.1 // half height (slightly taller)
-            const strokeColor = isCho ? '#C0392B' : '#1A6B4A'
-            const textColor = isCho ? '#A32424' : '#0E5A3A'
+            // 초(楚)=청색, 한(漢)=빨강 — 전통 한국 장기 색
+            const strokeColor = isCho ? '#1F4E8A' : '#A32424'
+            const textColor = isCho ? '#0D3D7A' : '#8B0000'
             const name = PIECE_NAMES[piece.type][piece.side]
             const fontSize = baseR * scale * 1.15
 
@@ -1208,7 +1203,7 @@ export default function Janggi({ onBack }) {
                 </text>
                 <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
                   fontSize={fontSize} fontWeight={900}
-                  fill={isKing ? (isCho ? '#8B0000' : '#004D2E') : textColor}
+                  fill={isKing ? (isCho ? '#002A6A' : '#600000') : textColor}
                   fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'HY견명조', 'Batang', serif"
                   style={{
                     userSelect: 'none', pointerEvents: 'none',
