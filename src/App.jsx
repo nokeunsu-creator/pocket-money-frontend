@@ -37,6 +37,10 @@ import TwentyFour from './components/TwentyFour'
 import Sudoku from './components/Sudoku'
 import WordChain from './components/WordChain'
 import CollaborativeDrawing from './components/CollaborativeDrawing'
+import WordMatching from './components/WordMatching'
+import NumberMemory from './components/NumberMemory'
+import dinosaurQuiz from './data/dinosaurQuiz'
+import spaceQuiz from './data/spaceQuiz'
 import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
@@ -459,6 +463,18 @@ export default function App() {
       )}
       {currentPage === 'game-draw' && (
         <CollaborativeDrawing onBack={goBack} />
+      )}
+      {currentPage === 'game-wordmatch' && (
+        <WordMatching onBack={goBack} />
+      )}
+      {currentPage === 'game-nummem' && (
+        <NumberMemory onBack={goBack} />
+      )}
+      {currentPage === 'game-dinosaur' && (
+        <GradeQuiz quizId="dinosaur" title="공룡 퀴즈" icon="🦖" color="#8B5A2B" grades={dinosaurQuiz} onBack={goBack} />
+      )}
+      {currentPage === 'game-space' && (
+        <GradeQuiz quizId="space" title="우주 퀴즈" icon="🌌" color="#6A1B9A" grades={spaceQuiz} onBack={goBack} />
       )}
       {currentPage === 'todo' && (
         <TodoList onBack={goBack} />

@@ -10,6 +10,10 @@ const QUIZ_LABELS = {
   safety: { icon: '🛡️', title: '안전/생활상식' },
   baduk: { icon: '❓', title: '바둑 퀴즈' },
   'whack-mole': { icon: '🐹', title: '두더지 게임' },
+  'word-match': { icon: '🔤', title: '영어 단어 매칭' },
+  'num-memory': { icon: '🧠', title: '숫자 기억' },
+  dinosaur: { icon: '🦖', title: '공룡 퀴즈' },
+  space: { icon: '🌌', title: '우주 퀴즈' },
 }
 
 const RANK_COLORS = ['#F1C40F', '#95A5A6', '#D35400']
