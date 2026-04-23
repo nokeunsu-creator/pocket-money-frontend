@@ -1082,16 +1082,15 @@ export default function Janggi({ onBack }) {
               <stop offset="100%" stopColor="#F1C40F" stopOpacity="0.8" />
             </radialGradient>
           </defs>
-          {/* Board background - 하얀 바탕 */}
-          <rect x={0} y={0} width={svgW} height={svgH} fill="#FAFAF5" rx={8}
-            stroke="#8B6914" strokeWidth={1.5} />
+          {/* Board background - 나무색 */}
+          <rect x={0} y={0} width={svgW} height={svgH} fill="#DCB35C" rx={8} />
 
           {/* Grid lines - horizontal */}
           {Array.from({ length: ROWS }).map((_, i) => (
             <line key={`h-${i}`}
               x1={pad} y1={pad + i * cellSize}
               x2={pad + boardW} y2={pad + i * cellSize}
-              stroke="#2C3E50" strokeWidth={1.2} />
+              stroke="#8B6914" strokeWidth={1} />
           ))}
 
           {/* Grid lines - vertical */}
@@ -1099,23 +1098,18 @@ export default function Janggi({ onBack }) {
             <line key={`v-${i}`}
               x1={pad + i * cellSize} y1={pad}
               x2={pad + i * cellSize} y2={pad + boardH}
-              stroke="#2C3E50" strokeWidth={1.2} />
+              stroke="#8B6914" strokeWidth={1} />
           ))}
 
-          {/* 강 영역에 전통 장기판 글자 (연속 그리드 유지) */}
-          <text x={pad + boardW / 2} y={pad + 4.55 * cellSize} textAnchor="middle" dominantBaseline="middle"
-            fontSize={cellSize * 0.42} fill="#444" fontWeight="bold" opacity={0.25}
-            fontFamily="'Noto Serif KR', 'Nanum Myeongjo', 'Batang', serif">
-            楚 河 漢 界
-          </text>
+          {/* 강 영역 텍스트 제거됨 — 연속 그리드만 */}
 
           {/* Palace diagonals - HAN (top) */}
-          <line x1={pad + 3 * cellSize} y1={pad + 0 * cellSize} x2={pad + 5 * cellSize} y2={pad + 2 * cellSize} stroke="#2C3E50" strokeWidth={1} />
-          <line x1={pad + 5 * cellSize} y1={pad + 0 * cellSize} x2={pad + 3 * cellSize} y2={pad + 2 * cellSize} stroke="#2C3E50" strokeWidth={1} />
+          <line x1={pad + 3 * cellSize} y1={pad + 0 * cellSize} x2={pad + 5 * cellSize} y2={pad + 2 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
+          <line x1={pad + 5 * cellSize} y1={pad + 0 * cellSize} x2={pad + 3 * cellSize} y2={pad + 2 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
 
           {/* Palace diagonals - CHO (bottom) */}
-          <line x1={pad + 3 * cellSize} y1={pad + 7 * cellSize} x2={pad + 5 * cellSize} y2={pad + 9 * cellSize} stroke="#2C3E50" strokeWidth={1} />
-          <line x1={pad + 5 * cellSize} y1={pad + 7 * cellSize} x2={pad + 3 * cellSize} y2={pad + 9 * cellSize} stroke="#2C3E50" strokeWidth={1} />
+          <line x1={pad + 3 * cellSize} y1={pad + 7 * cellSize} x2={pad + 5 * cellSize} y2={pad + 9 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
+          <line x1={pad + 5 * cellSize} y1={pad + 7 * cellSize} x2={pad + 3 * cellSize} y2={pad + 9 * cellSize} stroke="#8B6914" strokeWidth={0.8} />
 
           {/* Last move indicators */}
           {lastMove && (

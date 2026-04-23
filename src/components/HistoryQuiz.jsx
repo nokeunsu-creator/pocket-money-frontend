@@ -91,9 +91,9 @@ export default function HistoryQuiz({ onBack }) {
     if (!q) return
     wrongRef.current = [...wrongRef.current, { ...q, selected: null }]
     setWrongAnswers(wrongRef.current)
-    setFeedback({ selected: null, correct: q.answer, isCorrect: false })
+    setFeedback({ selected: null, correct: q.answer, isCorrect: false, explanation: q.explanation })
     clearInterval(timerRef.current)
-    feedbackRef.current = setTimeout(() => advanceQuestion(), 2500)
+    // 자동 진행 제거 — "다음" 버튼으로 진행
   }
 
   const handleAnswer = (choiceIdx) => {
@@ -117,7 +117,7 @@ export default function HistoryQuiz({ onBack }) {
     }
 
     setFeedback({ selected: choiceIdx, correct: q.answer, isCorrect, earned, explanation: q.explanation })
-    feedbackRef.current = setTimeout(() => advanceQuestion(), isCorrect ? 2000 : 2500)
+    // 자동 진행 제거 — "다음" 버튼으로 진행
   }
 
   const advanceQuestion = () => {
@@ -416,28 +416,53 @@ export default function HistoryQuiz({ onBack }) {
 
         {/* Feedback */}
         {feedback && (
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16, maxWidth: 420, margin: '16px auto 0' }}>
             <div style={{
-              fontSize: 15, fontWeight: 700,
-              color: feedback.isCorrect ? '#06D6A0' : '#EF476F',
-              marginBottom: 6,
+              padding: '14px 18px', borderRadius: 14,
+              background: feedback.isCorrect
+                ? 'linear-gradient(135deg, #F0FFF4, #E8F8F0)'
+                : 'linear-gradient(135deg, #FFF5F5, #FFE8E8)',
+              border: `2px solid ${feedback.isCorrect ? '#A9DFBF' : '#F5B7B1'}`,
+              marginBottom: 14,
             }}>
-              {feedback.isCorrect
-                ? `정답! +${feedback.earned}점`
-                : feedback.selected === null
-                  ? `시간 초과! 정답: ${q.choices[q.answer]}`
-                  : `오답! 정답: ${q.choices[q.answer]}`
-              }
-            </div>
-            {feedback.explanation && (
               <div style={{
-                fontSize: 13, color: '#5D3A1A', lineHeight: 1.5,
-                background: '#FFF3E0', padding: '8px 12px', borderRadius: 8,
-                maxWidth: 380, margin: '0 auto', textAlign: 'left',
+                fontSize: 16, fontWeight: 800,
+                color: feedback.isCorrect ? '#1E8449' : '#C0392B',
+                marginBottom: feedback.explanation ? 10 : 0,
               }}>
-                {feedback.explanation}
+                {feedback.isCorrect
+                  ? `🎉 정답! +${feedback.earned}점`
+                  : feedback.selected === null
+                    ? `⏰ 시간 초과! 정답: ${q.choices[q.answer]}`
+                    : `😅 오답! 정답: ${q.choices[q.answer]}`
+                }
               </div>
-            )}
+              {feedback.explanation && (
+                <div style={{
+                  fontSize: 12, fontWeight: 700,
+                  color: feedback.isCorrect ? '#1E8449' : '#8B0000',
+                  letterSpacing: 0.5, marginBottom: 6,
+                }}>
+                  💡 자세한 설명
+                </div>
+              )}
+              {feedback.explanation && (
+                <div style={{
+                  fontSize: 14, color: '#2C3E50', lineHeight: 1.75,
+                  whiteSpace: 'pre-line',
+                }}>
+                  {feedback.explanation}
+                </div>
+              )}
+            </div>
+            <button onClick={advanceQuestion}
+              style={{
+                width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(135deg, #8B4513, #A0522D)',
+                color: '#FFF', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+              }}>
+              {currentIdx + 1 >= questions.length ? '결과 보기 →' : '다음 문제 →'}
+            </button>
           </div>
         )}
       </div>
