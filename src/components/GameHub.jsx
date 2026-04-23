@@ -23,6 +23,8 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'whackmole', icon: '🐹', title: '두더지 게임', desc: '30초 반사·리더보드', color: '#D35400' },
         { key: '24', icon: '🔢', title: '24점 퍼즐', desc: '숫자 4개로 24 만들기', color: '#4895EF' },
         { key: 'sudoku', icon: '🧩', title: '스도쿠', desc: '4×4 · 6×6 · 9×9', color: '#9B59B6' },
+        { key: 'wordchain', icon: '🔤', title: '끝말잇기', desc: '2인 · 20초 턴', color: '#16A085' },
+        { key: 'draw', icon: '🎨', title: '이어그리기', desc: '2인 번갈아 그림 완성', color: '#E67E22' },
       ],
     },
     {

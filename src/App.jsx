@@ -35,6 +35,8 @@ import QuizLeaderboard from './components/QuizLeaderboard'
 import WhackAMole from './components/WhackAMole'
 import TwentyFour from './components/TwentyFour'
 import Sudoku from './components/Sudoku'
+import WordChain from './components/WordChain'
+import CollaborativeDrawing from './components/CollaborativeDrawing'
 import { onAchievementUnlock } from './utils/achievements'
 import TodoList from './components/TodoList'
 import StudyTimer from './components/StudyTimer'
@@ -451,6 +453,12 @@ export default function App() {
       )}
       {currentPage === 'game-sudoku' && (
         <Sudoku onBack={goBack} />
+      )}
+      {currentPage === 'game-wordchain' && (
+        <WordChain onBack={goBack} />
+      )}
+      {currentPage === 'game-draw' && (
+        <CollaborativeDrawing onBack={goBack} />
       )}
       {currentPage === 'todo' && (
         <TodoList onBack={goBack} />
