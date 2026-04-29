@@ -1,6 +1,17 @@
 // 우리 가족 허브 — 가족 관련 메뉴 모음 (비밀번호 3396으로 진입)
 // 가계도 / 할 일 / 공부 타이머 / 공부 기록 / 메모 / 성장 기록
 
+const EXTERNAL_APPS = [
+  { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena-omega.vercel.app' },
+  { name: 'betking', label: '베팅킹', emoji: '👑', url: 'https://betking-pi.vercel.app' },
+  { name: 'final-choice', label: '결정 도우미', emoji: '🎲', url: 'https://final-choice.vercel.app' },
+  { name: 'questions', label: '질문', emoji: '❓', url: 'https://questions-psi.vercel.app' },
+  { name: 'selfphotostudio', label: '셀프 포토', emoji: '📸', url: 'https://selfphotostudio.vercel.app' },
+  { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
+  { name: 'jumal-muhae', label: '주말 무해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
+  { name: 'chukchuk-calc', label: '척척 계산기', emoji: '🧮', url: 'https://chukchuk-calc.vercel.app' },
+]
+
 export default function FamilyHub({ onBack, onSelect }) {
   const btn = (key, label, emoji, color, wide) => (
     <button
@@ -51,6 +62,45 @@ export default function FamilyHub({ onBack, onSelect }) {
         {btn('study', '공부 기록', '📋', 'linear-gradient(135deg, #3498DB, #2980B9)', true)}
         {btn('memo', '메모', '📝', 'linear-gradient(135deg, #F39C12, #E67E22)')}
         {btn('todo', '할 일', '✅', 'linear-gradient(135deg, #06D6A0, #05B384)')}
+      </div>
+
+      <div style={{ maxWidth: 480, margin: '24px auto 0' }}>
+        <div style={{
+          fontSize: 13, fontWeight: 700, color: '#2C3E50',
+          marginBottom: 8, paddingLeft: 4,
+        }}>
+          🔗 다른 앱들
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+        }}>
+          {EXTERNAL_APPS.map(app => (
+            <a
+              key={app.name}
+              href={app.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 6, padding: '14px 6px', borderRadius: 14,
+                background: '#FFF', border: '1px solid #E8E0D0',
+                color: '#2C3E50', textDecoration: 'none',
+                fontSize: 12, fontWeight: 600, textAlign: 'center',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                transition: 'transform 0.1s',
+              }}
+              onPointerDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+              onPointerUp={e => e.currentTarget.style.transform = ''}
+              onPointerLeave={e => e.currentTarget.style.transform = ''}
+            >
+              <span style={{ fontSize: 26 }}>{app.emoji}</span>
+              <span style={{ lineHeight: 1.2 }}>{app.label}</span>
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   )
