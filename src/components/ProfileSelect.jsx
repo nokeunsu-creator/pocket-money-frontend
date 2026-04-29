@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CHILD1, CHILD2, MOM } from '../config/names'
 import { getProfilePhotos, saveProfilePhoto } from '../api/api'
 
@@ -12,6 +12,8 @@ const MENU_PASSWORDS = {
   'game': '5431',
   'familyHub': '3396',
 }
+
+const PHOTO_CHANGE_PASSWORD = '3396'
 
 export default function ProfileSelect({ onSelect }) {
   const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
@@ -48,13 +50,25 @@ export default function ProfileSelect({ onSelect }) {
   const [showModal, setShowModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedMenu, setSelectedMenu] = useState(null)
+  const [photoChangeUser, setPhotoChangeUser] = useState(null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
+  const fileInputRefs = useRef({})
+
+  const handlePhotoChangeClick = (name) => {
+    setSelectedUser(null)
+    setSelectedMenu(null)
+    setPhotoChangeUser(name)
+    setPassword('')
+    setError(false)
+    setShowModal(true)
+  }
 
   const handleClick = (name) => {
     if (PASSWORDS[name]) {
       setSelectedUser(name)
       setSelectedMenu(null)
+      setPhotoChangeUser(null)
       setPassword('')
       setError(false)
       setShowModal(true)
@@ -67,6 +81,7 @@ export default function ProfileSelect({ onSelect }) {
     if (MENU_PASSWORDS[category]) {
       setSelectedUser(null)
       setSelectedMenu(category)
+      setPhotoChangeUser(null)
       setPassword('')
       setError(false)
       setShowModal(true)
@@ -76,7 +91,17 @@ export default function ProfileSelect({ onSelect }) {
   }
 
   const handleSubmit = () => {
-    if (selectedMenu) {
+    if (photoChangeUser) {
+      if (password === PHOTO_CHANGE_PASSWORD) {
+        const target = photoChangeUser
+        setShowModal(false)
+        setPhotoChangeUser(null)
+        fileInputRefs.current[target]?.click()
+      } else {
+        setError(true)
+        setPassword('')
+      }
+    } else if (selectedMenu) {
       if (password === MENU_PASSWORDS[selectedMenu]) {
         setShowModal(false)
         onSelect(null, selectedMenu)
@@ -126,14 +151,23 @@ export default function ProfileSelect({ onSelect }) {
               <div className="name">{p.name}</div>
               <div style={{ fontSize: 11, color: '#999', marginTop: -2 }}>용돈기입장</div>
             </button>
-            <label style={{
-              fontSize: 11, color: '#AAA', cursor: 'pointer', padding: '2px 8px',
-              borderRadius: 8, background: '#F0F0F0',
-            }}>
+            <button
+              type="button"
+              onClick={() => handlePhotoChangeClick(p.name)}
+              style={{
+                fontSize: 11, color: '#AAA', cursor: 'pointer', padding: '2px 8px',
+                borderRadius: 8, background: '#F0F0F0', border: 'none',
+              }}
+            >
               📷 사진변경
-              <input type="file" accept="image/*" hidden
-                onChange={(e) => handlePhotoChange(p.name, e)} />
-            </label>
+            </button>
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              ref={(el) => { fileInputRefs.current[p.name] = el }}
+              onChange={(e) => handlePhotoChange(p.name, e)}
+            />
           </div>
         ))}
       </div>
@@ -218,7 +252,7 @@ export default function ProfileSelect({ onSelect }) {
           background: 'rgba(0,0,0,0.4)', display: 'flex',
           alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh', zIndex: 200,
         }}
-          onClick={() => setShowModal(false)}
+          onClick={() => { setShowModal(false); setPhotoChangeUser(null) }}
         >
           <div
             className="card pop-in"
@@ -227,24 +261,36 @@ export default function ProfileSelect({ onSelect }) {
           >
             <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
             <h3 style={{ fontSize: 16, color: 'var(--brown)', marginBottom: 16 }}>
-              {selectedMenu
+              {photoChangeUser
+                ? photoChangeUser + ' 사진 변경 비밀번호를 입력하세요'
+                : selectedMenu
                 ? ({ budget: '가계부', game: '게임', familyHub: '우리 가족' }[selectedMenu] || '') + ' 비밀번호를 입력하세요'
                 : selectedUser + '의 비밀번호를 입력하세요'}
             </h3>
             <input
               type="password"
               inputMode="numeric"
-              maxLength={selectedMenu ? 4 : 6}
+              maxLength={(selectedMenu || photoChangeUser) ? 4 : 6}
               value={password}
               onChange={(e) => {
                 const val = e.target.value.replace(/[^0-9]/g, '')
                 setPassword(val)
                 setError(false)
-                const maxLen = selectedMenu ? 4 : 6
+                const maxLen = (selectedMenu || photoChangeUser) ? 4 : 6
                 if (val.length === maxLen) {
                   setTimeout(() => {
                     // Auto submit
-                    if (selectedMenu) {
+                    if (photoChangeUser) {
+                      if (val === PHOTO_CHANGE_PASSWORD) {
+                        const target = photoChangeUser
+                        setShowModal(false)
+                        setPhotoChangeUser(null)
+                        fileInputRefs.current[target]?.click()
+                      } else {
+                        setError(true)
+                        setPassword('')
+                      }
+                    } else if (selectedMenu) {
                       if (val === MENU_PASSWORDS[selectedMenu]) {
                         setShowModal(false)
                         onSelect(null, selectedMenu)
@@ -266,7 +312,7 @@ export default function ProfileSelect({ onSelect }) {
               }}
               onKeyDown={handleKeyDown}
               autoFocus
-              placeholder={selectedMenu ? '비밀번호 4자리' : '비밀번호 6자리'}
+              placeholder={(selectedMenu || photoChangeUser) ? '비밀번호 4자리' : '비밀번호 6자리'}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: `2px solid ${error ? '#EF476F' : '#EEE'}`,
@@ -280,7 +326,7 @@ export default function ProfileSelect({ onSelect }) {
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setPhotoChangeUser(null) }}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 10,
                   background: 'var(--light-gray)', fontSize: 14, color: 'var(--gray)',
