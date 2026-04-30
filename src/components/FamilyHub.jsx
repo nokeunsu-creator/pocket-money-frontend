@@ -6,7 +6,7 @@ const EXTERNAL_APPS = [
   { name: 'betking', label: '베팅킹', emoji: '👑', url: 'https://betking-pi.vercel.app' },
   { name: 'final-choice', label: '결정 도우미', emoji: '🎲', url: 'https://final-choice.vercel.app' },
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
-  { name: 'jumal-muhae', label: '주말 무해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
+  { name: 'jumal-muhae', label: '주말 뭐해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
   { name: 'chukchuk-calc', label: '척척 계산기', emoji: '🧮', url: 'https://chukchuk-calc.vercel.app' },
 ]
 
