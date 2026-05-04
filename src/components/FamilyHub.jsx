@@ -8,6 +8,7 @@ const EXTERNAL_APPS = [
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
   { name: 'jumal-muhae', label: '주말 뭐해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
   { name: 'pocket-pet', label: '포켓 펫', emoji: '🐾', url: 'https://pocket-pet.vercel.app' },
+  { name: 'just-speak', label: '그냥 말해', emoji: '🗣️', url: 'https://just-speak.vercel.app' },
 ]
 
 export default function FamilyHub({ onBack, onSelect }) {
