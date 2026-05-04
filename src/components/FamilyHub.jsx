@@ -2,7 +2,7 @@
 // 가계도 / 할 일 / 공부 타이머 / 공부 기록 / 메모 / 성장 기록
 
 const EXTERNAL_APPS = [
-  { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena.vercel.app' },
+  { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena-omega.vercel.app/' },
   { name: 'betking', label: '한판해', emoji: '👑', url: 'https://betking-pi.vercel.app' },
   { name: 'final-choice', label: '최우의 한판', emoji: '🎲', url: 'https://final-choice.vercel.app' },
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
