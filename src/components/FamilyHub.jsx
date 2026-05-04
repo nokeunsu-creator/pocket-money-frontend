@@ -2,11 +2,12 @@
 // 가계도 / 할 일 / 공부 타이머 / 공부 기록 / 메모 / 성장 기록
 
 const EXTERNAL_APPS = [
-  { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena-omega.vercel.app' },
-  { name: 'betking', label: '베팅킹', emoji: '👑', url: 'https://betking-pi.vercel.app' },
+  { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena.vercel.app' },
+  { name: 'betking', label: '한판해', emoji: '👑', url: 'https://betking-pi.vercel.app' },
   { name: 'final-choice', label: '결정 도우미', emoji: '🎲', url: 'https://final-choice.vercel.app' },
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
   { name: 'jumal-muhae', label: '주말 뭐해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
+  { name: 'pocket-pet', label: '포켓 펫', emoji: '🐾', url: 'https://pocket-pet.vercel.app' },
 ]
 
 export default function FamilyHub({ onBack, onSelect }) {
