@@ -4,7 +4,7 @@
 const EXTERNAL_APPS = [
   { name: 'quizarena', label: '퀴즈 아레나', emoji: '🎯', url: 'https://quizarena.vercel.app' },
   { name: 'betking', label: '한판해', emoji: '👑', url: 'https://betking-pi.vercel.app' },
-  { name: 'final-choice', label: '결정 도우미', emoji: '🎲', url: 'https://final-choice.vercel.app' },
+  { name: 'final-choice', label: '최우의 한판', emoji: '🎲', url: 'https://final-choice.vercel.app' },
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
   { name: 'jumal-muhae', label: '주말 뭐해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
   { name: 'pocket-pet', label: '포켓 펫', emoji: '🐾', url: 'https://pocket-pet.vercel.app' },
