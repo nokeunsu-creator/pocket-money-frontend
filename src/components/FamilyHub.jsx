@@ -7,7 +7,7 @@ const EXTERNAL_APPS = [
   { name: 'final-choice', label: '최우의 선택', emoji: '🎲', url: 'https://final-choice.vercel.app' },
   { name: 'chonmap', label: '촌맵', emoji: '🗺️', url: 'https://chonmap.vercel.app' },
   { name: 'jumal-muhae', label: '주말 뭐해', emoji: '🌅', url: 'https://jumal-muhae-frontend.vercel.app' },
-  { name: 'pocket-pet', label: '포켓 펫', emoji: '🐾', url: 'https://pocket-pet.vercel.app' },
+  { name: 'pocket-pet', label: '포켓 펫', emoji: '🐾', url: 'https://pocket-pet-alpha.vercel.app' },
   { name: 'just-speak', label: '그냥 말해', emoji: '🗣️', url: 'https://just-speak.vercel.app' },
 ]
 
