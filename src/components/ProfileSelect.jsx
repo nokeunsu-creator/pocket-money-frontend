@@ -3,17 +3,17 @@ import { CHILD1, CHILD2, MOM } from '../config/names'
 import { getProfilePhotos, saveProfilePhoto } from '../api/api'
 
 const PASSWORDS = {
-  [CHILD1]: '150324',
-  [CHILD2]: '170410',
+  [CHILD1]: '15',
+  [CHILD2]: '17',
 }
 
 const MENU_PASSWORDS = {
-  'budget': '1219',
-  'game': '5431',
+  'budget': '12',
+  'game': '54',
   'familyHub': '33',
 }
 
-const PHOTO_CHANGE_PASSWORD = '3396'
+const PHOTO_CHANGE_PASSWORD = '33'
 
 export default function ProfileSelect({ onSelect }) {
   const defaultPhotos = { [CHILD1]: '/profiles/nogunwoo.jpg', [CHILD2]: '/profiles/noseungwoo.jpg' }
@@ -270,13 +270,22 @@ export default function ProfileSelect({ onSelect }) {
             <input
               type="password"
               inputMode="numeric"
-              maxLength={selectedMenu ? MENU_PASSWORDS[selectedMenu].length : (photoChangeUser ? 4 : 6)}
+              maxLength={
+                selectedMenu ? MENU_PASSWORDS[selectedMenu].length
+                : photoChangeUser ? PHOTO_CHANGE_PASSWORD.length
+                : selectedUser ? PASSWORDS[selectedUser].length
+                : 2
+              }
               value={password}
               onChange={(e) => {
                 const val = e.target.value.replace(/[^0-9]/g, '')
                 setPassword(val)
                 setError(false)
-                const maxLen = selectedMenu ? MENU_PASSWORDS[selectedMenu].length : (photoChangeUser ? 4 : 6)
+                const maxLen =
+                  selectedMenu ? MENU_PASSWORDS[selectedMenu].length
+                  : photoChangeUser ? PHOTO_CHANGE_PASSWORD.length
+                  : selectedUser ? PASSWORDS[selectedUser].length
+                  : 2
                 if (val.length === maxLen) {
                   setTimeout(() => {
                     // Auto submit
@@ -312,7 +321,12 @@ export default function ProfileSelect({ onSelect }) {
               }}
               onKeyDown={handleKeyDown}
               autoFocus
-              placeholder={selectedMenu ? `비밀번호 ${MENU_PASSWORDS[selectedMenu].length}자리` : (photoChangeUser ? '비밀번호 4자리' : '비밀번호 6자리')}
+              placeholder={
+                selectedMenu ? `비밀번호 ${MENU_PASSWORDS[selectedMenu].length}자리`
+                : photoChangeUser ? `비밀번호 ${PHOTO_CHANGE_PASSWORD.length}자리`
+                : selectedUser ? `비밀번호 ${PASSWORDS[selectedUser].length}자리`
+                : '비밀번호'
+              }
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: `2px solid ${error ? '#EF476F' : '#EEE'}`,
