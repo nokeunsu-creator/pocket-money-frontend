@@ -10,7 +10,7 @@ const PASSWORDS = {
 const MENU_PASSWORDS = {
   'budget': '1219',
   'game': '5431',
-  'familyHub': '3396',
+  'familyHub': '33',
 }
 
 const PHOTO_CHANGE_PASSWORD = '3396'
@@ -270,13 +270,13 @@ export default function ProfileSelect({ onSelect }) {
             <input
               type="password"
               inputMode="numeric"
-              maxLength={(selectedMenu || photoChangeUser) ? 4 : 6}
+              maxLength={selectedMenu ? MENU_PASSWORDS[selectedMenu].length : (photoChangeUser ? 4 : 6)}
               value={password}
               onChange={(e) => {
                 const val = e.target.value.replace(/[^0-9]/g, '')
                 setPassword(val)
                 setError(false)
-                const maxLen = (selectedMenu || photoChangeUser) ? 4 : 6
+                const maxLen = selectedMenu ? MENU_PASSWORDS[selectedMenu].length : (photoChangeUser ? 4 : 6)
                 if (val.length === maxLen) {
                   setTimeout(() => {
                     // Auto submit
@@ -312,7 +312,7 @@ export default function ProfileSelect({ onSelect }) {
               }}
               onKeyDown={handleKeyDown}
               autoFocus
-              placeholder={(selectedMenu || photoChangeUser) ? '비밀번호 4자리' : '비밀번호 6자리'}
+              placeholder={selectedMenu ? `비밀번호 ${MENU_PASSWORDS[selectedMenu].length}자리` : (photoChangeUser ? '비밀번호 4자리' : '비밀번호 6자리')}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: `2px solid ${error ? '#EF476F' : '#EEE'}`,
