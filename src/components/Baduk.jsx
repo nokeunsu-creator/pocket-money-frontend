@@ -29,6 +29,40 @@ function applyHandicap(board, stones) {
   return newBoard
 }
 
+// 등급별 진행도. 급 트랙(30급→1급)과 단 트랙(1단→9단)은 분리.
+// kyu=-1: 30급(strength 0)만 활성. dan=29: 1단(strength 30)만 활성.
+const BADUK_PROGRESS_KEY = 'baduk-progress'
+const DEFAULT_PROGRESS = { kyu: -1, dan: 29 }
+function getProgress() {
+  try {
+    const raw = localStorage.getItem(BADUK_PROGRESS_KEY)
+    if (!raw) return { ...DEFAULT_PROGRESS }
+    const p = JSON.parse(raw)
+    return {
+      kyu: typeof p.kyu === 'number' ? p.kyu : DEFAULT_PROGRESS.kyu,
+      dan: typeof p.dan === 'number' ? p.dan : DEFAULT_PROGRESS.dan,
+    }
+  } catch { return { ...DEFAULT_PROGRESS } }
+}
+function recordWin(strength) {
+  const p = getProgress()
+  if (strength < 30) {
+    if (strength > p.kyu) p.kyu = strength
+  } else {
+    if (strength > p.dan) p.dan = strength
+  }
+  localStorage.setItem(BADUK_PROGRESS_KEY, JSON.stringify(p))
+  return p
+}
+function isRankUnlocked(strength, progress) {
+  if (strength < 30) return strength <= progress.kyu + 1
+  return strength <= progress.dan + 1
+}
+function isRankCleared(strength, progress) {
+  if (strength < 30) return strength <= progress.kyu
+  return strength <= progress.dan
+}
+
 function boardToFlat(board) {
   return board.map(row => row.map(c => c || '').join(',')).join('|')
 }
@@ -64,15 +98,17 @@ export default function Baduk({ onBack }) {
   const [aiThinking, setAiThinking] = useState(false)
   const [handicapCount, setHandicapCount] = useState(0)
   const [komi, setKomi] = useState(6.5)
+  const [progress, setProgress] = useState(getProgress)
 
   const room = useGameRoom('baduk')
   const vw = useViewportWidth()
 
-  // 업적: AI 모드에서 승리 (바둑에서 플레이어는 흑)
+  // 업적 + 진행도 기록: AI 모드에서 승리 (바둑에서 플레이어는 흑)
   useEffect(() => {
-    if (mode === 'ai' && gameOver && score && score.black > score.white) {
+    if (mode === 'ai' && gameOver && score && score.black > score.white && aiRank != null) {
       unlock('baduk_ai_win')
       if (aiRank === 38) unlock('baduk_dan9')
+      setProgress(recordWin(aiRank))
     }
   }, [gameOver, mode, score, aiRank])
   const aiTimerRef = useRef(null)
@@ -467,6 +503,9 @@ export default function Baduk({ onBack }) {
   if (mode === 'ai' && size && aiRank == null) {
     const ranks = rankTab === 'kyu' ? KYU_RANKS : DAN_RANKS
     const cols = rankTab === 'kyu' ? 6 : 3
+    const currentTrackMax = rankTab === 'kyu' ? progress.kyu : progress.dan
+    const currentTarget = currentTrackMax + 1 // 지금 도전할 등급 strength
+    const currentRank = ranks.find(r => r.strength === currentTarget)
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={() => setSize(null)}
@@ -476,7 +515,7 @@ export default function Baduk({ onBack }) {
         <div style={{ fontSize: 64, marginBottom: 12 }}>🤖</div>
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>등급 선택</h2>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
-          {size}×{size} · 30급(가장 약함) → 9단(가장 강함)
+          {size}×{size} · 약한 등급부터 차례로 도전!
         </p>
 
         {/* 급/단 탭 */}
@@ -501,7 +540,14 @@ export default function Baduk({ onBack }) {
           </button>
         </div>
 
-        {/* 등급 버튼 그리드 (강한 등급이 위에 오도록 정렬: 1급/9단부터) */}
+        {/* 현재 도전 안내 */}
+        {currentRank && (
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
+            지금 도전할 차례: <strong style={{ color: getRankColor(currentRank.strength) }}>{currentRank.label}</strong>
+          </div>
+        )}
+
+        {/* 등급 버튼 그리드 (약한 등급이 위: 30급/1단부터) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
@@ -509,19 +555,31 @@ export default function Baduk({ onBack }) {
           maxWidth: 320,
           margin: '0 auto',
         }}>
-          {[...ranks].reverse().map(rank => (
-            <button key={rank.strength}
-              onClick={() => startAiGame(size, rank.strength)}
-              title={getRankDescription(rank.strength)}
-              style={{
-                padding: '12px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-                fontSize: 14, fontWeight: 700, color: '#FFF',
-                background: getRankColor(rank.strength),
-                boxShadow: `0 2px 6px ${getRankColor(rank.strength)}44`,
-              }}>
-              {rank.label}
-            </button>
-          ))}
+          {ranks.map(rank => {
+            const locked = !isRankUnlocked(rank.strength, progress)
+            const cleared = isRankCleared(rank.strength, progress)
+            const isCurrent = rank.strength === currentTarget
+            const mark = locked ? '🔒' : cleared ? '✓' : ''
+            return (
+              <button key={rank.strength}
+                onClick={() => !locked && startAiGame(size, rank.strength)}
+                disabled={locked}
+                title={locked ? '먼저 이전 등급을 이겨주세요' : getRankDescription(rank.strength)}
+                style={{
+                  padding: '12px 0', borderRadius: 10, border: 'none',
+                  cursor: locked ? 'not-allowed' : 'pointer',
+                  fontSize: 14, fontWeight: 700,
+                  color: locked ? '#999' : '#FFF',
+                  background: locked ? '#E0E0E0' : getRankColor(rank.strength),
+                  boxShadow: locked ? 'none'
+                    : isCurrent ? `0 0 0 2px #F1C40F, 0 2px 6px ${getRankColor(rank.strength)}66`
+                    : `0 2px 6px ${getRankColor(rank.strength)}44`,
+                  opacity: locked ? 0.55 : 1,
+                }}>
+                {mark} {rank.label}
+              </button>
+            )
+          })}
         </div>
 
         <p style={{ fontSize: 11, color: '#AAA', marginTop: 16, lineHeight: 1.5, maxWidth: 320, margin: '16px auto 0' }}>
