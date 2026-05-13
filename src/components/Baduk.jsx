@@ -63,6 +63,24 @@ function isRankCleared(strength, progress) {
   return strength <= progress.dan
 }
 
+// 화면 깊이(안드로이드 뒤로가기 단계 관리용).
+//  0: 모드 선택 (Baduk 진입점)
+//  1: 사이즈 선택 또는 online-create
+//  2: AI 등급 선택, 로컬/온라인 게임, 온라인 대기
+//  3: AI 게임 또는 온라인 게임(접속됨)
+function getDepth(mode, size, aiRank, roomConnected) {
+  if (!mode) return 0
+  if (mode === 'online-create') return 1
+  if (mode === 'online') return roomConnected ? 3 : 2
+  if (mode === 'ai') {
+    if (!size) return 1
+    if (aiRank == null) return 2
+    return 3
+  }
+  if (mode === 'local') return size ? 2 : 1
+  return 1
+}
+
 function boardToFlat(board) {
   return board.map(row => row.map(c => c || '').join(',')).join('|')
 }
@@ -405,28 +423,58 @@ export default function Baduk({ onBack }) {
     }
   }
 
-  const handleBack = () => {
+  // 한 단계 뒤로 (상태만 변경, history 변경 없음)
+  const navigateBackInternal = useCallback(() => {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
-    if (mode === 'online') room.leaveRoom()
+    if (mode === 'online') {
+      room.leaveRoom()
+      setMode(null); setSize(null); setAiRank(null)
+      return
+    }
+    if (mode === 'online-create') { setMode(null); return }
     if (mode === 'ai') {
-      setAiRank(null)
-      setSize(null)
-      setMode(null)
-      return
+      if (aiRank != null) { setAiRank(null); return }
+      if (size != null) { setSize(null); return }
+      setMode(null); return
     }
-    if (mode) {
-      setMode(null)
-      setSize(null)
-      return
+    if (mode === 'local') {
+      if (size != null) { setSize(null); return }
+      setMode(null); return
     }
-    onBack()
-  }
+    onBack() // depth 0에서 뒤로 → Baduk 종료
+  }, [mode, size, aiRank, room, onBack])
+
+  // 인앱 뒤로가기 버튼: history.back()을 통해 popstate 트리거 → navigateBackInternal
+  const handleBack = useCallback(() => {
+    if (depthRef.current > 0) {
+      window.history.back()
+    } else {
+      onBack()
+    }
+  }, [onBack])
+
+  // 깊이 변화 추적 + 깊어질 때 history push
+  const depthRef = useRef(0)
+  const currentDepth = getDepth(mode, size, aiRank, room.connected)
+  useEffect(() => {
+    if (currentDepth > depthRef.current) {
+      window.history.pushState({ baduk: currentDepth }, '')
+    }
+    depthRef.current = currentDepth
+  }, [currentDepth])
+
+  // 안드로이드 하드웨어 뒤로가기 / 브라우저 뒤로가기 처리
+  useEffect(() => {
+    const handler = () => { navigateBackInternal() }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, [navigateBackInternal])
 
   // 모드 선택 화면
   if (!mode) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={onBack}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
@@ -474,7 +522,7 @@ export default function Baduk({ onBack }) {
   if (mode === 'ai' && !size) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={() => setMode(null)}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
@@ -508,7 +556,7 @@ export default function Baduk({ onBack }) {
     const currentRank = ranks.find(r => r.strength === currentTarget)
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={() => setSize(null)}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 크기 선택
         </button>
@@ -593,7 +641,7 @@ export default function Baduk({ onBack }) {
   if (mode === 'online-create') {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={() => setMode(null)}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
@@ -622,7 +670,7 @@ export default function Baduk({ onBack }) {
   if (mode === 'local' && !size) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
-        <button onClick={() => setMode(null)}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
@@ -716,7 +764,7 @@ export default function Baduk({ onBack }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={handleBack}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
-            ← {mode === 'online' ? '나가기' : '크기선택'}
+            ← {mode === 'online' ? '나가기' : mode === 'ai' ? '등급 선택' : '크기 선택'}
           </button>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
             바둑 ({size}×{size})
@@ -872,13 +920,13 @@ export default function Baduk({ onBack }) {
               다시 하기
             </button>
             {mode === 'local' && (
-              <button onClick={() => setSize(null)}
+              <button onClick={handleBack}
                 style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
                 크기 변경
               </button>
             )}
             {mode === 'ai' && (
-              <button onClick={() => { setAiRank(null); setSize(null) }}
+              <button onClick={handleBack}
                 style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
                 등급 변경
               </button>
