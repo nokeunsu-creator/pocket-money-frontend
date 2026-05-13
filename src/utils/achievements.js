@@ -8,7 +8,7 @@ export const ACHIEVEMENTS = [
   { id: 'janggi_lv5', icon: '將', title: '장기 중급', desc: '장기 Lv.5 클리어', category: 'board' },
   { id: 'janggi_lv10', icon: '🏆', title: '장기 달인', desc: '장기 Lv.10 클리어', category: 'board' },
   { id: 'baduk_ai_win', icon: '⚪', title: '바둑 첫 승', desc: '바둑 AI에게 승리', category: 'board' },
-  { id: 'baduk_lv10', icon: '🏆', title: '바둑 고수', desc: '바둑 Lv.10 AI 격파', category: 'board' },
+  { id: 'baduk_dan9', icon: '🏆', title: '바둑 9단', desc: '바둑 AI 9단 격파', category: 'board' },
 
   // Card games
   { id: 'onecard_win', icon: '🃏', title: '원카드 승리', desc: '원카드에서 승리', category: 'card' },

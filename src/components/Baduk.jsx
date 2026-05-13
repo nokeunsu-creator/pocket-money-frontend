@@ -2,9 +2,26 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { useViewportWidth } from '../utils/useViewportWidth'
 import { unlock } from '../utils/achievements'
+import {
+  getRank,
+  rankToStrategy,
+  getHandicapStones,
+  getKomi,
+  getRankColor,
+  getRankDescription,
+  getAiDelay,
+  getKyuRanks,
+  getDanRanks,
+} from '../utils/badukRank'
 
 function createBoard(size) {
   return Array.from({ length: size }, () => Array(size).fill(null))
+}
+
+function applyHandicap(board, stones) {
+  const newBoard = board.map(row => [...row])
+  stones.forEach(([r, c]) => { newBoard[r][c] = 'black' })
+  return newBoard
 }
 
 function boardToFlat(board) {
@@ -58,7 +75,7 @@ function boardToString(board) {
   return board.map(row => row.map(c => c || '.').join('')).join('|')
 }
 
-function countTerritory(board, size) {
+function countTerritory(board, size, komi = 6.5) {
   const visited = Array.from({ length: size }, () => Array(size).fill(false))
   let blackTerritory = 0, whiteTerritory = 0, blackStones = 0, whiteStones = 0
 
@@ -90,7 +107,8 @@ function countTerritory(board, size) {
 
   return {
     black: blackStones + blackTerritory,
-    white: whiteStones + whiteTerritory + 6.5,
+    white: whiteStones + whiteTerritory + komi,
+    komi,
     blackStones, whiteStones, blackTerritory, whiteTerritory,
   }
 }
@@ -136,7 +154,6 @@ function getCandidateMoves(board, size, radius) {
       if (board[r][c] !== null) hasStones.push([r, c])
 
   if (hasStones.length === 0) {
-    // Opening: return center and star points
     const center = Math.floor(size / 2)
     const moves = [[center, center]]
     ;(STAR_POINTS[size] || []).forEach(p => moves.push(p))
@@ -158,7 +175,6 @@ function getCandidateMoves(board, size, radius) {
 }
 
 function findCaptures(board, color, size, candidates, prevBoardStr) {
-  const opp = color === 'black' ? 'white' : 'black'
   const captureMoves = []
   for (const [r, c] of candidates) {
     if (!isLegalMove(board, r, c, color, size, prevBoardStr)) continue
@@ -170,7 +186,6 @@ function findCaptures(board, color, size, candidates, prevBoardStr) {
 }
 
 function findSaveMoves(board, color, size, candidates, prevBoardStr) {
-  // Find own groups with only 1 liberty and extend them
   const saves = []
   const checked = new Set()
   for (let r = 0; r < size; r++) {
@@ -181,7 +196,6 @@ function findSaveMoves(board, color, size, candidates, prevBoardStr) {
       const group = getGroup(board, r, c, size)
       group.stones.forEach(([sr, sc]) => checked.add(`${sr},${sc}`))
       if (group.liberties === 1) {
-        // Find the liberty point
         for (const [sr, sc] of group.stones) {
           for (const [dr, dc] of DIRS) {
             const nr = sr + dr, nc = sc + dc
@@ -234,7 +248,6 @@ function isInOpponentTerritory(board, r, c, color, size) {
       else if (board[nr][nc] === color) myAdj++
     }
   }
-  // Consider it opponent's territory if surrounded mostly by opponent
   return oppAdj >= 3 && myAdj === 0
 }
 
@@ -250,155 +263,237 @@ function isNearExistingGroup(board, r, c, color, size) {
   return false
 }
 
-// Advanced evaluation: territory + liberties + connectivity
 function advancedEval(board, r, c, color, size, prevBoardStr) {
   const result = simulateMove(board, r, c, color, size)
   let score = 0
-  // Territory
   score += evaluateTerritory(result.board, size, color) * 2
-  // Captures are very valuable
   score += result.captured * 10
-  // Own group liberties after move
   const group = getGroup(result.board, r, c, size)
   score += Math.min(group.liberties, 6) * 2
-  // Group size bonus
   score += Math.min(group.stones.length, 8)
-  // Near own stones bonus
   if (isNearExistingGroup(board, r, c, color, size)) score += 3
-  // Avoid opponent territory
   if (isInOpponentTerritory(board, r, c, color, size)) score -= 8
-  // Edge penalty (corners and edges are less valuable early)
   if (r === 0 || r === size - 1 || c === 0 || c === size - 1) score -= 2
-  // Self-atari penalty
   if (group.liberties === 1 && result.captured === 0) score -= 15
   return score
 }
 
-function getAiMove(board, size, aiLevel, prevBoardStr) {
+// Opening: 빈 화점을 우선 (수가 5수 이하일 때만 적용)
+function getOpeningMove(board, size, color, prevBoardStr) {
+  let stoneCount = 0
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++) if (board[r][c]) stoneCount++
+
+  if (stoneCount > 6) return null
+
+  const stars = STAR_POINTS[size] || []
+  const emptyStars = stars.filter(([r, c]) =>
+    !board[r][c] && isLegalMove(board, r, c, color, size, prevBoardStr)
+  )
+  if (emptyStars.length === 0) return null
+  return emptyStars[Math.floor(Math.random() * emptyStars.length)]
+}
+
+// 2-ply minimax with alpha-beta. score는 항상 `color`의 관점.
+function minimaxScore(board, size, color, toMove, depth, alpha, beta, prevBoardStr) {
+  if (depth === 0) {
+    return evaluateTerritory(board, size, color) * 2
+  }
+  const candidates = getCandidateMoves(board, size, 2)
+    .filter(([r, c]) => isLegalMove(board, r, c, toMove, size, prevBoardStr))
+
+  if (candidates.length === 0) return evaluateTerritory(board, size, color) * 2
+
+  const ordered = candidates.map(([r, c]) => {
+    const result = simulateMove(board, r, c, toMove, size)
+    const sign = toMove === color ? 1 : -1
+    const quick = sign * (result.captured * 5 + evaluateTerritory(result.board, size, color))
+    return { r, c, quick, result }
+  }).sort((a, b) => b.quick - a.quick).slice(0, 6)
+
+  const isMax = toMove === color
+  const newPrev = boardToString(board)
+  const nextToMove = toMove === 'black' ? 'white' : 'black'
+
+  let best = isMax ? -Infinity : Infinity
+  for (const cand of ordered) {
+    const child = minimaxScore(cand.result.board, size, color, nextToMove, depth - 1, alpha, beta, newPrev)
+    const captureBonus = (toMove === color ? 1 : -1) * cand.result.captured * 5
+    const score = child + captureBonus
+    if (isMax) {
+      if (score > best) best = score
+      if (best > alpha) alpha = best
+    } else {
+      if (score < best) best = score
+      if (best < beta) beta = best
+    }
+    if (beta <= alpha) break
+  }
+  return best
+}
+
+function chooseMoveDeep(board, size, color, prevBoardStr, depth, timeLimit) {
+  const candidates = getCandidateMoves(board, size, 2)
+    .filter(([r, c]) => isLegalMove(board, r, c, color, size, prevBoardStr))
+  if (candidates.length === 0) return null
+
+  const preScored = candidates.map(([r, c]) => ({
+    r, c, pre: advancedEval(board, r, c, color, size, prevBoardStr),
+  })).sort((a, b) => b.pre - a.pre)
+
+  const evalCount = Math.min(depth >= 2 ? 8 : 12, preScored.length)
+  const topMoves = preScored.slice(0, evalCount)
+  const opp = color === 'black' ? 'white' : 'black'
+  const newPrev = boardToString(board)
+  const startTime = Date.now()
+
+  let bestScore = -Infinity
+  let bestMove = [topMoves[0].r, topMoves[0].c]
+
+  for (const cand of topMoves) {
+    if (Date.now() - startTime > timeLimit) break
+    const result = simulateMove(board, cand.r, cand.c, color, size)
+    const child = minimaxScore(result.board, size, color, opp, depth - 1, -Infinity, Infinity, newPrev)
+    const score = child + result.captured * 10
+    if (score > bestScore) {
+      bestScore = score
+      bestMove = [cand.r, cand.c]
+    }
+  }
+  return bestMove
+}
+
+function getAiMove(board, size, strategy, prevBoardStr) {
   const color = 'white'
   const opp = 'black'
-  const radius = aiLevel >= 7 ? 3 : 2
+  const { tier, subLevel } = strategy
+
+  if (tier === 'deep') {
+    const opening = getOpeningMove(board, size, color, prevBoardStr)
+    if (opening) return opening
+  }
+
+  const radius = (tier === 'lookahead2' || tier === 'deep') ? 3 : 2
   const allCandidates = getCandidateMoves(board, size, radius)
   const legalMoves = allCandidates.filter(([r, c]) => isLegalMove(board, r, c, color, size, prevBoardStr))
 
-  if (legalMoves.length === 0) return null // pass
+  if (legalMoves.length === 0) return null
 
-  // Level 1-2: Random legal moves, avoid obvious bad moves
-  if (aiLevel <= 2) {
-    // Filter out self-atari and moves in opponent's strong territory
-    const decent = legalMoves.filter(([r, c]) => {
-      const result = simulateMove(board, r, c, color, size)
-      const selfGroup = getGroup(result.board, r, c, size)
-      return selfGroup.liberties >= 2 || result.captured > 0
-    })
-    const pool = decent.length > 0 ? decent : legalMoves
-    return pool[Math.floor(Math.random() * pool.length)]
+  const decent = legalMoves.filter(([r, c]) => {
+    const result = simulateMove(board, r, c, color, size)
+    const selfGroup = getGroup(result.board, r, c, size)
+    return selfGroup.liberties >= 2 || result.captured > 0
+  })
+  const decentPool = decent.length > 0 ? decent : legalMoves
+  const pickRand = pool => pool[Math.floor(Math.random() * pool.length)]
+
+  // Tier: random  (30~21급)
+  if (tier === 'random') {
+    const mistakeRate = 1 - subLevel * 0.8
+    if (Math.random() < mistakeRate) return pickRand(legalMoves)
+    return pickRand(decentPool)
   }
 
-  // Level 3-4: Capture + save + random
-  if (aiLevel <= 4) {
-    // Priority 1: Capture opponent stones
-    const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
-    if (captures.length > 0) {
-      return aiLevel === 3
-        ? [captures[0].r, captures[0].c]
-        : [captures[Math.floor(Math.random() * Math.min(2, captures.length))].r,
-           captures[Math.floor(Math.random() * Math.min(2, captures.length))].c]
-    }
-
-    // Priority 2: Save own groups in atari
-    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
-    if (saves.length > 0) return saves[Math.floor(Math.random() * saves.length)]
-
-    // Random from decent moves
-    const decent = legalMoves.filter(([r, c]) => {
-      const result = simulateMove(board, r, c, color, size)
-      const selfGroup = getGroup(result.board, r, c, size)
-      return selfGroup.liberties >= 2 || result.captured > 0
-    })
-    const pool = decent.length > 0 ? decent : legalMoves
-    return pool[Math.floor(Math.random() * pool.length)]
-  }
-
-  // Level 5-6: Territory evaluation
-  if (aiLevel <= 6) {
+  // Tier: capture  (20~13급)
+  if (tier === 'capture') {
+    const mistakeRate = 0.4 * (1 - subLevel)
+    if (Math.random() < mistakeRate) return pickRand(decentPool)
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0) return [captures[0].r, captures[0].c]
+    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    if (saves.length > 0) return pickRand(saves)
+    return pickRand(decentPool)
+  }
 
+  // Tier: territory  (12~7급)
+  if (tier === 'territory') {
+    const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (captures.length > 0) return [captures[0].r, captures[0].c]
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // Score moves by territory influence
     const scored = legalMoves
       .filter(([r, c]) => !isInOpponentTerritory(board, r, c, color, size))
-      .map(([r, c]) => ({
-        r, c,
-        score: scoreMoveByTerritory(board, r, c, color, size),
-      }))
+      .map(([r, c]) => ({ r, c, score: scoreMoveByTerritory(board, r, c, color, size) }))
     scored.sort((a, b) => b.score - a.score)
+    if (scored.length === 0) return pickRand(decentPool)
 
-    if (scored.length === 0) return legalMoves[Math.floor(Math.random() * legalMoves.length)]
-
-    // Pick from top moves with some randomness
-    const topN = Math.min(aiLevel === 5 ? 5 : 3, scored.length)
-    const pick = scored[Math.floor(Math.random() * topN)]
+    const topN = Math.max(2, Math.round(6 - subLevel * 4))
+    const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
     return [pick.r, pick.c]
   }
 
-  // Level 7-8: Advanced evaluation with deeper analysis
-  if (aiLevel <= 8) {
+  // Tier: advanced  (6~1급)
+  if (tier === 'advanced') {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
-
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
     const scored = legalMoves.map(([r, c]) => ({
-      r, c,
-      score: advancedEval(board, r, c, color, size, prevBoardStr),
+      r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),
     }))
     scored.sort((a, b) => b.score - a.score)
     if (scored.length === 0) return null
 
-    // Level 7: pick from top 3, Level 8: pick best
-    const topN = aiLevel === 7 ? Math.min(3, scored.length) : 1
-    const pick = scored[Math.floor(Math.random() * topN)]
+    const topN = Math.max(1, Math.round(4 - subLevel * 3))
+    const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
     return [pick.r, pick.c]
   }
 
-  // Level 9-10: Advanced evaluation + look-ahead (simulate opponent response)
-  {
+  // Tier: lookahead1  (1~3단) — 1-ply
+  if (tier === 'lookahead1') {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0 && captures[0].captured >= 3) return [captures[0].r, captures[0].c]
-
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // Score all moves with advanced eval
+    const oppLookCount = Math.round(6 + subLevel * 4)
     const scored = legalMoves.map(([r, c]) => {
       let score = advancedEval(board, r, c, color, size, prevBoardStr)
-
-      // Look-ahead: simulate opponent's best response
-      if (aiLevel === 10) {
-        const result = simulateMove(board, r, c, color, size)
-        const oppMoves = getCandidateMoves(result.board, size, 2)
-          .filter(([or, oc]) => isLegalMove(result.board, or, oc, opp, size, ''))
-          .slice(0, 8) // limit for speed
-        let bestOppScore = -Infinity
-        for (const [or, oc] of oppMoves) {
-          const oppResult = simulateMove(result.board, or, oc, opp, size)
-          const oppScore = evaluateTerritory(oppResult.board, size, opp) + oppResult.captured * 5
-          if (oppScore > bestOppScore) bestOppScore = oppScore
-        }
-        if (bestOppScore > -Infinity) score -= bestOppScore * 0.5
+      const result = simulateMove(board, r, c, color, size)
+      const oppMoves = getCandidateMoves(result.board, size, 2)
+        .filter(([or, oc]) => isLegalMove(result.board, or, oc, opp, size, ''))
+        .slice(0, oppLookCount)
+      let bestOppScore = -Infinity
+      for (const [or, oc] of oppMoves) {
+        const oppResult = simulateMove(result.board, or, oc, opp, size)
+        const oppScore = evaluateTerritory(oppResult.board, size, opp) + oppResult.captured * 5
+        if (oppScore > bestOppScore) bestOppScore = oppScore
       }
-
+      if (bestOppScore > -Infinity) score -= bestOppScore * 0.5
       return { r, c, score }
     })
     scored.sort((a, b) => b.score - a.score)
     if (scored.length === 0) return null
 
-    return [scored[0].r, scored[0].c]
+    const topN = Math.max(1, Math.round(3 - subLevel * 2))
+    const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
+    return [pick.r, pick.c]
+  }
+
+  // Tier: lookahead2 (4~6단) — 2-ply
+  if (tier === 'lookahead2') {
+    const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (captures.length > 0 && captures[0].captured >= 3) return [captures[0].r, captures[0].c]
+    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    if (saves.length > 0) return saves[0]
+
+    const move = chooseMoveDeep(board, size, color, prevBoardStr, 2, 800 + subLevel * 400)
+    if (move) return move
+    return pickRand(decentPool)
+  }
+
+  // Tier: deep (7~9단) — 2-ply + 정석 + 더 많은 후보
+  {
+    const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
+    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    if (saves.length > 0) return saves[0]
+
+    const move = chooseMoveDeep(board, size, color, prevBoardStr, 2, 1200 + subLevel * 600)
+    if (move) return move
+    return pickRand(decentPool)
   }
 }
 
@@ -406,37 +501,14 @@ function getAiMove(board, size, aiLevel, prevBoardStr) {
 // Component
 // ============================================================
 
-const AI_LEVEL_LABELS = [
-  { range: '1-2', label: '입문', levels: [1, 2] },
-  { range: '3-4', label: '초급', levels: [3, 4] },
-  { range: '5-6', label: '중급', levels: [5, 6] },
-  { range: '7-8', label: '상급', levels: [7, 8] },
-  { range: '9-10', label: '고수', levels: [9, 10] },
-]
-
-function getLevelColor(level) {
-  const colors = [
-    '#2ECC71', '#27AE60', // 1-2 green
-    '#F1C40F', '#F39C12', // 3-4 yellow
-    '#E67E22', '#D35400', // 5-6 orange
-    '#E74C3C', '#C0392B', // 7-8 red
-    '#8E44AD', '#6C3483', // 9-10 purple/dark
-  ]
-  return colors[level - 1] || '#333'
-}
-
-function getLevelLabel(level) {
-  if (level <= 2) return '입문'
-  if (level <= 4) return '초급'
-  if (level <= 6) return '중급'
-  if (level <= 8) return '상급'
-  return '고수'
-}
+const KYU_RANKS = getKyuRanks()
+const DAN_RANKS = getDanRanks()
 
 export default function Baduk({ onBack }) {
   const [mode, setMode] = useState(null) // null | 'local' | 'ai' | 'online'
   const [size, setSize] = useState(null)
-  const [aiLevel, setAiLevel] = useState(null)
+  const [aiRank, setAiRank] = useState(null) // strength 정수 0~38
+  const [rankTab, setRankTab] = useState('kyu') // 'kyu' | 'dan'
   const [board, setBoard] = useState([])
   const [turn, setTurn] = useState('black')
   const [captures, setCaptures] = useState({ black: 0, white: 0 })
@@ -449,6 +521,8 @@ export default function Baduk({ onBack }) {
   const [message, setMessage] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [aiThinking, setAiThinking] = useState(false)
+  const [handicapCount, setHandicapCount] = useState(0)
+  const [komi, setKomi] = useState(6.5)
 
   const room = useGameRoom('baduk')
   const vw = useViewportWidth()
@@ -457,9 +531,9 @@ export default function Baduk({ onBack }) {
   useEffect(() => {
     if (mode === 'ai' && gameOver && score && score.black > score.white) {
       unlock('baduk_ai_win')
-      if (aiLevel === 10) unlock('baduk_lv10')
+      if (aiRank === 38) unlock('baduk_dan9')
     }
-  }, [gameOver, mode, score, aiLevel])
+  }, [gameOver, mode, score, aiRank])
   const aiTimerRef = useRef(null)
 
   const opponent = turn === 'black' ? 'white' : 'black'
@@ -484,21 +558,22 @@ export default function Baduk({ onBack }) {
   const aiThinkingRef = useRef(false)
   useEffect(() => {
     if (mode !== 'ai' || turn !== 'white' || gameOver) return
-    if (!size || board.length === 0) return
+    if (!size || board.length === 0 || aiRank == null) return
     if (aiThinkingRef.current) return
 
     aiThinkingRef.current = true
     setAiThinking(true)
-    const delay = aiLevel <= 4 ? 300 : aiLevel <= 6 ? 400 : 500
+    const strategy = rankToStrategy(aiRank)
+    const delay = getAiDelay(aiRank)
 
     const timer = setTimeout(() => {
       try {
-        const move = getAiMove(board, size, aiLevel, prevBoardStr)
+        const move = getAiMove(board, size, strategy, prevBoardStr)
 
         if (move === null) {
           const newPassCount = passCount + 1
           if (newPassCount >= 2) {
-            const newScore = countTerritory(board, size)
+            const newScore = countTerritory(board, size, komi)
             setScore(newScore)
             setGameOver(true)
             setMessage('')
@@ -534,10 +609,36 @@ export default function Baduk({ onBack }) {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [mode, turn, gameOver, board, size, aiLevel, prevBoardStr, passCount, captures])
+  }, [mode, turn, gameOver, board, size, aiRank, prevBoardStr, passCount, captures, komi])
 
+  // AI 모드 시작 (rank 기반 핸디캡 적용)
+  const startAiGame = (s, rankStrength) => {
+    const stones = getHandicapStones(rankStrength, s)
+    const k = getKomi(rankStrength, s)
+    const initialBoard = applyHandicap(createBoard(s), stones)
+    setSize(s)
+    setAiRank(rankStrength)
+    setHandicapCount(stones.length)
+    setKomi(k)
+    setBoard(initialBoard)
+    // 핸디캡이 있으면 백(AI)이 선공
+    setTurn(stones.length > 0 ? 'white' : 'black')
+    setCaptures({ black: 0, white: 0 })
+    setLastMove(null)
+    setPrevBoardStr('')
+    setPassCount(0)
+    setGameOver(false)
+    setScore(null)
+    setHistory([])
+    setMessage('')
+    setAiThinking(false)
+  }
+
+  // 일반(로컬/온라인) 시작
   const startGame = (s) => {
     setSize(s)
+    setHandicapCount(0)
+    setKomi(6.5)
     setBoard(createBoard(s))
     setTurn('black')
     setCaptures({ black: 0, white: 0 })
@@ -588,12 +689,10 @@ export default function Baduk({ onBack }) {
   const place = useCallback((r, c) => {
     if (!size || board[r][c] || gameOver) return
 
-    // AI mode: only allow player (black) to play
     if (mode === 'ai') {
       if (turn !== 'black' || aiThinking) return
     }
 
-    // 온라인: 자기 턴만 가능
     if (mode === 'online') {
       if (!room.connected) return
       if (turn !== room.myColor) return
@@ -651,12 +750,10 @@ export default function Baduk({ onBack }) {
   const pass = () => {
     if (gameOver) return
 
-    // AI mode: only player can pass
     if (mode === 'ai') {
       if (turn !== 'black' || aiThinking) return
     }
 
-    // 온라인: 자기 턴만 가능
     if (mode === 'online') {
       if (!room.connected) return
       if (turn !== room.myColor) return
@@ -665,9 +762,10 @@ export default function Baduk({ onBack }) {
     const newPassCount = passCount + 1
     let newGameOver = false
     let newScore = null
+    const useKomi = mode === 'ai' ? komi : 6.5
 
     if (newPassCount >= 2) {
-      newScore = countTerritory(board, size)
+      newScore = countTerritory(board, size, useKomi)
       newGameOver = true
     }
 
@@ -697,12 +795,10 @@ export default function Baduk({ onBack }) {
   }
 
   const undo = () => {
-    if (mode === 'online') return // 온라인은 무르기 불가
+    if (mode === 'online') return
     if (history.length === 0 || gameOver) return
-
     if (mode === 'ai' && aiThinking) return
 
-    // In AI mode, undo both AI move and player move
     if (mode === 'ai' && history.length >= 2) {
       const prev = history[history.length - 2]
       setBoard(prev.board)
@@ -727,6 +823,8 @@ export default function Baduk({ onBack }) {
     if (!window.confirm('현재 게임을 종료하고 새 게임을 시작할까요?')) return
     if (mode === 'online') {
       room.updateState(getInitialOnlineState(size))
+    } else if (mode === 'ai' && aiRank != null) {
+      startAiGame(size, aiRank)
     } else {
       startGame(size)
     }
@@ -736,7 +834,7 @@ export default function Baduk({ onBack }) {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current)
     if (mode === 'online') room.leaveRoom()
     if (mode === 'ai') {
-      setAiLevel(null)
+      setAiRank(null)
       setSize(null)
       setMode(null)
       return
@@ -783,7 +881,7 @@ export default function Baduk({ onBack }) {
               style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: '2px solid #DDD',
                 fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
-                fontFamily: 'monospace',
+                fontFamily: 'monospace', minWidth: 0, boxSizing: 'border-box',
               }}
             />
             <button onClick={joinOnline}
@@ -826,8 +924,10 @@ export default function Baduk({ onBack }) {
     )
   }
 
-  // AI 모드: 레벨 선택
-  if (mode === 'ai' && size && !aiLevel) {
+  // AI 모드: 등급(급/단) 선택
+  if (mode === 'ai' && size && aiRank == null) {
+    const ranks = rankTab === 'kyu' ? KYU_RANKS : DAN_RANKS
+    const cols = rankTab === 'kyu' ? 6 : 3
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={() => setSize(null)}
@@ -835,35 +935,59 @@ export default function Baduk({ onBack }) {
           ← 크기 선택
         </button>
         <div style={{ fontSize: 64, marginBottom: 12 }}>🤖</div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>난이도 선택</h2>
-        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>{size}×{size} · 나는 ⚫ 흑 (선공)</p>
-        <div style={{ maxWidth: 300, margin: '0 auto' }}>
-          {AI_LEVEL_LABELS.map(({ range, label, levels }) => (
-            <div key={range} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4, textAlign: 'left', paddingLeft: 4 }}>
-                {label}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {levels.map(lv => (
-                  <button key={lv} onClick={() => { setAiLevel(lv); startGame(size) }}
-                    style={{
-                      flex: 1, padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
-                      fontSize: 18, fontWeight: 700, color: '#FFF',
-                      background: getLevelColor(lv),
-                      boxShadow: `0 2px 8px ${getLevelColor(lv)}44`,
-                      transition: 'transform 0.1s',
-                    }}
-                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    {lv}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>등급 선택</h2>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+          {size}×{size} · 30급(가장 약함) → 9단(가장 강함)
+        </p>
+
+        {/* 급/단 탭 */}
+        <div style={{ display: 'flex', gap: 8, maxWidth: 300, margin: '0 auto 16px' }}>
+          <button onClick={() => setRankTab('kyu')}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+              fontSize: 14, fontWeight: 700,
+              background: rankTab === 'kyu' ? '#333' : '#F0F0F0',
+              color: rankTab === 'kyu' ? '#FFF' : '#666',
+            }}>
+            급 (30~1급)
+          </button>
+          <button onClick={() => setRankTab('dan')}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+              fontSize: 14, fontWeight: 700,
+              background: rankTab === 'dan' ? '#333' : '#F0F0F0',
+              color: rankTab === 'dan' ? '#FFF' : '#666',
+            }}>
+            단 (1~9단)
+          </button>
+        </div>
+
+        {/* 등급 버튼 그리드 (강한 등급이 위에 오도록 정렬: 1급/9단부터) */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gap: 6,
+          maxWidth: 320,
+          margin: '0 auto',
+        }}>
+          {[...ranks].reverse().map(rank => (
+            <button key={rank.strength}
+              onClick={() => startAiGame(size, rank.strength)}
+              title={getRankDescription(rank.strength)}
+              style={{
+                padding: '12px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                fontSize: 14, fontWeight: 700, color: '#FFF',
+                background: getRankColor(rank.strength),
+                boxShadow: `0 2px 6px ${getRankColor(rank.strength)}44`,
+              }}>
+              {rank.label}
+            </button>
           ))}
         </div>
+
+        <p style={{ fontSize: 11, color: '#AAA', marginTop: 16, lineHeight: 1.5, maxWidth: 320, margin: '16px auto 0' }}>
+          ※ 단(段)에서는 플레이어가 미리 흑돌을 화점에 놓고 시작합니다 (접바둑).
+        </p>
       </div>
     )
   }
@@ -953,7 +1077,6 @@ export default function Baduk({ onBack }) {
     )
   }
 
-  // 사이즈가 아직 없으면 (온라인 게스트가 아직 상태를 받지 못한 경우)
   if (!size) {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
@@ -966,12 +1089,14 @@ export default function Baduk({ onBack }) {
   const isMyTurn = mode === 'local' || mode === 'ai' ? turn === 'black' || mode === 'local' : turn === room.myColor
   const isPC = vw >= 768
   const maxCell = isPC
-    ? (size === 19 ? 36 : size === 13 ? 50 : 64)  // PC: 약 1.8x
+    ? (size === 19 ? 36 : size === 13 ? 50 : 64)
     : (size === 19 ? 20 : size === 13 ? 28 : 38)
   const effectiveWidth = isPC ? Math.min(vw - 40, 900) : vw - 32
   const cellSize = Math.min(Math.floor(effectiveWidth / size), maxCell)
   const boardPx = cellSize * (size - 1)
   const padding = cellSize
+
+  const aiRankObj = aiRank != null ? getRank(aiRank) : null
 
   const turnLabel = (() => {
     if (gameOver) return '종료'
@@ -986,7 +1111,9 @@ export default function Baduk({ onBack }) {
   return (
     <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', paddingBottom: '1rem' }}>
       <div style={{
-        background: mode === 'ai' ? 'linear-gradient(135deg, #4a1a6b, #6C3483)' : 'linear-gradient(135deg, #1a1a1a, #333)',
+        background: mode === 'ai'
+          ? `linear-gradient(135deg, ${getRankColor(aiRank ?? 0)}, ${getRankColor(Math.max(0, (aiRank ?? 0) - 5))})`
+          : 'linear-gradient(135deg, #1a1a1a, #333)',
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -996,7 +1123,7 @@ export default function Baduk({ onBack }) {
           </button>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
             바둑 ({size}×{size})
-            {mode === 'ai' && ` · AI Lv.${aiLevel}`}
+            {mode === 'ai' && aiRankObj && ` · AI ${aiRankObj.label}`}
             {mode === 'online' && ' · 온라인'}
           </span>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -1036,9 +1163,10 @@ export default function Baduk({ onBack }) {
         </div>
       </div>
 
-      {mode === 'ai' && (
+      {mode === 'ai' && aiRankObj && (
         <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0' }}>
-          난이도: <strong>Lv.{aiLevel}</strong> ({getLevelLabel(aiLevel)})
+          <strong>{aiRankObj.label}</strong> · {getRankDescription(aiRank)}
+          {handicapCount > 0 && ` · 접바둑 ${handicapCount}점`}
         </div>
       )}
 
@@ -1120,8 +1248,12 @@ export default function Baduk({ onBack }) {
           <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
             {score.black > score.white
-              ? mode === 'ai' ? '⚫ 승리! AI를 이겼습니다!' : '⚫ 흑 승리!'
-              : mode === 'ai' ? '⚪ AI 승리! 다시 도전하세요!' : '⚪ 백 승리!'}
+              ? mode === 'ai'
+                ? `⚫ 승리! AI ${aiRankObj ? aiRankObj.label : ''}을(를) 이겼습니다!`
+                : '⚫ 흑 승리!'
+              : mode === 'ai'
+                ? `⚪ AI ${aiRankObj ? aiRankObj.label : ''} 승리! 다시 도전하세요!`
+                : '⚪ 백 승리!'}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16, fontSize: 13 }}>
             <div>
@@ -1132,7 +1264,9 @@ export default function Baduk({ onBack }) {
             <div>
               <div style={{ fontWeight: 700, fontSize: 20 }}>{score.white}</div>
               <div style={{ color: '#888' }}>⚪ 백{mode === 'ai' ? '(AI)' : ''}</div>
-              <div style={{ fontSize: 11, color: '#AAA' }}>돌 {score.whiteStones} + 집 {score.whiteTerritory} + 덤6.5</div>
+              <div style={{ fontSize: 11, color: '#AAA' }}>
+                돌 {score.whiteStones} + 집 {score.whiteTerritory} + 덤{score.komi}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
@@ -1147,9 +1281,9 @@ export default function Baduk({ onBack }) {
               </button>
             )}
             {mode === 'ai' && (
-              <button onClick={() => { setAiLevel(null); setSize(null) }}
+              <button onClick={() => { setAiRank(null); setSize(null) }}
                 style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
-                난이도 변경
+                등급 변경
               </button>
             )}
           </div>
