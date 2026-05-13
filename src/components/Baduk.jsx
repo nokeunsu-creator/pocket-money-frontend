@@ -454,18 +454,27 @@ export default function Baduk({ onBack }) {
   }, [onBack])
 
   // 깊이 변화 추적 + 깊어질 때 history push
+  // App.jsx도 자체 popstate 핸들러로 user/page를 관리하므로, 그 상태를 보존하며
+  // baduk 마커만 덧붙여야 함. 안 그러면 뒤로가기 시 user 필드 없음 → 프로필로 가버림.
   const depthRef = useRef(0)
   const currentDepth = getDepth(mode, size, aiRank, room.connected)
   useEffect(() => {
     if (currentDepth > depthRef.current) {
-      window.history.pushState({ baduk: currentDepth }, '')
+      const prev = window.history.state || {}
+      window.history.pushState({ ...prev, baduk: currentDepth }, '')
     }
     depthRef.current = currentDepth
   }, [currentDepth])
 
   // 안드로이드 하드웨어 뒤로가기 / 브라우저 뒤로가기 처리
+  // baduk 마커가 있는 push에서 뒤로 갈 때만 처리 (App.jsx가 관리하는 페이지 전환에는 관여 안 함)
   useEffect(() => {
-    const handler = () => { navigateBackInternal() }
+    const handler = (e) => {
+      // 우리가 push한 상태에서 뒤로 갈 때만 한 단계 뒤로 이동
+      if (depthRef.current > 0) {
+        navigateBackInternal()
+      }
+    }
     window.addEventListener('popstate', handler)
     return () => window.removeEventListener('popstate', handler)
   }, [navigateBackInternal])
