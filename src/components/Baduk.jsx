@@ -149,8 +149,32 @@ export default function Baduk({ onBack }) {
     setScore(s.score || null)
   }, [room.gameState, mode])
 
-  // AI move effect
+  // AI move effect — Web Worker로 분리해서 UI 안 멈추게 함
   const aiThinkingRef = useRef(false)
+  const aiWorkerRef = useRef(null)
+  const aiRequestIdRef = useRef(0)
+
+  // Worker 1회 초기화 (mode가 ai일 때만)
+  useEffect(() => {
+    if (mode !== 'ai') return
+    if (aiWorkerRef.current) return
+    try {
+      aiWorkerRef.current = new Worker(
+        new URL('../utils/badukAiWorker.js', import.meta.url),
+        { type: 'module' },
+      )
+    } catch (e) {
+      console.error('Worker 생성 실패, 동기 fallback:', e)
+      aiWorkerRef.current = null
+    }
+    return () => {
+      if (aiWorkerRef.current) {
+        aiWorkerRef.current.terminate()
+        aiWorkerRef.current = null
+      }
+    }
+  }, [mode])
+
   useEffect(() => {
     if (mode !== 'ai' || turn !== 'white' || gameOver) return
     if (!size || board.length === 0 || aiRank == null) return
@@ -158,49 +182,75 @@ export default function Baduk({ onBack }) {
 
     aiThinkingRef.current = true
     setAiThinking(true)
-    const strategy = rankToStrategy(aiRank)
+    const strategy = rankToStrategy(aiRank, size)
+    strategy.komi = komi
     const delay = getAiDelay(aiRank)
 
-    const timer = setTimeout(() => {
-      try {
-        const move = getAiMove(board, size, strategy, prevBoardStr)
-
-        if (move === null) {
-          const newPassCount = passCount + 1
-          if (newPassCount >= 2) {
-            const newScore = countTerritory(board, size, komi)
-            setScore(newScore)
-            setGameOver(true)
-            setMessage('')
-          } else {
-            setPassCount(newPassCount)
-            setTurn('black')
-            setMessage('⚪ 백(AI) 패스')
-          }
-        } else {
-          const [r, c] = move
-          const testBoard = board.map(row => [...row])
-          testBoard[r][c] = 'white'
-          const afterCapture = removeDeadStones(testBoard, 'black', size)
-          const newBoard = afterCapture.board
-          const newCaptured = afterCapture.captured
-          const newCaptures = { ...captures, white: captures.white + newCaptured }
-          const newPrevBoardStr = boardToString(board)
-
-          setHistory(prev => [...prev, { board: board.map(row => [...row]), turn: 'white', captures: { ...captures }, prevBoardStr }])
-          setPrevBoardStr(newPrevBoardStr)
-          setBoard(newBoard)
-          setLastMove([r, c])
-          setCaptures(newCaptures)
-          setPassCount(0)
-          setTurn('black')
+    const applyMove = (move) => {
+      if (move === null) {
+        const newPassCount = passCount + 1
+        if (newPassCount >= 2) {
+          const newScore = countTerritory(board, size, komi)
+          setScore(newScore)
+          setGameOver(true)
           setMessage('')
+        } else {
+          setPassCount(newPassCount)
+          setTurn('black')
+          setMessage('⚪ 백(AI) 패스')
         }
-      } catch (e) {
-        console.error('AI error:', e)
+      } else {
+        const [r, c] = move
+        const testBoard = board.map(row => [...row])
+        testBoard[r][c] = 'white'
+        const afterCapture = removeDeadStones(testBoard, 'black', size)
+        const newBoard = afterCapture.board
+        const newCaptured = afterCapture.captured
+        const newCaptures = { ...captures, white: captures.white + newCaptured }
+        const newPrevBoardStr = boardToString(board)
+
+        setHistory(prev => [...prev, { board: board.map(row => [...row]), turn: 'white', captures: { ...captures }, prevBoardStr }])
+        setPrevBoardStr(newPrevBoardStr)
+        setBoard(newBoard)
+        setLastMove([r, c])
+        setCaptures(newCaptures)
+        setPassCount(0)
+        setTurn('black')
+        setMessage('')
       }
       aiThinkingRef.current = false
       setAiThinking(false)
+    }
+
+    const requestId = ++aiRequestIdRef.current
+    const worker = aiWorkerRef.current
+
+    const timer = setTimeout(() => {
+      // Worker 사용 가능하면 비동기로, 아니면 동기 fallback
+      if (worker) {
+        const handler = (e) => {
+          if (e.data.requestId !== requestId) return
+          worker.removeEventListener('message', handler)
+          if (e.data.error) {
+            console.error('AI worker error:', e.data.error)
+            applyMove(null)
+            return
+          }
+          applyMove(e.data.move)
+        }
+        worker.addEventListener('message', handler)
+        worker.postMessage({
+          board, size, strategy, prevBoardStr, color: 'white', requestId,
+        })
+      } else {
+        try {
+          const move = getAiMove(board, size, strategy, prevBoardStr)
+          applyMove(move)
+        } catch (e) {
+          console.error('AI error:', e)
+          applyMove(null)
+        }
+      }
     }, delay)
 
     return () => clearTimeout(timer)

@@ -1,5 +1,7 @@
 // 바둑 게임 로직 + AI 엔진 (UI/React 의존 없음, 테스트 가능)
 
+import { searchBestMove } from './badukSearch.js'
+
 export const STAR_POINTS = {
   9: [[2, 2], [2, 6], [4, 4], [6, 2], [6, 6]],
   13: [[3, 3], [3, 6], [3, 9], [6, 3], [6, 6], [6, 9], [9, 3], [9, 6], [9, 9]],
@@ -114,7 +116,24 @@ export function simulateMove(board, r, c, color, size) {
   return { board: afterCapture.board, captured: afterCapture.captured }
 }
 
-function getCandidateMoves(board, size, radius) {
+// 큰 점(화점/소목/3-3) 좌표 — 보드 크기별
+// 초반에 후보로 강제 포함
+const BIG_POINTS = {
+  9: [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4], [2, 4], [4, 2], [4, 6], [6, 4]],
+  13: [
+    [3, 3], [3, 9], [9, 3], [9, 9], [6, 6],
+    [3, 6], [6, 3], [6, 9], [9, 6],
+    [2, 2], [2, 10], [10, 2], [10, 10],
+  ],
+  19: [
+    [3, 3], [3, 15], [15, 3], [15, 15], [9, 9],
+    [3, 9], [9, 3], [9, 15], [15, 9],
+    [2, 5], [5, 2], [2, 13], [13, 2], [16, 5], [5, 16], [16, 13], [13, 16],
+    [3, 5], [5, 3], [3, 13], [13, 3], [15, 5], [5, 15], [15, 13], [13, 15],
+  ],
+}
+
+function getCandidateMoves(board, size, radius, includeBigPoints = false) {
   const hasStones = []
   for (let r = 0; r < size; r++)
     for (let c = 0; c < size; c++)
@@ -138,7 +157,150 @@ function getCandidateMoves(board, size, radius) {
       }
     }
   }
+  // 초반(돌 10개 이하)에는 큰 점도 후보에 포함
+  if (includeBigPoints && hasStones.length <= 12) {
+    const points = BIG_POINTS[size] || []
+    for (const [br, bc] of points) {
+      if (board[br][bc] === null) candidates.add(`${br},${bc}`)
+    }
+  }
   return Array.from(candidates).map(s => s.split(',').map(Number))
+}
+
+// 사다리 읽기: 단수에 몰린 victim 그룹이 도망쳐서 살 수 있나?
+// - victim 차례: 활로로 도망
+// - 도망 후 활로 2면 상대가 추격 가능 → 재귀
+// - 활로 3+ 도달하면 살았다고 판정
+// 반환: true = 살 수 있음, false = 잡힘
+export function canEscapeLadder(board, victimR, victimC, size, prevBoardStr, depth = 0) {
+  if (depth > 25) return true // 너무 깊으면 산다고 가정 (보수적)
+  const victimColor = board[victimR][victimC]
+  if (!victimColor) return true
+  const attackerColor = victimColor === 'black' ? 'white' : 'black'
+  const group = getGroup(board, victimR, victimC, size)
+  if (group.liberties === 0) return false
+  if (group.liberties >= 3) return true
+
+  // 활로 위치 모으기
+  const libs = new Set()
+  for (const [sr, sc] of group.stones) {
+    for (const [dr, dc] of DIRS) {
+      const nr = sr + dr, nc = sc + dc
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+        libs.add(`${nr},${nc}`)
+      }
+    }
+  }
+
+  // 활로 1 (단수): 활로에 두는 것 외에 잡기로도 살 수 있음
+  // 잡기 후보: 자기 그룹에 인접한 상대 그룹 중 활로 1
+  const captureMoves = new Set()
+  for (const [sr, sc] of group.stones) {
+    for (const [dr, dc] of DIRS) {
+      const nr = sr + dr, nc = sc + dc
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === attackerColor) {
+        const enemyGroup = getGroup(board, nr, nc, size)
+        if (enemyGroup.liberties === 1) {
+          // 잡기 위치 찾기
+          for (const [er, ec] of enemyGroup.stones) {
+            for (const [edr, edc] of DIRS) {
+              const enr = er + edr, enc = ec + edc
+              if (enr >= 0 && enr < size && enc >= 0 && enc < size && board[enr][enc] === null) {
+                captureMoves.add(`${enr},${enc}`)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const tries = [...libs, ...captureMoves]
+  const newPrev = boardToString(board)
+
+  for (const key of tries) {
+    const [er, ec] = key.split(',').map(Number)
+    if (!isLegalMove(board, er, ec, victimColor, size, prevBoardStr)) continue
+    const after = simulateMove(board, er, ec, victimColor, size)
+    // 두고나서 victim 그룹이 사라졌으면 (자살수) skip
+    if (after.board[victimR][victimC] !== victimColor && after.board[er][ec] !== victimColor) continue
+    // 새 victim 좌표 찾기 (원래 victim 셀이 살아있으면 그대로, 아니면 새로 둔 자리)
+    const newVR = after.board[victimR][victimC] === victimColor ? victimR : er
+    const newVC = after.board[victimR][victimC] === victimColor ? victimC : ec
+    const newGroup = getGroup(after.board, newVR, newVC, size)
+    if (newGroup.liberties === 0) continue
+    if (newGroup.liberties >= 3) return true
+
+    if (newGroup.liberties === 1) {
+      // 또 단수 — 잡기로 살 수 있는지만 확인 (재귀 1회)
+      if (canEscapeLadder(after.board, newVR, newVC, size, newPrev, depth + 1)) return true
+      continue
+    }
+
+    // 활로 2: 상대가 추격할 차례
+    const newLibs = new Set()
+    for (const [sr, sc] of newGroup.stones) {
+      for (const [dr, dc] of DIRS) {
+        const nr = sr + dr, nc = sc + dc
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && after.board[nr][nc] === null) {
+          newLibs.add(`${nr},${nc}`)
+        }
+      }
+    }
+    // 상대가 모든 활로를 시도해서 잡으면 victim 죽음
+    let attackerCanCatch = false
+    for (const chaseKey of newLibs) {
+      const [cr, cc] = chaseKey.split(',').map(Number)
+      if (!isLegalMove(after.board, cr, cc, attackerColor, size, newPrev)) continue
+      const afterChase = simulateMove(after.board, cr, cc, attackerColor, size)
+      // 추격수 자체가 자살수
+      const chaseGroup = getGroup(afterChase.board, cr, cc, size)
+      if (chaseGroup.liberties === 0) continue
+      // victim이 잡혔나
+      if (afterChase.board[newVR] && afterChase.board[newVR][newVC] !== victimColor) {
+        attackerCanCatch = true
+        break
+      }
+      // 재귀: victim이 또 도망
+      const chasePrev = boardToString(after.board)
+      if (!canEscapeLadder(afterChase.board, newVR, newVC, size, chasePrev, depth + 1)) {
+        attackerCanCatch = true
+        break
+      }
+    }
+    if (!attackerCanCatch) return true
+  }
+  return false
+}
+
+// 사다리로 잡히는 수 찾기 (상대 그룹을 단수로 만든 후 사다리로 잡을 수 있는 수)
+function findLadderCaptures(board, color, size, candidates, prevBoardStr) {
+  const opp = color === 'black' ? 'white' : 'black'
+  const captures = []
+  for (const [r, c] of candidates) {
+    if (!isLegalMove(board, r, c, color, size, prevBoardStr)) continue
+    const after = simulateMove(board, r, c, color, size)
+    // 이 수로 상대 그룹 중 활로=1된 게 있는지
+    const enemyAtariGroups = new Set()
+    for (let er = 0; er < size; er++) {
+      for (let ec = 0; ec < size; ec++) {
+        if (after.board[er][ec] !== opp) continue
+        const key = `${er},${ec}`
+        if (enemyAtariGroups.has(key)) continue
+        const g = getGroup(after.board, er, ec, size)
+        if (g.liberties === 1) {
+          g.stones.forEach(([sr, sc]) => enemyAtariGroups.add(`${sr},${sc}`))
+          // 사다리 검증
+          const newPrev = boardToString(board)
+          if (!canEscapeLadder(after.board, er, ec, size, newPrev, 0)) {
+            captures.push({ r, c, victimStones: g.stones.length })
+          }
+        }
+      }
+    }
+  }
+  captures.sort((a, b) => b.victimStones - a.victimStones)
+  return captures
 }
 
 function findCaptures(board, color, size, candidates, prevBoardStr) {
@@ -152,6 +314,9 @@ function findCaptures(board, color, size, candidates, prevBoardStr) {
   return captureMoves
 }
 
+// 단수에 몰린 자기 그룹의 살리기 수 찾기
+// - 사다리로 살 수 없는 수는 제외 (헛수)
+// - 큰 그룹 우선
 function findSaveMoves(board, color, size, candidates, prevBoardStr) {
   const saves = []
   const checked = new Set()
@@ -162,21 +327,66 @@ function findSaveMoves(board, color, size, candidates, prevBoardStr) {
       if (checked.has(key)) continue
       const group = getGroup(board, r, c, size)
       group.stones.forEach(([sr, sc]) => checked.add(`${sr},${sc}`))
-      if (group.liberties === 1) {
-        for (const [sr, sc] of group.stones) {
-          for (const [dr, dc] of DIRS) {
-            const nr = sr + dr, nc = sc + dc
-            if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
-              if (isLegalMove(board, nr, nc, color, size, prevBoardStr)) {
-                saves.push([nr, nc])
+      if (group.liberties !== 1) continue
+      const tryMoves = new Set()
+      // 활로로 도망
+      for (const [sr, sc] of group.stones) {
+        for (const [dr, dc] of DIRS) {
+          const nr = sr + dr, nc = sc + dc
+          if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === null) {
+            tryMoves.add(`${nr},${nc}`)
+          }
+        }
+      }
+      // 잡기로 살리기 (인접 상대 그룹 활로 1)
+      const opp = color === 'black' ? 'white' : 'black'
+      for (const [sr, sc] of group.stones) {
+        for (const [dr, dc] of DIRS) {
+          const nr = sr + dr, nc = sc + dc
+          if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === opp) {
+            const eg = getGroup(board, nr, nc, size)
+            if (eg.liberties === 1) {
+              for (const [er, ec] of eg.stones) {
+                for (const [edr, edc] of DIRS) {
+                  const enr = er + edr, enc = ec + edc
+                  if (enr >= 0 && enr < size && enc >= 0 && enc < size && board[enr][enc] === null) {
+                    tryMoves.add(`${enr},${enc}`)
+                  }
+                }
               }
             }
           }
         }
       }
+
+      for (const tkey of tryMoves) {
+        const [tr, tc] = tkey.split(',').map(Number)
+        if (!isLegalMove(board, tr, tc, color, size, prevBoardStr)) continue
+        const after = simulateMove(board, tr, tc, color, size)
+        // 둔 후 그룹 활로 확인 — 사다리로 살 수 있어야 함
+        const newR = after.board[r][c] === color ? r : tr
+        const newC = after.board[r][c] === color ? c : tc
+        if (after.board[newR][newC] !== color) continue
+        const newGroup = getGroup(after.board, newR, newC, size)
+        if (newGroup.liberties === 0) continue
+        if (newGroup.liberties >= 3) {
+          saves.push({ r: tr, c: tc, stones: group.stones.length, safe: true })
+          continue
+        }
+        // 활로 1~2: 사다리로 살 수 있나
+        const newPrev = boardToString(board)
+        if (canEscapeLadder(after.board, newR, newC, size, newPrev, 0)) {
+          saves.push({ r: tr, c: tc, stones: group.stones.length, safe: false })
+        }
+      }
     }
   }
-  return saves
+  // 큰 그룹 살리기 우선, 안전한 수 우선
+  saves.sort((a, b) => {
+    if (a.safe !== b.safe) return a.safe ? -1 : 1
+    return b.stones - a.stones
+  })
+  return saves.map(s => [s.r, s.c])
 }
 
 function evaluateTerritory(board, size, color) {
@@ -343,7 +553,36 @@ function pickByHeuristic({
 // 메인 진입점. color는 'black' 또는 'white' (테스트에서 양쪽 모두 사용).
 export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') {
   const opp = color === 'black' ? 'white' : 'black'
-  const { tier, subLevel } = strategy
+  const { tier, subLevel, search } = strategy
+
+  // 단(段) 등급: 알파베타 탐색 우선 사용 (search 옵션 있을 때만)
+  if (search && (tier === 'lookahead1' || tier === 'lookahead2' || tier === 'deep')) {
+    // 초반 정석: 빈 판이면 화점 선택
+    if (tier === 'deep' || tier === 'lookahead2') {
+      const opening = getOpeningMove(board, size, color, prevBoardStr)
+      if (opening) return opening
+    }
+    // 잡기 우선 검사 (사다리 포함)
+    const radius = 3
+    const allCandidates = getCandidateMoves(board, size, radius, true)
+    const legalMoves = allCandidates.filter(([r, c]) => isLegalMove(board, r, c, color, size, prevBoardStr))
+    if (legalMoves.length === 0) return null
+
+    const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
+    const ladderCaps = findLadderCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (ladderCaps.length > 0 && ladderCaps[0].victimStones >= 2) return [ladderCaps[0].r, ladderCaps[0].c]
+    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    if (saves.length > 0) return saves[0]
+
+    // 알파베타 탐색
+    const komi = strategy.komi ?? 6.5
+    const move = searchBestMove(
+      { board, size, color, prevBoardStr, komi },
+      search,
+    )
+    if (move) return move
+  }
 
   if (tier === 'deep') {
     const opening = getOpeningMove(board, size, color, prevBoardStr)
@@ -351,7 +590,7 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   }
 
   const radius = (tier === 'lookahead2' || tier === 'deep') ? 3 : 2
-  const allCandidates = getCandidateMoves(board, size, radius)
+  const allCandidates = getCandidateMoves(board, size, radius, tier !== 'random')
   const legalMoves = allCandidates.filter(([r, c]) => isLegalMove(board, r, c, color, size, prevBoardStr))
 
   if (legalMoves.length === 0) return null
@@ -399,7 +638,7 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
 
   if (tier === 'advanced') {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
-    if (captures.length > 0 && captures[0].captured >= 2) return [captures[0].r, captures[0].c]
+    if (captures.length > 0) return [captures[0].r, captures[0].c]
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
@@ -409,6 +648,7 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     scored.sort((a, b) => b.score - a.score)
     if (scored.length === 0) return null
 
+    // 상위 티어일수록 결정론적: subLevel=1 → topN=1, subLevel=0 → topN=4
     const topN = Math.max(1, Math.round(4 - subLevel * 3))
     const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
     return [pick.r, pick.c]
