@@ -1,6 +1,8 @@
 // 바둑 게임 로직 + AI 엔진 (UI/React 의존 없음, 테스트 가능)
 
 import { searchBestMove } from './badukSearch.js'
+import { getJosekiMove, getOpeningMove as getOpeningCornerMove } from './badukJoseki.js'
+import { searchMctsMove } from './badukMcts.js'
 
 export const STAR_POINTS = {
   9: [[2, 2], [2, 6], [4, 4], [6, 2], [6, 6]],
@@ -555,14 +557,25 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   const opp = color === 'black' ? 'white' : 'black'
   const { tier, subLevel, search } = strategy
 
-  // 단(段) 등급: 알파베타 탐색 우선 사용 (search 옵션 있을 때만)
+  // 단(段) 등급: 정석 → 잡기/살리기 → MCTS/알파베타
   if (search && (tier === 'lookahead1' || tier === 'lookahead2' || tier === 'deep')) {
-    // 초반 정석: 빈 판이면 화점 선택
+    // 1. 정석 매칭 (lookahead2, deep에서만)
     if (tier === 'deep' || tier === 'lookahead2') {
-      const opening = getOpeningMove(board, size, color, prevBoardStr)
-      if (opening) return opening
+      const joseki = getJosekiMove(board, size, color)
+      if (joseki && isLegalMove(board, joseki[0], joseki[1], color, size, prevBoardStr)) {
+        return joseki
+      }
+      // 정석 매칭 안 되면 빈 코너 점령 (포석)
+      const opening = getOpeningCornerMove(board, size, color)
+      if (opening && isLegalMove(board, opening[0], opening[1], color, size, prevBoardStr)) {
+        return opening
+      }
+      // 화점 fallback
+      const star = getOpeningMove(board, size, color, prevBoardStr)
+      if (star) return star
     }
-    // 잡기 우선 검사 (사다리 포함)
+
+    // 2. 잡기/살리기 우선
     const radius = 3
     const allCandidates = getCandidateMoves(board, size, radius, true)
     const legalMoves = allCandidates.filter(([r, c]) => isLegalMove(board, r, c, color, size, prevBoardStr))
@@ -575,8 +588,16 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // 알파베타 탐색
+    // 3. MCTS (7~9단) 또는 알파베타
+    // MCTS는 budget >= 2초일 때만 (짧은 시간엔 알파베타가 더 안정적)
     const komi = strategy.komi ?? 6.5
+    if (search.useMcts && (search.timeBudgetMs ?? 0) >= 2000) {
+      const mctsMove = searchMctsMove(
+        { board, size, color, prevBoardStr, komi },
+        search,
+      )
+      if (mctsMove) return mctsMove
+    }
     const move = searchBestMove(
       { board, size, color, prevBoardStr, komi },
       search,
@@ -612,9 +633,16 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   if (tier === 'capture') {
     const mistakeRate = 0.4 * (1 - subLevel)
     if (Math.random() < mistakeRate) return pickRand(decentPool)
+    // 살리기를 잡기보다 먼저 — 살리기 못하면 큰 손실
+    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    if (saves.length > 0 && subLevel > 0.3) return saves[0]
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0) return [captures[0].r, captures[0].c]
-    const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
+    // subLevel 높으면 사다리 잡기도 본다
+    if (subLevel > 0.5) {
+      const ladderCaps = findLadderCaptures(board, color, size, legalMoves, prevBoardStr)
+      if (ladderCaps.length > 0 && ladderCaps[0].victimStones >= 2) return [ladderCaps[0].r, ladderCaps[0].c]
+    }
     if (saves.length > 0) return pickRand(saves)
     return pickRand(decentPool)
   }
@@ -622,8 +650,21 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   if (tier === 'territory') {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0) return [captures[0].r, captures[0].c]
+    const ladderCaps = findLadderCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (ladderCaps.length > 0 && ladderCaps[0].victimStones >= 2) return [ladderCaps[0].r, ladderCaps[0].c]
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
+
+    // territory도 상대 응수 1개 정도는 본다 (subLevel에 따라)
+    if (subLevel > 0.3) {
+      const move = pickByHeuristic({
+        board, size, color, prevBoardStr, legalMoves,
+        oppLookCount: Math.round(2 + subLevel * 2),
+        myFollowupCount: 0,
+        topN: Math.max(2, Math.round(5 - subLevel * 3)),
+      })
+      if (move) return move
+    }
 
     const scored = legalMoves
       .filter(([r, c]) => !isInOpponentTerritory(board, r, c, color, size))
@@ -639,8 +680,21 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   if (tier === 'advanced') {
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0) return [captures[0].r, captures[0].c]
+    const ladderCaps = findLadderCaptures(board, color, size, legalMoves, prevBoardStr)
+    if (ladderCaps.length > 0 && ladderCaps[0].victimStones >= 2) return [ladderCaps[0].r, ladderCaps[0].c]
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
+
+    // advanced(6~1급)는 가벼운 응수 평가 — lookahead1보다는 약하게 (단 등급 갭 유지)
+    if (subLevel > 0.4) {
+      const move = pickByHeuristic({
+        board, size, color, prevBoardStr, legalMoves,
+        oppLookCount: Math.round(1 + subLevel * 3),  // 1~4
+        myFollowupCount: 0,
+        topN: Math.max(2, Math.round(5 - subLevel * 3)),  // 2~5
+      })
+      if (move) return move
+    }
 
     const scored = legalMoves.map(([r, c]) => ({
       r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),
@@ -648,7 +702,6 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     scored.sort((a, b) => b.score - a.score)
     if (scored.length === 0) return null
 
-    // 상위 티어일수록 결정론적: subLevel=1 → topN=1, subLevel=0 → topN=4
     const topN = Math.max(1, Math.round(4 - subLevel * 3))
     const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
     return [pick.r, pick.c]

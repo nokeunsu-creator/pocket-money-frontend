@@ -62,39 +62,41 @@ const TIER_RANGES = [
 // strength → { maxDepth, candidateLimit, timeBudgetMs }
 // 9x9는 단순하므로 같은 깊이로도 강함, 19x19는 후보 많이/깊이 얕게
 // candidate는 8~12로 유지 (분기 폭발 방지), 강도는 depth와 budget으로 차별화
+// depth가 강도에 가장 큰 영향을 줌. candidateLimit은 분기 폭발 막는 수준에서 유지.
+// useMcts는 실제 게임 budget(7000ms+)에서만 활성 (badukEngine.js에서 2초 미만이면 알파베타로 fallback).
 const SEARCH_OPTIONS = {
   9: {
-    30: { maxDepth: 2, candidateLimit: 8,  timeBudgetMs: 500 },  // 1단
-    31: { maxDepth: 2, candidateLimit: 10, timeBudgetMs: 700 },  // 2단
-    32: { maxDepth: 3, candidateLimit: 8,  timeBudgetMs: 900 },  // 3단
-    33: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 1200 }, // 4단
-    34: { maxDepth: 4, candidateLimit: 8,  timeBudgetMs: 1500 }, // 5단
-    35: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 2000 }, // 6단
-    36: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 2500 }, // 7단
-    37: { maxDepth: 5, candidateLimit: 10, timeBudgetMs: 3500 }, // 8단
-    38: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 5000 }, // 9단
+    30: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 1000 },  // 1단
+    31: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 1500 },  // 2단
+    32: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 2000 },  // 3단
+    33: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 3000 },  // 4단
+    34: { maxDepth: 5, candidateLimit: 10, timeBudgetMs: 4000 },  // 5단
+    35: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 5500 },  // 6단
+    36: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 7000, useMcts: true },  // 7단
+    37: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 9000, useMcts: true },  // 8단
+    38: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 10000, useMcts: true }, // 9단
   },
   13: {
-    30: { maxDepth: 2, candidateLimit: 8,  timeBudgetMs: 600 },
-    31: { maxDepth: 2, candidateLimit: 10, timeBudgetMs: 800 },
-    32: { maxDepth: 2, candidateLimit: 12, timeBudgetMs: 1100 },
-    33: { maxDepth: 3, candidateLimit: 8,  timeBudgetMs: 1400 },
-    34: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 1800 },
-    35: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 2300 },
-    36: { maxDepth: 4, candidateLimit: 8,  timeBudgetMs: 2800 },
-    37: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 3800 },
-    38: { maxDepth: 5, candidateLimit: 10, timeBudgetMs: 5000 },
+    30: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 1200 },
+    31: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 1600 },
+    32: { maxDepth: 3, candidateLimit: 14, timeBudgetMs: 2200 },
+    33: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 3000 },
+    34: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 4000 },
+    35: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 5500 },
+    36: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 7000, useMcts: true },
+    37: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 9000, useMcts: true },
+    38: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
   },
   19: {
-    30: { maxDepth: 2, candidateLimit: 8,  timeBudgetMs: 700 },
-    31: { maxDepth: 2, candidateLimit: 10, timeBudgetMs: 900 },
-    32: { maxDepth: 2, candidateLimit: 12, timeBudgetMs: 1200 },
-    33: { maxDepth: 2, candidateLimit: 14, timeBudgetMs: 1500 },
-    34: { maxDepth: 3, candidateLimit: 8,  timeBudgetMs: 1900 },
-    35: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 2400 },
-    36: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 3000 },
-    37: { maxDepth: 4, candidateLimit: 8,  timeBudgetMs: 4000 },
-    38: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 5500 },
+    30: { maxDepth: 2, candidateLimit: 12, timeBudgetMs: 1400 },
+    31: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 1800 },
+    32: { maxDepth: 3, candidateLimit: 14, timeBudgetMs: 2400 },
+    33: { maxDepth: 3, candidateLimit: 16, timeBudgetMs: 3200 },
+    34: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 4200 },
+    35: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 5500 },
+    36: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 7000, useMcts: true },
+    37: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 9000, useMcts: true },
+    38: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
   },
 }
 
@@ -200,7 +202,7 @@ export function getRankColor(strength) {
   return `hsl(${hue}, ${sat}%, ${light}%)`
 }
 
-// AI 생각 시간 (ms)
+// AI 생각 시간 (ms) - 단(段) 등급은 자체 timeBudgetMs가 추가로 더해진다
 export function getAiDelay(strength) {
   const strategy = rankToStrategy(strength)
   if (strategy.tier === 'random') return 250
