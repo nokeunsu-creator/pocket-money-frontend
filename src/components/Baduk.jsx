@@ -256,6 +256,14 @@ export default function Baduk({ onBack }) {
     return () => clearTimeout(timer)
   }, [mode, turn, gameOver, board, size, aiRank, prevBoardStr, passCount, captures, komi])
 
+  // 진행도(잠금/해제) 초기화: 30급/1단부터 다시 도전
+  const handleResetProgress = () => {
+    if (window.confirm('진행도를 초기화하면 모든 등급이 다시 잠깁니다. 계속할까요?')) {
+      localStorage.removeItem(BADUK_PROGRESS_KEY)
+      setProgress({ ...DEFAULT_PROGRESS })
+    }
+  }
+
   // AI 모드 시작 (rank 기반 핸디캡 적용)
   const startAiGame = (s, rankStrength) => {
     const stones = getHandicapStones(rankStrength, s)
@@ -692,6 +700,16 @@ export default function Baduk({ onBack }) {
         <p style={{ fontSize: 11, color: '#AAA', marginTop: 16, lineHeight: 1.5, maxWidth: 320, margin: '16px auto 0' }}>
           ※ 단(段)에서는 플레이어가 미리 흑돌을 화점에 놓고 시작합니다 (접바둑).
         </p>
+
+        <button onClick={handleResetProgress}
+          style={{
+            marginTop: 20, padding: '8px 16px',
+            fontSize: 12, color: '#888',
+            background: 'none', border: '1px solid #DDD', borderRadius: 8,
+            cursor: 'pointer',
+          }}>
+          ↻ 진행도 초기화
+        </button>
       </div>
     )
   }
