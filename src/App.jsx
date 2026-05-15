@@ -21,6 +21,7 @@ import Chess from './components/Chess'
 import Janggi from './components/Janggi'
 import Omok from './components/Omok'
 import Baduk from './components/Baduk'
+import BadukAI from './components/BadukAI'
 import BadukClassroom from './components/BadukClassroom'
 import EnglishHub from './components/EnglishHub'
 import MathHub from './components/MathHub'
@@ -400,6 +401,9 @@ export default function App() {
       )}
       {currentPage === 'game-baduk' && (
         <Baduk onBack={goBack} />
+      )}
+      {currentPage === 'game-baduk-ai' && (
+        <BadukAI onBack={goBack} />
       )}
       {currentPage === 'game-baduk-classroom' && (
         <BadukClassroom onBack={goBack} />

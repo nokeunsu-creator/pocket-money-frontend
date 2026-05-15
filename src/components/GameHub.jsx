@@ -4,6 +4,7 @@ export default function GameHub({ onBack, onSelectGame }) {
       label: '🧩 보드게임', games: [
         { key: 'omok', icon: '⚫', title: '오목', desc: 'AI · 2인 · 온라인', color: '#333' },
         { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
+        { key: 'baduk-ai', icon: '🧠', title: 'AI 바둑', desc: '강화 AI · 같은 등급이라도 더 강함', color: '#8E44AD' },
         { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
         { key: 'janggi', icon: '將', title: '장기', desc: 'AI 10단계 · 2인 · 온라인', color: '#8B0000' },
       ],
