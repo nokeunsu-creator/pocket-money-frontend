@@ -661,15 +661,16 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   const pickRand = pool => pool[Math.floor(Math.random() * pool.length)]
 
   if (tier === 'random') {
-    const mistakeRate = 1 - subLevel * 0.85
+    // 한 단계 강화: mistakeRate 감소 (0.85→0.95)
+    const mistakeRate = 1 - subLevel * 0.95
     if (Math.random() < mistakeRate) return pickRand(legalMoves)
-    // subLevel 높을수록(21~22급) decentPool 중 단수/잡기 회피 더 선호
-    if (subLevel > 0.5) {
+    // subLevel 0.3부터 (이전 0.5) advancedEval로 평가
+    if (subLevel > 0.3) {
       const scored = decentPool.map(([r, c]) => ({
         r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),
       }))
       scored.sort((a, b) => b.score - a.score)
-      const topN = Math.max(3, Math.round(8 - subLevel * 4))
+      const topN = Math.max(2, Math.round(7 - subLevel * 5))
       const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))]
       return [pick.r, pick.c]
     }
@@ -677,26 +678,26 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   }
 
   if (tier === 'capture') {
-    const mistakeRate = 0.35 * (1 - subLevel)
+    // 한 단계 강화: mistakeRate 감소 (0.35→0.25)
+    const mistakeRate = 0.25 * (1 - subLevel)
     if (Math.random() < mistakeRate) return pickRand(decentPool)
-    // 살리기를 잡기보다 먼저 — 살리기 못하면 큰 손실
+    // 살리기 우선순위 (모든 subLevel)
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
-    if (saves.length > 0 && subLevel > 0.2) return saves[0]
+    if (saves.length > 0) return saves[0]
     const captures = findCaptures(board, color, size, legalMoves, prevBoardStr)
     if (captures.length > 0) return [captures[0].r, captures[0].c]
-    // 사다리 잡기 (subLevel 0.4부터)
-    if (subLevel > 0.4) {
+    // 사다리 잡기 (subLevel 0.2부터, 이전 0.4)
+    if (subLevel > 0.2) {
       const ladderCaps = findLadderCaptures(board, color, size, legalMoves, prevBoardStr)
       if (ladderCaps.length > 0 && ladderCaps[0].victimStones >= 2) return [ladderCaps[0].r, ladderCaps[0].c]
     }
-    if (saves.length > 0) return pickRand(saves)
-    // capture 티어 상위(13~15급)는 영토 평가도 가볍게 본다
-    if (subLevel > 0.5) {
+    // 영토 평가 (subLevel 0.3부터, 이전 0.5)
+    if (subLevel > 0.3) {
       const scored = decentPool
         .filter(([r, c]) => !isInOpponentTerritory(board, r, c, color, size))
         .map(([r, c]) => ({ r, c, score: scoreMoveByTerritory(board, r, c, color, size) }))
       scored.sort((a, b) => b.score - a.score)
-      const topN = Math.max(2, Math.round(6 - subLevel * 3))
+      const topN = Math.max(2, Math.round(6 - subLevel * 4))
       const pool = scored.slice(0, Math.min(topN, scored.length))
       if (pool.length > 0) {
         const pick = pool[Math.floor(Math.random() * pool.length)]
@@ -714,16 +715,14 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // territory 응수 평가: 활성 임계값 0.3 → 0.1로 낮춰 거의 모든 territory 등급에 적용
-    if (subLevel > 0.1) {
-      const move = pickByHeuristic({
-        board, size, color, prevBoardStr, legalMoves,
-        oppLookCount: Math.round(2 + subLevel * 4),  // 2~6
-        myFollowupCount: 0,
-        topN: Math.max(1, Math.round(4 - subLevel * 3)),
-      })
-      if (move) return move
-    }
+    // 응수 평가 항상 활성 (모든 territory 등급), oppLookCount 증가
+    const move = pickByHeuristic({
+      board, size, color, prevBoardStr, legalMoves,
+      oppLookCount: Math.round(3 + subLevel * 5),  // 3~8 (이전 2~6)
+      myFollowupCount: subLevel > 0.7 ? 2 : 0,  // 12~7급 상위는 후속수 평가
+      topN: Math.max(1, Math.round(3 - subLevel * 2)),
+    })
+    if (move) return move
 
     const scored = legalMoves
       .filter(([r, c]) => !isInOpponentTerritory(board, r, c, color, size))
@@ -744,16 +743,14 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // advanced(6~1급) 응수 평가: 임계값 0.4 → 0.1로 낮춰 6급부터 적용
-    if (subLevel > 0.1) {
-      const move = pickByHeuristic({
-        board, size, color, prevBoardStr, legalMoves,
-        oppLookCount: Math.round(2 + subLevel * 4),  // 2~6
-        myFollowupCount: 0,
-        topN: Math.max(1, Math.round(4 - subLevel * 3)),  // 1~4
-      })
-      if (move) return move
-    }
+    // advanced(6~1급) 한 단계 강화: oppLookCount 증가, 후속수 평가 추가
+    const move = pickByHeuristic({
+      board, size, color, prevBoardStr, legalMoves,
+      oppLookCount: Math.round(4 + subLevel * 5),  // 4~9 (이전 2~6)
+      myFollowupCount: subLevel > 0.5 ? Math.round(2 + subLevel * 2) : 0,  // 3급+는 후속수
+      topN: Math.max(1, Math.round(3 - subLevel * 2)),  // 1~3
+    })
+    if (move) return move
 
     const scored = legalMoves.map(([r, c]) => ({
       r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),

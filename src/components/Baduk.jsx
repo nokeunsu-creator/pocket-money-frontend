@@ -30,16 +30,21 @@ function applyHandicap(board, stones) {
 }
 
 // 등급별 진행도. 급 트랙(30급→1급)과 단 트랙(1단→9단)은 분리.
-// kyu=-1: 30급(strength 0)만 활성. dan=29: 1단(strength 30)만 활성.
+// 30~20급(strength 0~10)은 입문 단계라 무조건 활성. dan=29: 1단(strength 30)만 활성.
 const BADUK_PROGRESS_KEY = 'baduk-progress'
-const DEFAULT_PROGRESS = { kyu: -1, dan: 29 }
+const KYU_ALWAYS_UNLOCKED = 10 // strength 10 = 20급. 0~10은 기본 활성.
+const DEFAULT_PROGRESS = { kyu: KYU_ALWAYS_UNLOCKED, dan: 29 }
 function getProgress() {
   try {
     const raw = localStorage.getItem(BADUK_PROGRESS_KEY)
     if (!raw) return { ...DEFAULT_PROGRESS }
     const p = JSON.parse(raw)
     return {
-      kyu: typeof p.kyu === 'number' ? p.kyu : DEFAULT_PROGRESS.kyu,
+      // 기존 사용자도 30~20급은 자동 활성 — kyu 최솟값을 KYU_ALWAYS_UNLOCKED로 보정
+      kyu: Math.max(
+        typeof p.kyu === 'number' ? p.kyu : DEFAULT_PROGRESS.kyu,
+        KYU_ALWAYS_UNLOCKED,
+      ),
       dan: typeof p.dan === 'number' ? p.dan : DEFAULT_PROGRESS.dan,
     }
   } catch { return { ...DEFAULT_PROGRESS } }
@@ -55,6 +60,7 @@ function recordWin(strength) {
   return p
 }
 function isRankUnlocked(strength, progress) {
+  if (strength <= KYU_ALWAYS_UNLOCKED) return true // 30~20급 항상 활성
   if (strength < 30) return strength <= progress.kyu + 1
   return strength <= progress.dan + 1
 }
