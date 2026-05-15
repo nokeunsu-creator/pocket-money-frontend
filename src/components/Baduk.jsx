@@ -123,6 +123,7 @@ export default function Baduk({ onBack }) {
   const [handicapCount, setHandicapCount] = useState(0)
   const [komi, setKomi] = useState(6.5)
   const [progress, setProgress] = useState(getProgress)
+  const [aiEndProposal, setAiEndProposal] = useState(false) // AI 종료 제안 모달
 
   const room = useGameRoom('baduk')
   const vw = useViewportWidth()
@@ -194,17 +195,12 @@ export default function Baduk({ onBack }) {
 
     const applyMove = (move) => {
       if (move === null) {
-        const newPassCount = passCount + 1
-        if (newPassCount >= 2) {
-          const newScore = countTerritory(board, size, komi)
-          setScore(newScore)
-          setGameOver(true)
-          setMessage('')
-        } else {
-          setPassCount(newPassCount)
-          setTurn('black')
-          setMessage('⚪ 백(AI) 패스')
-        }
+        // AI가 더 둘 곳이 없다고 판단 → 종료 제안 모달 표시
+        // 양쪽 패스로 자동 종료하지 않고 플레이어가 결정
+        setAiEndProposal(true)
+        setMessage('⚪ 백(AI) 종료 제안')
+        // 턴은 플레이어에게 넘김 (모달에서 결정)
+        setTurn('black')
       } else {
         const [r, c] = move
         const testBoard = board.map(row => [...row])
@@ -290,6 +286,7 @@ export default function Baduk({ onBack }) {
     setHistory([])
     setMessage('')
     setAiThinking(false)
+    setAiEndProposal(false)
   }
 
   const startGame = (s) => {
@@ -307,6 +304,7 @@ export default function Baduk({ onBack }) {
     setHistory([])
     setMessage('')
     setAiThinking(false)
+    setAiEndProposal(false)
   }
 
   const getInitialOnlineState = (s) => ({
@@ -448,6 +446,48 @@ export default function Baduk({ onBack }) {
         setGameOver(true)
         setMessage('')
       }
+    }
+  }
+
+  // AI 종료 제안 수락 → 점수 계산 후 게임 종료
+  const acceptAiEnd = () => {
+    setAiEndProposal(false)
+    const finalScore = countTerritory(board, size, komi)
+    setScore(finalScore)
+    setGameOver(true)
+    setMessage('')
+  }
+
+  // AI 종료 제안 거절 → AI 패스로 처리, 플레이어가 계속 둠
+  const rejectAiEnd = () => {
+    setAiEndProposal(false)
+    const newPassCount = passCount + 1
+    setPassCount(newPassCount)
+    setMessage('⚪ 백(AI) 패스 — 계속 두세요')
+  }
+
+  const resign = () => {
+    if (gameOver) return
+    if (mode === 'ai' && (turn !== 'black' || aiThinking)) return
+    if (mode === 'online') {
+      if (!room.connected) return
+      if (turn !== room.myColor) return
+    }
+    if (!window.confirm('정말 기권하시겠어요?')) return
+    // 기권: 현재 차례의 반대편이 승. 가짜 score로 종료 (큰 차이 부여)
+    const myColor = mode === 'ai' ? 'black' : (mode === 'online' ? room.myColor : turn)
+    const winnerScore = { black: 0, white: 0, komi: 6.5, blackStones: 0, whiteStones: 0, blackTerritory: 0, whiteTerritory: 0, resignedBy: myColor }
+    if (myColor === 'black') { winnerScore.white = 999; winnerScore.black = 0 }
+    else { winnerScore.black = 999; winnerScore.white = 0 }
+    if (mode === 'online') {
+      room.updateState({
+        board: boardToFlat(board), turn: opponent, captures, lastMove,
+        passCount, prevBoardStr, gameOver: true, score: winnerScore, size,
+      })
+    } else {
+      setScore(winnerScore)
+      setGameOver(true)
+      setMessage('')
     }
   }
 
@@ -953,16 +993,54 @@ export default function Baduk({ onBack }) {
         </svg>
       </div>
 
+      {aiEndProposal && !gameOver && (
+        <div style={{
+          margin: '12px', padding: 16, borderRadius: 12,
+          background: 'linear-gradient(135deg, #E8F4FD, #D1E9FB)',
+          border: '2px solid #3498DB', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
+            ⚪ AI가 게임을 끝내자고 제안합니다
+          </div>
+          <div style={{ fontSize: 12, color: '#555', marginBottom: 12 }}>
+            더 둘 곳이 없다고 판단했어요. 지금 점수를 계산할까요?
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button onClick={acceptAiEnd} style={{
+              padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: '#27AE60', color: '#FFF', fontSize: 14, fontWeight: 600,
+            }}>
+              수락 (종료)
+            </button>
+            <button onClick={rejectAiEnd} style={{
+              padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: '#7F8C8D', color: '#FFF', fontSize: 14, fontWeight: 600,
+            }}>
+              거절 (계속)
+            </button>
+          </div>
+        </div>
+      )}
+
       {!gameOver && (
-        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+        <div style={{ textAlign: 'center', padding: '8px 0', display: 'flex', gap: 8, justifyContent: 'center' }}>
           <button onClick={pass}
             disabled={mode === 'ai' && (turn !== 'black' || aiThinking)}
             style={{
-              padding: '10px 28px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: (mode === 'online' && !isMyTurn) || (mode === 'ai' && (turn !== 'black' || aiThinking)) ? '#AAA' : '#555',
               color: '#FFF', fontSize: 14, fontWeight: 600,
             }}>
             패스 {passCount >= 1 ? '(양쪽 패스 시 종료)' : ''}
+          </button>
+          <button onClick={resign}
+            disabled={mode === 'ai' && (turn !== 'black' || aiThinking)}
+            style={{
+              padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: (mode === 'online' && !isMyTurn) || (mode === 'ai' && (turn !== 'black' || aiThinking)) ? '#C8A0A0' : '#C0392B',
+              color: '#FFF', fontSize: 14, fontWeight: 600,
+            }}>
+            기권
           </button>
         </div>
       )}
@@ -975,7 +1053,15 @@ export default function Baduk({ onBack }) {
         }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
-            {score.black > score.white
+            {score.resignedBy === 'black' && mode === 'ai'
+              ? `⚪ AI ${aiRankObj ? aiRankObj.label : ''} 승리! (기권)`
+              : score.resignedBy === 'white' && mode === 'ai'
+              ? `⚫ 승리! AI ${aiRankObj ? aiRankObj.label : ''}이(가) 기권했어요!`
+              : score.resignedBy === 'black'
+              ? '⚪ 백 승리! (흑 기권)'
+              : score.resignedBy === 'white'
+              ? '⚫ 흑 승리! (백 기권)'
+              : score.black > score.white
               ? mode === 'ai'
                 ? `⚫ 승리! AI ${aiRankObj ? aiRankObj.label : ''}을(를) 이겼습니다!`
                 : '⚫ 흑 승리!'
@@ -983,20 +1069,22 @@ export default function Baduk({ onBack }) {
                 ? `⚪ AI ${aiRankObj ? aiRankObj.label : ''} 승리! 다시 도전하세요!`
                 : '⚪ 백 승리!'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16, fontSize: 13 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 20 }}>{score.black}</div>
-              <div style={{ color: '#888' }}>⚫ 흑{mode === 'ai' ? '(나)' : ''}</div>
-              <div style={{ fontSize: 11, color: '#AAA' }}>돌 {score.blackStones} + 집 {score.blackTerritory}</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 20 }}>{score.white}</div>
-              <div style={{ color: '#888' }}>⚪ 백{mode === 'ai' ? '(AI)' : ''}</div>
-              <div style={{ fontSize: 11, color: '#AAA' }}>
-                돌 {score.whiteStones} + 집 {score.whiteTerritory} + 덤{score.komi}
+          {!score.resignedBy && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16, fontSize: 13 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 20 }}>{score.black}</div>
+                <div style={{ color: '#888' }}>⚫ 흑{mode === 'ai' ? '(나)' : ''}</div>
+                <div style={{ fontSize: 11, color: '#AAA' }}>돌 {score.blackStones} + 집 {score.blackTerritory}</div>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 20 }}>{score.white}</div>
+                <div style={{ color: '#888' }}>⚪ 백{mode === 'ai' ? '(AI)' : ''}</div>
+                <div style={{ fontSize: 11, color: '#AAA' }}>
+                  돌 {score.whiteStones} + 집 {score.whiteTerritory} + 덤{score.komi}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button onClick={resetGame}
               style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#333', color: '#FFF', fontSize: 14, fontWeight: 600 }}>

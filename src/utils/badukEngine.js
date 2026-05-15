@@ -715,16 +715,20 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
+    // *** 자기 영토 채우는 수는 후보에서 제외 (잡기/살리기 없을 때) ***
+    const filteredMoves = legalMoves.filter(([r, c]) => !isInOwnTerritory(board, r, c, color, size))
+    const candidates = filteredMoves.length > 0 ? filteredMoves : legalMoves
+
     // 응수 평가 항상 활성 (모든 territory 등급), oppLookCount 증가
     const move = pickByHeuristic({
-      board, size, color, prevBoardStr, legalMoves,
-      oppLookCount: Math.round(3 + subLevel * 5),  // 3~8 (이전 2~6)
-      myFollowupCount: subLevel > 0.7 ? 2 : 0,  // 12~7급 상위는 후속수 평가
+      board, size, color, prevBoardStr, legalMoves: candidates,
+      oppLookCount: Math.round(3 + subLevel * 5),
+      myFollowupCount: subLevel > 0.7 ? 2 : 0,
       topN: Math.max(1, Math.round(3 - subLevel * 2)),
     })
     if (move) return move
 
-    const scored = legalMoves
+    const scored = candidates
       .filter(([r, c]) => !isInOpponentTerritory(board, r, c, color, size))
       .map(([r, c]) => ({ r, c, score: scoreMoveByTerritory(board, r, c, color, size) }))
     scored.sort((a, b) => b.score - a.score)
@@ -743,16 +747,19 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // advanced(6~1급) 한 단계 강화: oppLookCount 증가, 후속수 평가 추가
+    // 자기 영토 채우는 수 제외
+    const filteredMoves = legalMoves.filter(([r, c]) => !isInOwnTerritory(board, r, c, color, size))
+    const candidates = filteredMoves.length > 0 ? filteredMoves : legalMoves
+
     const move = pickByHeuristic({
-      board, size, color, prevBoardStr, legalMoves,
-      oppLookCount: Math.round(4 + subLevel * 5),  // 4~9 (이전 2~6)
-      myFollowupCount: subLevel > 0.5 ? Math.round(2 + subLevel * 2) : 0,  // 3급+는 후속수
-      topN: Math.max(1, Math.round(3 - subLevel * 2)),  // 1~3
+      board, size, color, prevBoardStr, legalMoves: candidates,
+      oppLookCount: Math.round(4 + subLevel * 5),
+      myFollowupCount: subLevel > 0.5 ? Math.round(2 + subLevel * 2) : 0,
+      topN: Math.max(1, Math.round(3 - subLevel * 2)),
     })
     if (move) return move
 
-    const scored = legalMoves.map(([r, c]) => ({
+    const scored = candidates.map(([r, c]) => ({
       r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),
     }))
     scored.sort((a, b) => b.score - a.score)

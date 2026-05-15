@@ -228,7 +228,24 @@ export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   else if (selfLibs === 2) score -= 5
   else if (selfLibs === 1) score -= 40
 
-  // 빈칸 비율로 게임 단계 추정 (초반엔 1선/2선 더 강하게 회피)
+  // 인접 분석 (자기/상대 4방향)
+  const opp = color === 'black' ? 'white' : 'black'
+  let myAdj = 0, oppAdj = 0
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+    if (board[nr][nc] === color) myAdj++
+    else if (board[nr][nc] === opp) oppAdj++
+  }
+
+  // *** 자기 집(영토) 채우기 강한 페널티 ***
+  // 인접 4방향 모두 자기 색이고 상대 없음 = 확정된 자기 집을 메우는 자살수
+  // 잡기/단수 회피가 아닌 경우에만 적용
+  if (myAdj >= 3 && oppAdj === 0 && captured === 0) {
+    score -= 50
+  }
+
+  // 빈칸 비율로 게임 단계 추정
   let empty = 0
   for (let rr = 0; rr < size; rr++)
     for (let cc = 0; cc < size; cc++)
@@ -240,12 +257,10 @@ export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   // 1선 회피 (초반엔 더 강하게)
   const onFirstLine = r === 0 || r === size - 1 || c === 0 || c === size - 1
   if (onFirstLine) score -= isOpening ? 18 : 6
-  // 2선 (호선 위) 회피
   const onSecondLine = (r === 1 || r === size - 2 || c === 1 || c === size - 2) && !onFirstLine
   if (onSecondLine && isOpening) score -= 4
 
   // 상대 영향권 깊이 침입 페널티 (인접 + 2칸 거리 상대 돌 카운트)
-  const opp = color === 'black' ? 'white' : 'black'
   let oppNearby = 0
   let myNearby = 0
   for (let dr = -2; dr <= 2; dr++) {
@@ -259,7 +274,6 @@ export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
       else if (board[nr][nc] === color) myNearby += weight
     }
   }
-  // 상대 진영 깊숙이 + 아군 근처 없음: 무리수
   if (oppNearby >= 6 && myNearby <= 1) score -= 25
 
   // 중앙 선호
