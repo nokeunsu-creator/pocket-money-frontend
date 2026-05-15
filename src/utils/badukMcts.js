@@ -18,7 +18,7 @@ import {
 import { evaluatePosition, quickMoveScore } from './badukEval.js'
 
 const UCB_C = 1.4
-const ROLLOUT_DEPTH = 20
+const ROLLOUT_DEPTH = 30 // 20→30: 더 끝까지 가서 평가 노이즈 감소
 
 function getMctsCandidates(board, size) {
   const hasStones = []
@@ -126,7 +126,8 @@ function rollout(state, size, rootColor, komi, prevBoardStr) {
 
   for (let d = 0; d < ROLLOUT_DEPTH; d++) {
     const cands = getMctsCandidates(board, size)
-    const moves = orderAndPrune(board, size, color, prev, cands, 6)
+    // top-4로 좁힘 (6→4) — 더 결정론적 playout
+    const moves = orderAndPrune(board, size, color, prev, cands, 4)
     if (moves.length === 0) {
       passes++
       if (passes >= 2) break
@@ -134,8 +135,8 @@ function rollout(state, size, rootColor, komi, prevBoardStr) {
       continue
     }
     passes = 0
-    // 상위 후보 중 softmax-like 가중 랜덤 선택 (heavy playout)
-    const idx = Math.min(moves.length - 1, Math.floor(Math.random() * Math.random() * moves.length))
+    // Math.pow(r, 3): top 더 강하게 편향. r=0이 top 후보.
+    const idx = Math.min(moves.length - 1, Math.floor(Math.pow(Math.random(), 3) * moves.length))
     const [r, c] = moves[idx]
     const after = simulateMove(board, r, c, color, size)
     prev = boardToString(board)

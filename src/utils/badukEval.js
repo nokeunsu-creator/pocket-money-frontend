@@ -44,24 +44,33 @@ export function computeInfluence(board, size, color) {
 }
 
 export function estimateTerritory(board, size, color, inf) {
+  // 빈칸 비율로 게임 단계 추정 - 종반엔 임계값 낮춰서 더 정확
+  let empty = 0
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (board[r][c] === null) empty++
+  const totalCells = size * size
+  const emptyRatio = empty / totalCells
+  // 초반: |inf|>=8, 중반: 6, 종반: 4
+  const threshold = emptyRatio > 0.6 ? 8 : (emptyRatio > 0.3 ? 6 : 4)
+
   let myTerritory = 0
   let oppTerritory = 0
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       if (board[r][c] !== null) continue
-      if (inf[r][c] >= 8) myTerritory++
-      else if (inf[r][c] <= -8) oppTerritory++
+      if (inf[r][c] >= threshold) myTerritory++
+      else if (inf[r][c] <= -threshold) oppTerritory++
     }
   }
   return { myTerritory, oppTerritory }
 }
 
-// 그룹이 가진 "눈 후보" 빈칸 세기.
-// 그룹에 인접한 빈칸 중, 그룹과 인접한 다른 색 돌이 없고
-// 사방이 (가장자리 포함) 모두 같은 색 또는 보드 밖인 빈칸을 1눈으로 본다.
-// 두 개 이상의 분리된 눈 → 사실상 살아있음.
+// 그룹이 가진 "진짜 눈" 세기 (거짓 눈 제외).
+// - 4방향 모두 같은 색
+// - 대각선: 코너/변에서 상대 0, 중앙에서 상대 ≤ 1 + 자기 색 3개 이상
+// - 거짓 눈 (false eye): 대각선 상대 돌 있으면 의심, 추가로 인접 그룹이 분리된 경우 더 보수적
 function countEyes(board, size, color, group) {
-  const stoneSet = new Set(group.stones.map(([r, c]) => `${r},${c}`))
   const eyeCandidates = new Set()
   for (const [sr, sc] of group.stones) {
     for (const [dr, dc] of DIRS) {
@@ -75,7 +84,7 @@ function countEyes(board, size, color, group) {
   const eyes = []
   for (const key of eyeCandidates) {
     const [r, c] = key.split(',').map(Number)
-    // 4방향이 모두 우리 그룹의 돌 OR 같은 색 OR 보드 밖
+    // 4방향이 모두 우리 색이어야 함
     let isEye = true
     for (const [dr, dc] of DIRS) {
       const nr = r + dr, nc = c + dc
@@ -83,7 +92,8 @@ function countEyes(board, size, color, group) {
       if (board[nr][nc] !== color) { isEye = false; break }
     }
     if (!isEye) continue
-    // 대각선 중 3개 이상이 우리 색이거나 가장자리 → 진짜 눈
+
+    // 대각선 분석
     let myDiag = 0, oppDiag = 0, edgeDiag = 0
     for (const [dr, dc] of DIAGS) {
       const nr = r + dr, nc = c + dc
@@ -91,20 +101,24 @@ function countEyes(board, size, color, group) {
       else if (board[nr][nc] === color) myDiag++
       else if (board[nr][nc] !== null) oppDiag++
     }
-    // 코너(가장자리 대각 2): 상대 대각 0 필요
-    // 변(가장자리 대각 1): 상대 대각 0
-    // 중앙: 상대 대각 ≤ 1
-    if (edgeDiag >= 1 && oppDiag === 0) eyes.push([r, c])
-    else if (edgeDiag === 0 && oppDiag <= 1 && myDiag >= 3) eyes.push([r, c])
+
+    // 거짓 눈 패턴 1: 코너/변에서 상대 대각 1개 이상 = 거짓 눈
+    if (edgeDiag >= 1 && oppDiag >= 1) continue
+    // 거짓 눈 패턴 2: 중앙에서 상대 대각 2개 이상 = 거짓 눈
+    if (edgeDiag === 0 && oppDiag >= 2) continue
+    // 거짓 눈 패턴 3: 중앙에서 자기 색 대각 3개 미만 + 상대 1개 = 의심 (제외)
+    if (edgeDiag === 0 && oppDiag === 1 && myDiag < 3) continue
+
+    eyes.push([r, c])
   }
   return eyes.length
 }
 
-// 모양 점수: 빈삼각/우형 페널티, 호구/뻗음 가점
+// 모양 점수: 빈삼각/우형 페널티 + 호구/뻗음/마늘모/한칸뜀 보너스
 function shapeScore(board, size, color, r, c) {
-  // r,c 자체는 우리 돌
-  // 빈삼각: 같은 색 두 돌이 ㄱ자, 대각선 빈칸
   let score = 0
+
+  // 빈삼각: ㄱ자 같은 색 두 돌 + 대각선 빈칸 (자기 모양 우형)
   for (const [dr, dc] of DIAGS) {
     const r1 = r + dr, c1 = c
     const r2 = r, c2 = c + dc
@@ -116,6 +130,36 @@ function shapeScore(board, size, color, r, c) {
       if (board[dr2][dc2] === null) score -= 3 // 빈삼각
     }
   }
+
+  // 호구 (이쪽으로 두면 단수 만들 수 있는 형태): r,c 주변 같은 색 2개가 ㄱ자
+  // 단순화: 인접 4방향 중 2개에 같은 색
+  let sameAdj = 0
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+    if (board[nr][nc] === color) sameAdj++
+  }
+  // 인접 같은 색 2개 = 연결 단단 (호구 비슷)
+  if (sameAdj === 2) score += 1
+  if (sameAdj === 3) score += 2
+
+  // 한칸뜀: 직선 2칸 거리에 같은 색
+  for (const [dr, dc] of DIRS) {
+    const nr = r + 2 * dr, nc = c + 2 * dc
+    const mr = r + dr, mc = c + dc
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+    if (mr < 0 || mr >= size || mc < 0 || mc >= size) continue
+    // 한 칸 띄어 같은 색 + 사이 빈칸
+    if (board[nr][nc] === color && board[mr][mc] === null) score += 0.8
+  }
+
+  // 마늘모 (대각선 거리 1)
+  for (const [dr, dc] of DIAGS) {
+    const nr = r + dr, nc = c + dc
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+    if (board[nr][nc] === color) score += 0.6
+  }
+
   return score
 }
 

@@ -160,8 +160,12 @@ export default function Baduk({ onBack }) {
   const aiThinkingRef = useRef(false)
   const aiWorkerRef = useRef(null)
   const aiRequestIdRef = useRef(0)
+  // Pondering (사용자 차례에 미리 계산)
+  const ponderWorkerRef = useRef(null)
+  const ponderRequestIdRef = useRef(0)
+  const ponderCacheRef = useRef(null) // { boardKey, aiMove }
 
-  // Worker 1회 초기화 (mode가 ai일 때만)
+  // Worker 1회 초기화 (mode가 ai일 때만): 정규 + ponder 둘 다
   useEffect(() => {
     if (mode !== 'ai') return
     if (aiWorkerRef.current) return
@@ -170,17 +174,53 @@ export default function Baduk({ onBack }) {
         new URL('../utils/badukAiWorker.js', import.meta.url),
         { type: 'module' },
       )
+      ponderWorkerRef.current = new Worker(
+        new URL('../utils/badukAiWorker.js', import.meta.url),
+        { type: 'module' },
+      )
     } catch (e) {
       console.error('Worker 생성 실패, 동기 fallback:', e)
       aiWorkerRef.current = null
+      ponderWorkerRef.current = null
     }
     return () => {
-      if (aiWorkerRef.current) {
-        aiWorkerRef.current.terminate()
-        aiWorkerRef.current = null
-      }
+      if (aiWorkerRef.current) { aiWorkerRef.current.terminate(); aiWorkerRef.current = null }
+      if (ponderWorkerRef.current) { ponderWorkerRef.current.terminate(); ponderWorkerRef.current = null }
+      ponderCacheRef.current = null
     }
   }, [mode])
+
+  // AI 응답 적용 후 ponder 시작 — 사용자 응수 + 다음 AI 수를 미리 계산
+  const startPonder = useCallback((boardForPonder, prevForPonder) => {
+    if (!ponderWorkerRef.current || aiRank == null) return
+    ponderCacheRef.current = null
+    const strategy = rankToStrategy(aiRank, size)
+    strategy.komi = komi
+    const requestId = ++ponderRequestIdRef.current
+    const handler = (e) => {
+      if (e.data.requestId !== requestId) return
+      ponderWorkerRef.current.removeEventListener('message', handler)
+      if (!e.data.hit || !e.data.userMove || !e.data.aiMove) return
+      // 예측된 사용자 응수 적용 후 보드 key 계산
+      const [ur, uc] = e.data.userMove
+      const tempBoard = boardForPonder.map(row => [...row])
+      tempBoard[ur][uc] = 'black'
+      const afterUser = removeDeadStones(tempBoard, 'white', size)
+      ponderCacheRef.current = {
+        boardKey: boardToString(afterUser.board),
+        aiMove: e.data.aiMove,
+        userMove: e.data.userMove,
+      }
+    }
+    ponderWorkerRef.current.addEventListener('message', handler)
+    ponderWorkerRef.current.postMessage({
+      type: 'ponder',
+      board: boardForPonder, size, strategy,
+      prevBoardStr: prevForPonder,
+      userColor: 'black',
+      requestId,
+    })
+  }, [aiRank, size, komi])
 
   useEffect(() => {
     if (mode !== 'ai' || turn !== 'white' || gameOver) return
@@ -219,6 +259,8 @@ export default function Baduk({ onBack }) {
         setPassCount(0)
         setTurn('black')
         setMessage('')
+        // 사용자 차례에 ponder 시작
+        startPonder(newBoard, newPrevBoardStr)
       }
       aiThinkingRef.current = false
       setAiThinking(false)
@@ -226,6 +268,19 @@ export default function Baduk({ onBack }) {
 
     const requestId = ++aiRequestIdRef.current
     const worker = aiWorkerRef.current
+
+    // === Pondering 캐시 매칭: 즉시 응답 ===
+    const ponderCache = ponderCacheRef.current
+    if (ponderCache && ponderCache.aiMove) {
+      const currentBoardKey = boardToString(board)
+      if (ponderCache.boardKey === currentBoardKey) {
+        const cachedMove = ponderCache.aiMove
+        ponderCacheRef.current = null
+        // 너무 빠른 응답은 부자연스러우니 짧은 delay
+        const t = setTimeout(() => applyMove(cachedMove), 400)
+        return () => clearTimeout(t)
+      }
+    }
 
     const timer = setTimeout(() => {
       // Worker 사용 가능하면 비동기로, 아니면 동기 fallback
