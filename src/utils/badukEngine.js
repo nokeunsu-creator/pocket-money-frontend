@@ -444,8 +444,10 @@ function scoreMoveByTerritory(board, r, c, color, size) {
   return evaluateTerritory(result.board, size, color)
 }
 
+// 상대 영향권 안인지 (2칸 거리까지 확장 감지)
 function isInOpponentTerritory(board, r, c, color, size) {
   const opp = color === 'black' ? 'white' : 'black'
+  // 인접 4방향
   let oppAdj = 0, myAdj = 0
   for (const [dr, dc] of DIRS) {
     const nr = r + dr, nc = c + dc
@@ -454,7 +456,19 @@ function isInOpponentTerritory(board, r, c, color, size) {
       else if (board[nr][nc] === color) myAdj++
     }
   }
-  return oppAdj >= 3 && myAdj === 0
+  if (oppAdj >= 3 && myAdj === 0) return true
+  // 2칸 거리: 상대 돌이 많고 아군 없으면 상대 영향권
+  let oppNear = 0, myNear = 0
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      if (dr === 0 && dc === 0) continue
+      const nr = r + dr, nc = c + dc
+      if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+      if (board[nr][nc] === opp) oppNear++
+      else if (board[nr][nc] === color) myNear++
+    }
+  }
+  return oppNear >= 4 && myNear === 0
 }
 
 function isNearExistingGroup(board, r, c, color, size) {
@@ -469,6 +483,19 @@ function isNearExistingGroup(board, r, c, color, size) {
   return false
 }
 
+// 자기 영토 안에 두는 수인지 (이미 굳어진 자기 집을 채우는 수)
+function isInOwnTerritory(board, r, c, color, size) {
+  let myAdj = 0, oppAdj = 0
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+      if (board[nr][nc] === color) myAdj++
+      else if (board[nr][nc] !== null) oppAdj++
+    }
+  }
+  return myAdj >= 3 && oppAdj === 0
+}
+
 function advancedEval(board, r, c, color, size, prevBoardStr) {
   const result = simulateMove(board, r, c, color, size)
   let score = 0
@@ -478,8 +505,17 @@ function advancedEval(board, r, c, color, size, prevBoardStr) {
   score += Math.min(group.liberties, 6) * 2
   score += Math.min(group.stones.length, 8)
   if (isNearExistingGroup(board, r, c, color, size)) score += 3
-  if (isInOpponentTerritory(board, r, c, color, size)) score -= 8
-  if (r === 0 || r === size - 1 || c === 0 || c === size - 1) score -= 2
+  if (isInOpponentTerritory(board, r, c, color, size)) score -= 12
+  if (isInOwnTerritory(board, r, c, color, size)) score -= 15  // 자기 집 채우기 강한 페널티
+  // 1선 회피 (게임 초중반에 더 강하게)
+  let empty = 0
+  for (let rr = 0; rr < size; rr++)
+    for (let cc = 0; cc < size; cc++)
+      if (board[rr][cc] === null) empty++
+  const isOpening = empty > size * size * 0.7
+  if (r === 0 || r === size - 1 || c === 0 || c === size - 1) {
+    score -= isOpening ? 10 : 2
+  }
   if (group.liberties === 1 && result.captured === 0) score -= 15
   return score
 }

@@ -219,6 +219,7 @@ export function evaluatePosition(board, size, color, komi = 6.5) {
 }
 
 // 빠른 move scoring (move ordering용)
+// 게임 단계 고려: 빈칸 비율로 초/중/종반 추정
 export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   let score = 0
   score += captured * 80
@@ -226,11 +227,42 @@ export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   else if (selfLibs === 3) score += 3
   else if (selfLibs === 2) score -= 5
   else if (selfLibs === 1) score -= 40
-  // 가장자리 회피
-  if (r === 0 || r === size - 1 || c === 0 || c === size - 1) score -= 4
-  // 1-1, 2-2 같은 너무 구석은 추가 페널티
-  if ((r <= 1 || r >= size - 2) && (c <= 1 || c >= size - 2) && size >= 13) score -= 2
-  // 중앙 선호 (보드 작을수록 강하게)
+
+  // 빈칸 비율로 게임 단계 추정 (초반엔 1선/2선 더 강하게 회피)
+  let empty = 0
+  for (let rr = 0; rr < size; rr++)
+    for (let cc = 0; cc < size; cc++)
+      if (board[rr][cc] === null) empty++
+  const totalCells = size * size
+  const emptyRatio = empty / totalCells
+  const isOpening = emptyRatio > 0.7
+
+  // 1선 회피 (초반엔 더 강하게)
+  const onFirstLine = r === 0 || r === size - 1 || c === 0 || c === size - 1
+  if (onFirstLine) score -= isOpening ? 18 : 6
+  // 2선 (호선 위) 회피
+  const onSecondLine = (r === 1 || r === size - 2 || c === 1 || c === size - 2) && !onFirstLine
+  if (onSecondLine && isOpening) score -= 4
+
+  // 상대 영향권 깊이 침입 페널티 (인접 + 2칸 거리 상대 돌 카운트)
+  const opp = color === 'black' ? 'white' : 'black'
+  let oppNearby = 0
+  let myNearby = 0
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      if (dr === 0 && dc === 0) continue
+      const nr = r + dr, nc = c + dc
+      if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue
+      const dist = Math.abs(dr) + Math.abs(dc)
+      const weight = dist === 1 ? 3 : (dist === 2 ? 1 : 0.5)
+      if (board[nr][nc] === opp) oppNearby += weight
+      else if (board[nr][nc] === color) myNearby += weight
+    }
+  }
+  // 상대 진영 깊숙이 + 아군 근처 없음: 무리수
+  if (oppNearby >= 6 && myNearby <= 1) score -= 25
+
+  // 중앙 선호
   const center = (size - 1) / 2
   const distFromCenter = Math.abs(r - center) + Math.abs(c - center)
   const centerWeight = size <= 9 ? 0.5 : 0.3
