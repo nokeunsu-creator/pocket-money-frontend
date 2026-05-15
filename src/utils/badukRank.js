@@ -62,42 +62,41 @@ const TIER_RANGES = [
 // strength → { maxDepth, candidateLimit, timeBudgetMs }
 // 9x9는 단순하므로 같은 깊이로도 강함, 19x19는 후보 많이/깊이 얕게
 // candidate는 8~12로 유지 (분기 폭발 방지), 강도는 depth와 budget으로 차별화
-// 단 등급 강화 (2026-05-15): 실제 사람 1단은 25급을 압도해야 함.
-// 1단도 충분히 깊이 보도록 4초+로 상향. 9단은 최대 10초.
-// MCTS는 budget >= 2000ms에서만 활성 (badukEngine.js 게이트).
+// 단 등급 강화 (2026-05-15 2차): 4~9단까지 MCTS 활성, 깊이 +1 추가.
+// 9단은 10초 max 유지. MCTS는 budget >= 2000ms에서만 활성 (badukEngine.js 게이트).
 const SEARCH_OPTIONS = {
   9: {
     30: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 4000 },   // 1단
     31: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 5000 },   // 2단
-    32: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 6000 },   // 3단
-    33: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 7000 },   // 4단
-    34: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 8000 },   // 5단
-    35: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 9000 },   // 6단
-    36: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },  // 7단
-    37: { maxDepth: 9, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },  // 8단
-    38: { maxDepth: 10, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true }, // 9단
+    32: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 6000 },   // 3단
+    33: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 7000, useMcts: true },   // 4단
+    34: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 8000, useMcts: true },   // 5단
+    35: { maxDepth: 9, candidateLimit: 14, timeBudgetMs: 9000, useMcts: true },   // 6단
+    36: { maxDepth: 9, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },  // 7단
+    37: { maxDepth: 10, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true }, // 8단
+    38: { maxDepth: 11, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true }, // 9단
   },
   13: {
     30: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 4000 },
     31: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 5000 },
-    32: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 6000 },
-    33: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 7000 },
-    34: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 8000 },
-    35: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 9000 },
-    36: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
-    37: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
-    38: { maxDepth: 8, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    32: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 6000 },
+    33: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 7000, useMcts: true },
+    34: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 8000, useMcts: true },
+    35: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 9000, useMcts: true },
+    36: { maxDepth: 8, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    37: { maxDepth: 9, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    38: { maxDepth: 9, candidateLimit: 18, timeBudgetMs: 10000, useMcts: true },
   },
   19: {
     30: { maxDepth: 3, candidateLimit: 14, timeBudgetMs: 4000 },
-    31: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 5000 },
-    32: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 6000 },
-    33: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 7000 },
-    34: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 8000 },
-    35: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 9000 },
-    36: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
-    37: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 10000, useMcts: true },
-    38: { maxDepth: 7, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    31: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 5000 },
+    32: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 6000 },
+    33: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 7000, useMcts: true },
+    34: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 8000, useMcts: true },
+    35: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 9000, useMcts: true },
+    36: { maxDepth: 7, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    37: { maxDepth: 8, candidateLimit: 16, timeBudgetMs: 10000, useMcts: true },
+    38: { maxDepth: 8, candidateLimit: 18, timeBudgetMs: 10000, useMcts: true },
   },
 }
 
