@@ -58,8 +58,9 @@ function recordWin(strength) {
 
 function isRankUnlocked(strength, progress) {
   if (strength <= KYU_ALWAYS_UNLOCKED) return true
-  if (strength < 30) return strength <= progress.kyu + 1
-  return strength <= progress.dan + 1
+  // 단(段)은 사용자 요청으로 모두 활성 (강화 AI 모드 — 도전 자유)
+  if (strength >= 30) return true
+  return strength <= progress.kyu + 1
 }
 
 function isRankCleared(strength, progress) {
