@@ -10,6 +10,7 @@ const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 const DIAGS = [[-1, -1], [-1, 1], [1, -1], [1, 1]]
 
 // 영향력 맵 (Bouzy 5-4 단순화). 감쇠 0.9로 두터움 강화.
+// 2026-05-16: iter 5 → 8회로 늘려 영향력이 더 멀리 전파됨 (특히 19x19에서 큰 효과).
 export function computeInfluence(board, size, color) {
   const opp = color === 'black' ? 'white' : 'black'
   let inf = Array.from({ length: size }, () => Array(size).fill(0))
@@ -21,7 +22,7 @@ export function computeInfluence(board, size, color) {
     }
   }
 
-  for (let iter = 0; iter < 5; iter++) {
+  for (let iter = 0; iter < 8; iter++) {
     const next = inf.map(row => [...row])
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
@@ -115,6 +116,7 @@ function countEyes(board, size, color, group) {
 }
 
 // 모양 점수: 빈삼각/우형 페널티 + 호구/뻗음/마늘모/한칸뜀 보너스
+// 2026-05-16: 호구(虎口) 명시적 가점 추가 — ㄱ자 자기색 + 대각 자기색
 function shapeScore(board, size, color, r, c) {
   let score = 0
 
@@ -128,6 +130,20 @@ function shapeScore(board, size, color, r, c) {
     const dr2 = r + dr, dc2 = c + dc
     if (dr2 >= 0 && dr2 < size && dc2 >= 0 && dc2 < size) {
       if (board[dr2][dc2] === null) score -= 3 // 빈삼각
+    }
+  }
+
+  // *** 호구(虎口) 가점: ㄱ자 자기색 두 돌 + 대각선 자기색 (단단한 모양)
+  // 빈삼각과 동일 패턴이지만 대각이 자기색 → 매우 단단한 연결
+  for (const [dr, dc] of DIAGS) {
+    const r1 = r + dr, c1 = c
+    const r2 = r, c2 = c + dc
+    const dr2 = r + dr, dc2 = c + dc
+    if (r1 < 0 || r1 >= size || c1 < 0 || c1 >= size) continue
+    if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) continue
+    if (dr2 < 0 || dr2 >= size || dc2 < 0 || dc2 >= size) continue
+    if (board[r1][c1] === color && board[r2][c2] === color && board[dr2][dc2] === color) {
+      score += 2 // 호구 (강한 연결)
     }
   }
 
@@ -164,14 +180,21 @@ function shapeScore(board, size, color, r, c) {
 }
 
 // 그룹 안전도: 활로 + 눈 + 크기 종합
+// 2026-05-16: 살아있는 큰 그룹에 두께(thickness) 보너스 추가 — 외세 발휘
 function groupSafetyScore(board, size, color, group) {
   const { liberties, stones } = group
   const stoneCount = stones.length
   if (liberties === 0) return -stoneCount * 15
 
-  // 두 눈 인식 — 살아있으면 큰 보너스
+  // 두 눈 인식 — 살아있으면 큰 보너스 + 두께 가점
   const eyes = countEyes(board, size, color, group)
-  if (eyes >= 2) return stoneCount * 0.5 + 8
+  if (eyes >= 2) {
+    // 두께 보너스: 살아있고 크고 활로 많은 그룹 = 외세 발휘
+    const thickness = stoneCount >= 5 && liberties >= 5
+      ? Math.min(stoneCount * 0.3, 6)
+      : 0
+    return stoneCount * 0.5 + 8 + thickness
+  }
 
   let base = 0
   if (liberties === 1) base = -stoneCount * 6
@@ -264,13 +287,14 @@ export function evaluatePosition(board, size, color, komi = 6.5) {
 
 // 빠른 move scoring (move ordering용)
 // 게임 단계 고려: 빈칸 비율로 초/중/종반 추정
+// 2026-05-16: 자기 단수 만드는 수 페널티 -40 → -55 (자기 돌 단수 약점 ↓)
 export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   let score = 0
   score += captured * 80
   if (selfLibs >= 4) score += 6
   else if (selfLibs === 3) score += 3
-  else if (selfLibs === 2) score -= 5
-  else if (selfLibs === 1) score -= 40
+  else if (selfLibs === 2) score -= 8
+  else if (selfLibs === 1) score -= 55
 
   // 인접 분석 (자기/상대 4방향)
   const opp = color === 'black' ? 'white' : 'black'

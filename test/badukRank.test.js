@@ -190,10 +190,12 @@ test('1~2급은 약자라 핸디캡 없음', () => {
   assert.equal(getHandicap(29, 19), 0)
 })
 
-test('단(段)부터 핸디캡 시작', () => {
-  // 1단(30) 이상은 핸디캡 ≥ 1
-  for (let s = 30; s <= 38; s++) {
-    assert.ok(getHandicap(s, 19) >= 1, `strength ${s}`)
+test('핸디캡 제거: 모든 등급 핸디캡 0', () => {
+  // 2026-05-16: 사용자 요청으로 단(段)도 핸디캡 제거
+  for (let s = 0; s < RANK_COUNT; s++) {
+    for (const sz of [9, 13, 19]) {
+      assert.equal(getHandicap(s, sz), 0, `strength ${s}, size ${sz}`)
+    }
   }
 })
 
@@ -219,9 +221,9 @@ test('13x13/19x19 핸디캡은 최대 9점', () => {
   }
 })
 
-test('9단(38)은 9x9에서 5점, 19x19에서 9점', () => {
-  assert.equal(getHandicap(38, 9), 5)
-  assert.equal(getHandicap(38, 19), 9)
+test('9단(38)도 핸디캡 0 (핸디캡 제거)', () => {
+  assert.equal(getHandicap(38, 9), 0)
+  assert.equal(getHandicap(38, 19), 0)
 })
 
 test('핸디캡 좌표는 모두 보드 안', () => {
@@ -247,16 +249,11 @@ test('핸디캡 좌표 개수는 getHandicap()와 일치', () => {
   }
 })
 
-test('komi: 핸디캡 0 → 6.5, 그 외 → 0.5', () => {
-  // 30급(0)~1급(29)은 모두 핸디캡 0 → komi 6.5
-  for (let s = 0; s <= 29; s++) {
-    assert.equal(getKomi(s, 19), 6.5)
-    assert.equal(getKomi(s, 9), 6.5)
-  }
-  // 단(30~38)은 핸디캡 있음 → komi 0.5
-  for (let s = 30; s <= 38; s++) {
-    assert.equal(getKomi(s, 19), 0.5, `strength ${s}, 19`)
-    assert.equal(getKomi(s, 9), 0.5, `strength ${s}, 9`)
+test('komi: 모든 등급 핸디캡 0 → komi 6.5', () => {
+  // 2026-05-16: 핸디캡 제거 — 모든 등급(급+단) 핸디캡 0이므로 komi 6.5
+  for (let s = 0; s < RANK_COUNT; s++) {
+    assert.equal(getKomi(s, 19), 6.5, `strength ${s}, 19`)
+    assert.equal(getKomi(s, 9), 6.5, `strength ${s}, 9`)
   }
 })
 
@@ -293,10 +290,11 @@ test('getRankDescription: 빈 문자열 아님', () => {
   }
 })
 
-test('getRankDescription: 단(段) 등급은 "접바둑" 포함', () => {
+test('getRankDescription: 단(段) 등급도 접바둑 없음 (핸디캡 제거)', () => {
+  // 2026-05-16: 핸디캡 제거로 단 등급에도 "접바둑" 문구 없음
   for (let s = 30; s <= 38; s++) {
     const d = getRankDescription(s)
-    assert.match(d, /접바둑/, `strength ${s}: ${d}`)
+    assert.ok(!/접바둑/.test(d), `strength ${s}: 접바둑 문구가 남아있음: ${d}`)
   }
 })
 

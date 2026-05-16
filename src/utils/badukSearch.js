@@ -253,8 +253,9 @@ export function searchBestMove({ board, size, color, prevBoardStr, komi = 6.5 },
   let prevScore = null
 
   // Iterative deepening + Aspiration window
+  // 0.85 → 0.92 (2026-05-15): 3초 캡 시대에 짧은 budget을 더 짜내기
   for (let depth = 1; depth <= maxDepth; depth++) {
-    if (Date.now() - startTime > timeBudgetMs * 0.85) break
+    if (Date.now() - startTime > timeBudgetMs * 0.92) break
 
     let alpha, beta
     if (prevScore !== null && depth >= 3) {

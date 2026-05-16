@@ -624,8 +624,9 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
     if (saves.length > 0) return saves[0]
 
-    // 3. MCTS (7~9단) 또는 알파베타
-    // MCTS는 budget >= 2초일 때만 (짧은 시간엔 알파베타가 더 안정적)
+    // 3. MCTS (4~9단) 또는 알파베타 (1~3단)
+    // MCTS는 budget >= 2000ms일 때만 — 짧은 시간엔 알파베타가 더 안정적이고
+    // 강도 단조성도 유지됨 (1단 시간 1500ms는 알파베타로만)
     const komi = strategy.komi ?? 6.5
     if (search.useMcts && (search.timeBudgetMs ?? 0) >= 2000) {
       const mctsMove = searchMctsMove(
@@ -661,11 +662,11 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   const pickRand = pool => pool[Math.floor(Math.random() * pool.length)]
 
   if (tier === 'random') {
-    // 한 단계 강화: mistakeRate 감소 (0.85→0.95)
-    const mistakeRate = 1 - subLevel * 0.95
+    // 2026-05-15 5차: 강한 random(22~21급)에서 mistakeRate 더 줄임 (0.95→0.97)
+    // 그리고 advancedEval 활성 임계 0.3→0.2로 더 일찍 활성
+    const mistakeRate = 1 - subLevel * 0.97
     if (Math.random() < mistakeRate) return pickRand(legalMoves)
-    // subLevel 0.3부터 (이전 0.5) advancedEval로 평가
-    if (subLevel > 0.3) {
+    if (subLevel > 0.2) {
       const scored = decentPool.map(([r, c]) => ({
         r, c, score: advancedEval(board, r, c, color, size, prevBoardStr),
       }))
@@ -678,8 +679,8 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
   }
 
   if (tier === 'capture') {
-    // 한 단계 강화: mistakeRate 감소 (0.35→0.25)
-    const mistakeRate = 0.25 * (1 - subLevel)
+    // 2026-05-15 5차: mistakeRate 더 감소 (0.25→0.15)
+    const mistakeRate = 0.15 * (1 - subLevel)
     if (Math.random() < mistakeRate) return pickRand(decentPool)
     // 살리기 우선순위 (모든 subLevel)
     const saves = findSaveMoves(board, color, size, legalMoves, prevBoardStr)
@@ -720,10 +721,11 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const candidates = filteredMoves.length > 0 ? filteredMoves : legalMoves
 
     // 응수 평가 항상 활성 (모든 territory 등급), oppLookCount 증가
+    // 2026-05-15 5차: territory 응수 폭 확장 (3→4, 5→7)
     const move = pickByHeuristic({
       board, size, color, prevBoardStr, legalMoves: candidates,
-      oppLookCount: Math.round(3 + subLevel * 5),
-      myFollowupCount: subLevel > 0.7 ? 2 : 0,
+      oppLookCount: Math.round(4 + subLevel * 7),
+      myFollowupCount: subLevel > 0.5 ? 2 : 0,
       topN: Math.max(1, Math.round(3 - subLevel * 2)),
     })
     if (move) return move
@@ -751,10 +753,11 @@ export function getAiMove(board, size, strategy, prevBoardStr, color = 'white') 
     const filteredMoves = legalMoves.filter(([r, c]) => !isInOwnTerritory(board, r, c, color, size))
     const candidates = filteredMoves.length > 0 ? filteredMoves : legalMoves
 
+    // 2026-05-15 5차: advanced(6~1급) 응수 폭 + myFollowup 확장
     const move = pickByHeuristic({
       board, size, color, prevBoardStr, legalMoves: candidates,
-      oppLookCount: Math.round(4 + subLevel * 5),
-      myFollowupCount: subLevel > 0.5 ? Math.round(2 + subLevel * 2) : 0,
+      oppLookCount: Math.round(6 + subLevel * 6),
+      myFollowupCount: subLevel > 0.3 ? Math.round(2 + subLevel * 3) : 0,
       topN: Math.max(1, Math.round(3 - subLevel * 2)),
     })
     if (move) return move

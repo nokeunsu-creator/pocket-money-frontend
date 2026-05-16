@@ -12,13 +12,16 @@ self.onmessage = (e) => {
   const { type, board, size, strategy, prevBoardStr, color, userColor, requestId } = e.data
   try {
     if (type === 'ponder') {
-      // 사용자 best move 추측 + AI 응답 계산 (budget 절반씩)
+      // 사용자 best move 추측 + AI 응답 계산
+      // 2026-05-15 5차: 3초 캡 시대에는 사용자 추측은 1/3, AI 응답은 2/3로 비대칭 분배
+      // (AI 본 응답 품질이 더 중요하므로)
       const aiColor = userColor === 'black' ? 'white' : 'black'
       const baseBudget = strategy.search?.timeBudgetMs ?? 2000
-      const halfBudget = Math.max(500, Math.floor(baseBudget * 0.5))
+      const userBudget = Math.max(400, Math.floor(baseBudget * 0.33))
+      const aiBudget = Math.max(800, Math.floor(baseBudget * 0.67))
       const userStrategy = {
         ...strategy,
-        search: strategy.search ? { ...strategy.search, timeBudgetMs: halfBudget } : strategy.search,
+        search: strategy.search ? { ...strategy.search, timeBudgetMs: userBudget } : strategy.search,
       }
       const userMove = getAiMove(board, size, userStrategy, prevBoardStr, userColor)
       if (!userMove) {
@@ -31,7 +34,7 @@ self.onmessage = (e) => {
       const newPrev = boardToString(board)
       const aiStrategy = {
         ...strategy,
-        search: strategy.search ? { ...strategy.search, timeBudgetMs: halfBudget } : strategy.search,
+        search: strategy.search ? { ...strategy.search, timeBudgetMs: aiBudget } : strategy.search,
       }
       const aiMove = getAiMove(afterUser.board, size, aiStrategy, newPrev, aiColor)
       self.postMessage({

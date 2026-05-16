@@ -60,44 +60,47 @@ const TIER_RANGES = [
 
 // 단 등급 탐색 옵션 테이블 (보드 크기별로 비슷한 체감 되도록)
 // strength → { maxDepth, candidateLimit, timeBudgetMs }
-// 9x9는 단순하므로 같은 깊이로도 강함, 19x19는 후보 많이/깊이 얕게
-// candidate는 8~12로 유지 (분기 폭발 방지), 강도는 depth와 budget으로 차별화
-// 최대 생각 시간 5초 캡 (2026-05-15 4차): UI 응답성 위해 모든 단 등급 5초 이내.
-// 짧은 budget에서 단조성 위해 candidateLimit을 강한 등급일수록 작게 (깊이 더 살아남게).
-// 1~3단: 알파베타. 4~9단: MCTS+알파베타. MCTS gating은 budget >= 2000ms (모두 통과).
+// 2026-05-16: 9단을 정점으로 1단까지 한 단계씩 점진 약화 곡선.
+//   - 시간 캡 3초 유지 (UI 응답성)
+//   - 9단: budget=3000, maxDepth 최대 (보드별로 다름)
+//   - 1단 → 9단: budget 1200→3000 (약 +225ms씩), maxDepth +1씩
+//   - candidateLimit 12 통일 (안정성)
+//   - MCTS는 4단(budget≥2000ms)부터 활성 (badukEngine.js gating)
 const SEARCH_OPTIONS = {
   9: {
-    30: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 2500 }, // 1단
-    31: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 3000 }, // 2단
-    32: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 3500, useMcts: true }, // 3단
-    33: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 4000, useMcts: true }, // 4단
-    34: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 4500, useMcts: true }, // 5단
-    35: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 5000, useMcts: true }, // 6단
-    36: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true }, // 7단
-    37: { maxDepth: 10, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true }, // 8단
-    38: { maxDepth: 11, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true }, // 9단
+    30: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 1200 }, // 1단
+    31: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 1450 }, // 2단
+    32: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 1700 }, // 3단
+    33: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 2000, useMcts: true }, // 4단
+    34: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 2225, useMcts: true }, // 5단
+    35: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 2450, useMcts: true }, // 6단
+    36: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 2675, useMcts: true }, // 7단
+    37: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 2900, useMcts: true }, // 8단
+    38: { maxDepth: 10, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
   },
   13: {
-    30: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 2500 },
-    31: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 3000 },
-    32: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 3500, useMcts: true },
-    33: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 4000, useMcts: true },
-    34: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 4500, useMcts: true },
-    35: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 5000, useMcts: true },
-    36: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true },
-    37: { maxDepth: 8, candidateLimit: 14, timeBudgetMs: 5000, useMcts: true },
-    38: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true },
+    30: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 1200 }, // 1단
+    31: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 1450 }, // 2단
+    32: { maxDepth: 4, candidateLimit: 12, timeBudgetMs: 1700 }, // 3단
+    33: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 2000, useMcts: true }, // 4단
+    34: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 2225, useMcts: true }, // 5단
+    35: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 2450, useMcts: true }, // 6단
+    36: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 2675, useMcts: true }, // 7단
+    37: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 2900, useMcts: true }, // 8단
+    38: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
   },
   19: {
-    30: { maxDepth: 3, candidateLimit: 14, timeBudgetMs: 2500 },
-    31: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 3000 },
-    32: { maxDepth: 4, candidateLimit: 14, timeBudgetMs: 3500, useMcts: true },
-    33: { maxDepth: 5, candidateLimit: 12, timeBudgetMs: 4000, useMcts: true },
-    34: { maxDepth: 5, candidateLimit: 14, timeBudgetMs: 4500, useMcts: true },
-    35: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true },
-    36: { maxDepth: 6, candidateLimit: 14, timeBudgetMs: 5000, useMcts: true },
-    37: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 5000, useMcts: true },
-    38: { maxDepth: 7, candidateLimit: 14, timeBudgetMs: 5000, useMcts: true },
+    // 2026-05-16: 19x19 candidateLimit 축소(12→8~10)로 같은 시간에 깊이 +1~2.
+    // 19x19은 후보가 많아서 좁은 폭으로 깊게 가는 것이 효과적.
+    30: { maxDepth: 3, candidateLimit: 10, timeBudgetMs: 1200 }, // 1단
+    31: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 1450 }, // 2단
+    32: { maxDepth: 4, candidateLimit: 10, timeBudgetMs: 1700 }, // 3단
+    33: { maxDepth: 5, candidateLimit: 9,  timeBudgetMs: 2000, useMcts: true }, // 4단
+    34: { maxDepth: 5, candidateLimit: 9,  timeBudgetMs: 2225, useMcts: true }, // 5단
+    35: { maxDepth: 6, candidateLimit: 8,  timeBudgetMs: 2450, useMcts: true }, // 6단
+    36: { maxDepth: 7, candidateLimit: 8,  timeBudgetMs: 2675, useMcts: true }, // 7단
+    37: { maxDepth: 8, candidateLimit: 8,  timeBudgetMs: 2900, useMcts: true }, // 8단
+    38: { maxDepth: 9, candidateLimit: 8,  timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
   },
 }
 
@@ -144,14 +147,9 @@ export function getRankDescription(strength) {
 // strength가 클수록(AI가 강할수록) 플레이어(흑)가 받는 미리 놓은 돌 수가 늘어남.
 
 // strength → 기본 핸디캡 수 (보드 크기 제한 적용 전)
-const HANDICAP_TABLE = (() => {
-  const t = new Array(RANK_COUNT).fill(0)
-  // 1단(30)~9단(38)
-  t[30] = 2; t[31] = 2; t[32] = 3; t[33] = 3
-  t[34] = 4; t[35] = 5; t[36] = 6; t[37] = 7
-  t[38] = 9
-  return t
-})()
+// 2026-05-15 5차: 사용자 요청으로 단(段) 핸디캡 전부 제거.
+// 흑(사람) 먼저 두는 문화는 유지 — 컴퓨터는 백으로 둠.
+const HANDICAP_TABLE = new Array(RANK_COUNT).fill(0)
 
 const MAX_HANDICAP_BY_SIZE = { 9: 5, 13: 9, 19: 9 }
 
