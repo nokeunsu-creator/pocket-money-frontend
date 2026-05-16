@@ -3,8 +3,10 @@
 // - 두 눈 판정으로 그룹 사활 인식
 // - 빈삼각/우형 페널티, 호구/뻗음 가점
 // - 약한 돌 (활로 적고 두께 부족) 페널티
+// - 국지 패턴 라이브러리 (badukPatterns)로 응수 보너스/페널티
 
 import { getGroup } from './badukEngine.js'
+import { getPatternBonus } from './badukPatterns.js'
 
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 const DIAGS = [[-1, -1], [-1, 1], [1, -1], [1, 1]]
@@ -349,5 +351,9 @@ export function quickMoveScore(board, size, r, c, color, captured, selfLibs) {
   const distFromCenter = Math.abs(r - center) + Math.abs(c - center)
   const centerWeight = size <= 9 ? 0.5 : 0.3
   score -= distFromCenter * centerWeight
+
+  // 2026-05-16: 국지 모양 패턴 라이브러리 가산
+  score += getPatternBonus(board, size, r, c, color)
+
   return score
 }

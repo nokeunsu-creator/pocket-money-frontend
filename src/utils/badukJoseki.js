@@ -21,45 +21,84 @@ const KOMOKU = { 9: [[2, 1], [1, 2]], 13: [[3, 2], [2, 3]], 19: [[3, 2], [2, 3]]
 // 9x9는 작아서 정석보단 빠른 점령. 19x19는 화점 정석.
 const JOSEKI_PATTERNS = {
   19: [
-    // 흑 화점 → 백 3-3 침입 → 흑 막기 (정석)
+    // === 화점(4-4) 정석 ===
+    // 흑 화점 → 백 3-3 침입 (가장 흔한 침입)
     {
       stones: [[3, 3, 'black'], [2, 2, 'white']],
-      next: [2, 3, 'black'], // 흑이 막음
-      desc: '화점 3-3 침입 막기',
+      next: [2, 3, 'black'],
+      desc: '화점 3-3 침입 막기(아래)',
     },
     {
       stones: [[3, 3, 'black'], [2, 2, 'white'], [2, 3, 'black']],
-      next: [3, 2, 'white'], // 백이 뻗음
+      next: [3, 2, 'white'],
       desc: '3-3 침입 뻗음',
     },
     {
       stones: [[3, 3, 'black'], [2, 2, 'white'], [2, 3, 'black'], [3, 2, 'white']],
-      next: [1, 3, 'black'], // 흑이 막음
+      next: [1, 3, 'black'],
       desc: '3-3 후속 막기',
+    },
+    {
+      stones: [[3, 3, 'black'], [2, 2, 'white'], [2, 3, 'black'], [3, 2, 'white'], [1, 3, 'black']],
+      next: [4, 2, 'white'],
+      desc: '3-3 침입 백 뻗기',
     },
     {
       stones: [[3, 3, 'black'], [2, 2, 'white'], [3, 2, 'black']],
       next: [2, 3, 'white'],
-      desc: '3-3 침입 반대 막기',
+      desc: '3-3 침입 옆 막기',
     },
-    // 흑 화점 → 백 걸침 (한칸낮은걸침) → 흑 마늘모
+    {
+      stones: [[3, 3, 'black'], [2, 2, 'white'], [3, 2, 'black'], [2, 3, 'white']],
+      next: [3, 1, 'black'],
+      desc: '3-3 침입 옆 막기 후',
+    },
+
+    // 화점 → 한칸낮은걸침(3-5) → 마늘모 받음
     {
       stones: [[3, 3, 'black'], [5, 2, 'white']],
       next: [3, 2, 'black'],
-      desc: '한칸낮은걸침 마늘모',
+      desc: '한칸낮은걸침 마늘모(아래)',
     },
     {
       stones: [[3, 3, 'black'], [2, 5, 'white']],
       next: [2, 3, 'black'],
-      desc: '한칸낮은걸침 반대',
+      desc: '한칸낮은걸침 마늘모(옆)',
     },
-    // 화점 → 두 칸 협공
     {
       stones: [[3, 3, 'black'], [5, 2, 'white'], [3, 2, 'black']],
-      next: [2, 4, 'white'],
+      next: [4, 4, 'white'],
       desc: '걸침 후 백 한칸뜀',
     },
-    // 흑 소목 (3-4) → 백 걸침 정석
+    // 화점 → 두칸낮은걸침(3-6)
+    {
+      stones: [[3, 3, 'black'], [6, 2, 'white']],
+      next: [4, 4, 'black'],
+      desc: '두칸낮은걸침 마늘모',
+    },
+    // 화점 → 한칸높은걸침(2-5)
+    {
+      stones: [[3, 3, 'black'], [5, 3, 'white']],
+      next: [3, 4, 'black'],
+      desc: '한칸높은걸침 받음',
+    },
+
+    // === 화점 굳힘(布石) ===
+    // 한칸 굳힘 — 화점 + 마늘모 (강함)
+    {
+      stones: [[3, 3, 'black'], [5, 4, 'black']],
+      next: [3, 9, 'black'],
+      desc: '화점 한칸 굳힘 → 변 벌림',
+    },
+    // 두칸 굳힘 — 화점 + 한칸 거리
+    {
+      stones: [[3, 3, 'black'], [5, 3, 'black']],
+      next: [3, 9, 'black'],
+      desc: '화점 두칸 굳힘 → 변',
+    },
+
+    // === 소목(3-4) 정석 ===
+    // 흑 소목 → 백 한칸걸침 → 흑 마늘모
     {
       stones: [[3, 2, 'black'], [5, 3, 'white']],
       next: [3, 4, 'black'],
@@ -68,33 +107,170 @@ const JOSEKI_PATTERNS = {
     {
       stones: [[2, 3, 'black'], [3, 5, 'white']],
       next: [4, 3, 'black'],
-      desc: '소목 걸침 반대',
+      desc: '소목 한칸걸침 반대 마늘모',
+    },
+    // 소목 + 한칸걸침 후 → 백 두칸 벌림
+    {
+      stones: [[3, 2, 'black'], [5, 3, 'white'], [3, 4, 'black']],
+      next: [5, 5, 'white'],
+      desc: '한칸걸침 후 백 한칸뜀',
+    },
+    // 소목 → 백 한칸높은걸침(2-5)
+    {
+      stones: [[3, 2, 'black'], [5, 2, 'white']],
+      next: [4, 3, 'black'],
+      desc: '소목 한칸낮은걸침 응수',
+    },
+    // 소목 → 두칸걸침(5-3)
+    {
+      stones: [[3, 2, 'black'], [5, 4, 'white']],
+      next: [4, 3, 'black'],
+      desc: '소목 두칸높은걸침 받음',
+    },
+
+    // === 소목 굳힘 ===
+    // 눈목자 굳힘
+    {
+      stones: [[3, 2, 'black'], [5, 4, 'black']],
+      next: [3, 9, 'black'],
+      desc: '소목 눈목자 굳힘 → 변',
+    },
+    // 한칸 굳힘
+    {
+      stones: [[3, 2, 'black'], [5, 2, 'black']],
+      next: [3, 9, 'black'],
+      desc: '소목 한칸 굳힘 → 변',
+    },
+    // 마늘모 굳힘
+    {
+      stones: [[3, 2, 'black'], [4, 3, 'black']],
+      next: [3, 9, 'black'],
+      desc: '소목 마늘모 굳힘 → 변',
+    },
+
+    // === 백 화점 정석(우리 색 = 백) ===
+    {
+      stones: [[3, 3, 'white'], [2, 2, 'black']],
+      next: [2, 3, 'white'],
+      desc: '백 화점 3-3 침입 막기',
+    },
+    {
+      stones: [[3, 3, 'white'], [2, 2, 'black'], [2, 3, 'white']],
+      next: [3, 2, 'black'],
+      desc: '백 화점 3-3 침입 뻗음',
+    },
+    {
+      stones: [[3, 3, 'white'], [5, 2, 'black']],
+      next: [3, 2, 'white'],
+      desc: '백 화점 걸침 받음',
+    },
+    {
+      stones: [[3, 3, 'white'], [5, 3, 'black']],
+      next: [3, 4, 'white'],
+      desc: '백 화점 한칸높은걸침 받음',
+    },
+
+    // 백 소목 정석
+    {
+      stones: [[3, 2, 'white'], [5, 3, 'black']],
+      next: [3, 4, 'white'],
+      desc: '백 소목 한칸걸침 마늘모',
+    },
+    {
+      stones: [[2, 3, 'white'], [3, 5, 'black']],
+      next: [4, 3, 'white'],
+      desc: '백 소목 한칸걸침 반대',
+    },
+
+    // 백 굳힘
+    {
+      stones: [[3, 3, 'white'], [5, 4, 'white']],
+      next: [3, 9, 'white'],
+      desc: '백 화점 한칸 굳힘 → 변',
+    },
+    {
+      stones: [[3, 2, 'white'], [5, 4, 'white']],
+      next: [3, 9, 'white'],
+      desc: '백 소목 눈목자 굳힘 → 변',
     },
   ],
   13: [
-    // 13x13 단순 정석
+    // 13x13 화점(3-3 기준) 정석
     {
       stones: [[3, 3, 'black'], [2, 2, 'white']],
       next: [2, 3, 'black'],
       desc: '13: 3-3 침입 막기',
     },
     {
+      stones: [[3, 3, 'black'], [2, 2, 'white'], [2, 3, 'black']],
+      next: [3, 2, 'white'],
+      desc: '13: 3-3 침입 뻗음',
+    },
+    {
       stones: [[3, 3, 'black'], [5, 2, 'white']],
       next: [3, 2, 'black'],
-      desc: '13: 걸침 마늘모',
+      desc: '13: 한칸낮은걸침 마늘모',
+    },
+    {
+      stones: [[3, 3, 'black'], [2, 5, 'white']],
+      next: [2, 3, 'black'],
+      desc: '13: 한칸낮은걸침 옆',
+    },
+    {
+      stones: [[3, 3, 'black'], [5, 3, 'white']],
+      next: [3, 4, 'black'],
+      desc: '13: 한칸높은걸침 받음',
+    },
+    // 13x13 굳힘
+    {
+      stones: [[3, 3, 'black'], [5, 4, 'black']],
+      next: [3, 6, 'black'],
+      desc: '13: 화점 한칸 굳힘 → 변',
+    },
+    // 백 색 정석
+    {
+      stones: [[3, 3, 'white'], [2, 2, 'black']],
+      next: [2, 3, 'white'],
+      desc: '13: 백 3-3 침입 막기',
+    },
+    {
+      stones: [[3, 3, 'white'], [5, 2, 'black']],
+      next: [3, 2, 'white'],
+      desc: '13: 백 걸침 받음',
     },
   ],
   9: [
-    // 9x9는 정석보다 점령 패턴
+    // 9x9 화점(2-2) 정석
     {
       stones: [[2, 2, 'black'], [1, 1, 'white']],
       next: [1, 2, 'black'],
       desc: '9: 3-3 침입 막기',
     },
     {
+      stones: [[2, 2, 'black'], [1, 1, 'white'], [1, 2, 'black']],
+      next: [2, 1, 'white'],
+      desc: '9: 3-3 침입 뻗음',
+    },
+    {
       stones: [[2, 2, 'black'], [4, 2, 'white']],
       next: [3, 2, 'black'],
-      desc: '9: 침입 막기',
+      desc: '9: 옆 침입 막기',
+    },
+    {
+      stones: [[2, 2, 'black'], [2, 4, 'white']],
+      next: [2, 3, 'black'],
+      desc: '9: 옆 침입 막기(반대)',
+    },
+    // 9x9 백 정석
+    {
+      stones: [[2, 2, 'white'], [1, 1, 'black']],
+      next: [1, 2, 'white'],
+      desc: '9: 백 3-3 침입 막기',
+    },
+    {
+      stones: [[2, 2, 'white'], [4, 2, 'black']],
+      next: [3, 2, 'white'],
+      desc: '9: 백 옆 막기',
     },
   ],
 }
