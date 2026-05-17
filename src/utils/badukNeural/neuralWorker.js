@@ -13,13 +13,21 @@ function getWeights() {
 }
 
 self.onmessage = (e) => {
-  const { board, size, color, prevBoardStr, komi, simulations, timeBudgetMs, requestId } = e.data
+  const {
+    board, size, color, prevBoardStr, komi,
+    simulations, timeBudgetMs, rootTopK, childTopK, rolloutDepth,
+    requestId,
+  } = e.data
   try {
     const weights = getWeights()
     const move = neuralSearch(
       { board, size, color, prevBoardStr: prevBoardStr || '', komi: komi ?? 6.5 },
       weights,
-      { simulations: simulations ?? 120, timeBudgetMs: timeBudgetMs ?? 1800 },
+      {
+        simulations: simulations ?? 120,
+        timeBudgetMs: timeBudgetMs ?? 1800,
+        rootTopK, childTopK, rolloutDepth,
+      },
     )
     self.postMessage({ move, requestId })
   } catch (err) {

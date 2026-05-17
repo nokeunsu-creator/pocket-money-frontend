@@ -18,11 +18,11 @@ const C_PUCT = 1.8
 const HEURISTIC_MIX = 0.85
 // Leaf 평가: 신경망 value와 휴리스틱 평가의 혼합 비율 (휴리스틱 우세)
 const HEURISTIC_VALUE_MIX = 0.90
-// 짧은 rollout 깊이 (평가 잡음 감소)
-const ROLLOUT_DEPTH = 20
-// 루트에서 유지할 최대 후보 수 (탐색 폭 제한 → 깊이 ↑)
-const ROOT_TOP_K = 16
-const CHILD_TOP_K = 10
+// 짧은 rollout 깊이 (평가 잡음 감소) — 옵션으로 override 가능
+const DEFAULT_ROLLOUT_DEPTH = 20
+// 루트/자식 후보 수 (탐색 폭) — 옵션으로 override 가능
+const DEFAULT_ROOT_TOP_K = 16
+const DEFAULT_CHILD_TOP_K = 10
 
 function legalMaskOf(board, size, color, prevBoardStr) {
   const mask = new Float32Array(size * size)
@@ -164,7 +164,8 @@ class Node {
 }
 
 // 한 번 시뮬레이션 (selection → expansion → backup)
-function simulate(root, rootState, weights, size, komi) {
+function simulate(root, rootState, weights, size, komi, params) {
+  const { childTopK, rolloutDepth } = params
   // 1) Selection
   let node = root
   const path = [node]
@@ -207,7 +208,7 @@ function simulate(root, rootState, weights, size, komi) {
       if (mask[p] && mixed[p] > 1e-6) cands.push({ p, prior: mixed[p] })
     }
     cands.sort((a, b) => b.prior - a.prior)
-    const topCands = cands.slice(0, CHILD_TOP_K)
+    const topCands = cands.slice(0, childTopK)
     let hasLegal = false
     for (const { p, prior } of topCands) {
       const r = Math.floor(p / size), c = p % size
@@ -222,8 +223,8 @@ function simulate(root, rootState, weights, size, komi) {
     // 휴리스틱 leaf 평가 + 2회 rollout 평균 (잡음 ↓)
     const heurValRaw = evaluatePosition(state.board, size, state.color, komi)
     const heurVal = Math.tanh(heurValRaw / 25)
-    const r1 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
-    const r2 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
+    const r1 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, rolloutDepth)
+    const r2 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, rolloutDepth)
     const rolloutVal = (r1 + r2) / 2
     // 휴리스틱 90% (eval 50% + rollout 50%) + 신경망 10%
     const combinedHeur = heurVal * 0.5 + rolloutVal * 0.5
@@ -249,6 +250,10 @@ function simulate(root, rootState, weights, size, komi) {
 export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights, options) {
   const sims = options.simulations ?? 100
   const timeBudgetMs = options.timeBudgetMs ?? 1500
+  const rootTopK = options.rootTopK ?? DEFAULT_ROOT_TOP_K
+  const childTopK = options.childTopK ?? DEFAULT_CHILD_TOP_K
+  const rolloutDepth = options.rolloutDepth ?? DEFAULT_ROLLOUT_DEPTH
+  const searchParams = { childTopK, rolloutDepth }
   const startTime = Date.now()
 
   // 정석/포석 우선 (초반에만 매칭됨)
@@ -286,7 +291,7 @@ export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights
     if (mask[p] && mixed[p] > 1e-6) rootCands.push({ p, prior: mixed[p] })
   }
   rootCands.sort((a, b) => b.prior - a.prior)
-  const topRoot = rootCands.slice(0, ROOT_TOP_K)
+  const topRoot = rootCands.slice(0, rootTopK)
   for (const { p, prior } of topRoot) {
     const r = Math.floor(p / size), c = p % size
     root.children.set(`${r},${c}`, new Node(root, prior))
@@ -298,7 +303,7 @@ export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights
 
   let count = 0
   while (count < sims && Date.now() - startTime < timeBudgetMs) {
-    simulate(root, rootState, weights, size, komi)
+    simulate(root, rootState, weights, size, komi, searchParams)
     count++
   }
 

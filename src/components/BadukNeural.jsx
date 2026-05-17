@@ -15,6 +15,8 @@ const STRENGTHS = [
   { key: 'deep',    label: '깊은 사고', desc: '강한 탐색 · 1200 sim',   sims: 1200,  timeMs: 6000,  color: '#8E44AD' },
   { key: 'max',     label: '최강',     desc: '극한 탐색 · 2500 sim',   sims: 2500,  timeMs: 10000, color: '#C0392B' },
   { key: 'beyond',  label: '초월',     desc: '한계 돌파 · 5000 sim',   sims: 5000,  timeMs: 15000, color: '#1A1A1A' },
+  { key: 'god',     label: '신(神)',   desc: '광폭 탐색 · 8000 sim',   sims: 8000,  timeMs: 25000, color: '#6A1B9A', rootTopK: 22, childTopK: 14, rolloutDepth: 30 },
+  { key: 'heaven',  label: '천(天)',   desc: '천하무적 · 12000 sim',   sims: 12000, timeMs: 35000, color: '#B8860B', rootTopK: 28, childTopK: 18, rolloutDepth: 40 },
 ]
 
 function getDepth(size, strength) {
@@ -138,6 +140,7 @@ export default function BadukNeural({ onBack }) {
     worker.postMessage({
       board, size, color: 'white', prevBoardStr, komi,
       simulations: strength.sims, timeBudgetMs: strength.timeMs,
+      rootTopK: strength.rootTopK, childTopK: strength.childTopK, rolloutDepth: strength.rolloutDepth,
       requestId,
     })
 
