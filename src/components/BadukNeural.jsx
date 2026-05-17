@@ -10,10 +10,11 @@ import {
 } from '../utils/badukEngine'
 
 const STRENGTHS = [
-  { key: 'light',  label: '얕은 사고', desc: '빠른 추론 · 120 sim',  sims: 120,  timeMs: 1500, color: '#06D6A0' },
-  { key: 'normal', label: '보통 사고', desc: '균형 잡힌 · 300 sim',  sims: 300,  timeMs: 2800, color: '#4895EF' },
-  { key: 'deep',   label: '깊은 사고', desc: '강한 탐색 · 700 sim',  sims: 700,  timeMs: 5000, color: '#8E44AD' },
-  { key: 'max',    label: '최강',     desc: '최대 깊이 · 1400 sim', sims: 1400, timeMs: 8000, color: '#C0392B' },
+  { key: 'light',   label: '얕은 사고', desc: '빠른 추론 · 200 sim',    sims: 200,   timeMs: 2000,  color: '#06D6A0' },
+  { key: 'normal',  label: '보통 사고', desc: '균형 잡힌 · 500 sim',    sims: 500,   timeMs: 3500,  color: '#4895EF' },
+  { key: 'deep',    label: '깊은 사고', desc: '강한 탐색 · 1200 sim',   sims: 1200,  timeMs: 6000,  color: '#8E44AD' },
+  { key: 'max',     label: '최강',     desc: '극한 탐색 · 2500 sim',   sims: 2500,  timeMs: 10000, color: '#C0392B' },
+  { key: 'beyond',  label: '초월',     desc: '한계 돌파 · 5000 sim',   sims: 5000,  timeMs: 15000, color: '#1A1A1A' },
 ]
 
 function getDepth(size, strength) {

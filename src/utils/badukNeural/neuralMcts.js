@@ -9,16 +9,20 @@ import {
   isLegalMove, simulateMove, boardToString, getGroup, STAR_POINTS,
 } from '../badukEngine.js'
 import { quickMoveScore, evaluatePosition } from '../badukEval.js'
+import { getJosekiMove, getOpeningMove } from '../badukJoseki.js'
 import { makeInputPlanes } from './featurePlanes.js'
 import { forward } from './cnn.js'
 
-const C_PUCT = 1.6
+const C_PUCT = 1.8
 // 신경망 prior와 휴리스틱 prior 혼합 비율 (학습 안 된 신경망 보강)
-const HEURISTIC_MIX = 0.78
+const HEURISTIC_MIX = 0.85
 // Leaf 평가: 신경망 value와 휴리스틱 평가의 혼합 비율 (휴리스틱 우세)
-const HEURISTIC_VALUE_MIX = 0.75
+const HEURISTIC_VALUE_MIX = 0.90
 // 짧은 rollout 깊이 (평가 잡음 감소)
-const ROLLOUT_DEPTH = 8
+const ROLLOUT_DEPTH = 20
+// 루트에서 유지할 최대 후보 수 (탐색 폭 제한 → 깊이 ↑)
+const ROOT_TOP_K = 16
+const CHILD_TOP_K = 10
 
 function legalMaskOf(board, size, color, prevBoardStr) {
   const mask = new Float32Array(size * size)
@@ -197,26 +201,32 @@ function simulate(root, rootState, weights, size, komi) {
     const mixed = mixPolicy(policy, heur, size)
 
     const HW = size * size
-    let hasLegal = false
+    // Top-K 후보만 유지 (탐색 폭 ↓, 깊이 ↑)
+    const cands = []
     for (let p = 0; p < HW; p++) {
-      if (mask[p] && mixed[p] > 1e-6) {
-        const r = Math.floor(p / size), c = p % size
-        node.children.set(`${r},${c}`, new Node(node, mixed[p]))
-        hasLegal = true
-      }
+      if (mask[p] && mixed[p] > 1e-6) cands.push({ p, prior: mixed[p] })
     }
-    // 패스 옵션 (legal move 거의 없을 때만 무게)
+    cands.sort((a, b) => b.prior - a.prior)
+    const topCands = cands.slice(0, CHILD_TOP_K)
+    let hasLegal = false
+    for (const { p, prior } of topCands) {
+      const r = Math.floor(p / size), c = p % size
+      node.children.set(`${r},${c}`, new Node(node, prior))
+      hasLegal = true
+    }
     if (!hasLegal || pass > 0.05) {
       node.children.set('pass', new Node(node, Math.max(pass, hasLegal ? 0.001 : 0.5)))
     }
     node.expanded = true
 
-    // 휴리스틱 leaf 평가 + 짧은 rollout 결합 (학습 안 된 신경망 value 보강)
+    // 휴리스틱 leaf 평가 + 2회 rollout 평균 (잡음 ↓)
     const heurValRaw = evaluatePosition(state.board, size, state.color, komi)
     const heurVal = Math.tanh(heurValRaw / 25)
-    const rolloutVal = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
-    // 휴리스틱 75% (eval 60% + rollout 40% 의 혼합) + 신경망 25%
-    const combinedHeur = heurVal * 0.6 + rolloutVal * 0.4
+    const r1 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
+    const r2 = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
+    const rolloutVal = (r1 + r2) / 2
+    // 휴리스틱 90% (eval 50% + rollout 50%) + 신경망 10%
+    const combinedHeur = heurVal * 0.5 + rolloutVal * 0.5
     const combined = HEURISTIC_VALUE_MIX * combinedHeur + (1 - HEURISTIC_VALUE_MIX) * value
     node.value = combined
     leafValue = combined
@@ -241,9 +251,24 @@ export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights
   const timeBudgetMs = options.timeBudgetMs ?? 1500
   const startTime = Date.now()
 
+  // 정석/포석 우선 (초반에만 매칭됨)
+  const josekiMove = getJosekiMove(board, size, color)
+  if (josekiMove) {
+    const [jr, jc] = josekiMove
+    if (isLegalMove(board, jr, jc, color, size, prevBoardStr)) {
+      const sim = simulateMove(board, jr, jc, color, size)
+      const g = getGroup(sim.board, jr, jc, size)
+      if (g.liberties > 0) return josekiMove
+    }
+  }
+  const openingMove = getOpeningMove(board, size, color)
+  if (openingMove) {
+    const [or, oc] = openingMove
+    if (isLegalMove(board, or, oc, color, size, prevBoardStr)) return openingMove
+  }
+
   const rootState = { board, color, prevBoardStr }
   const root = new Node(null, 1.0)
-  // root 확장
   const mask = legalMaskOf(board, size, color, prevBoardStr)
   const HW = size * size
   let legalCount = 0
@@ -254,11 +279,17 @@ export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights
   const { policy, pass, value } = forward(input, weights, size, mask)
   const heur = heuristicPrior(board, size, color, prevBoardStr, mask)
   const mixed = mixPolicy(policy, heur, size)
+
+  // Root: 더 넓은 Top-K (탐색 다양성)
+  const rootCands = []
   for (let p = 0; p < HW; p++) {
-    if (mask[p] && mixed[p] > 1e-6) {
-      const r = Math.floor(p / size), c = p % size
-      root.children.set(`${r},${c}`, new Node(root, mixed[p]))
-    }
+    if (mask[p] && mixed[p] > 1e-6) rootCands.push({ p, prior: mixed[p] })
+  }
+  rootCands.sort((a, b) => b.prior - a.prior)
+  const topRoot = rootCands.slice(0, ROOT_TOP_K)
+  for (const { p, prior } of topRoot) {
+    const r = Math.floor(p / size), c = p % size
+    root.children.set(`${r},${c}`, new Node(root, prior))
   }
   if (pass > 0.1) root.children.set('pass', new Node(root, pass))
   root.expanded = true
