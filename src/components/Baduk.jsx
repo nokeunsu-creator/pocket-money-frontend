@@ -12,6 +12,7 @@ import {
   getAiDelay,
   getKyuRanks,
   getDanRanks,
+  getMasterRanks,
 } from '../utils/badukRank'
 import {
   createBoard,
@@ -53,20 +54,23 @@ function recordWin(strength) {
   const p = getProgress()
   if (strength < 30) {
     if (strength > p.kyu) p.kyu = strength
-  } else {
+  } else if (strength < 39) {
     if (strength > p.dan) p.dan = strength
   }
+  // 최강(39)은 진행도 추적 안 함 (항상 도전 가능)
   localStorage.setItem(BADUK_PROGRESS_KEY, JSON.stringify(p))
   return p
 }
 function isRankUnlocked(strength, progress) {
   if (strength <= KYU_ALWAYS_UNLOCKED) return true // 30~20급 항상 활성
   if (strength < 30) return strength <= progress.kyu + 1
-  return strength <= progress.dan + 1
+  if (strength < 39) return strength <= progress.dan + 1
+  return true // 최강은 항상 활성
 }
 function isRankCleared(strength, progress) {
   if (strength < 30) return strength <= progress.kyu
-  return strength <= progress.dan
+  if (strength < 39) return strength <= progress.dan
+  return false // 최강은 cleared 마크 없음
 }
 
 // 화면 깊이(안드로이드 뒤로가기 단계 관리용).
@@ -102,12 +106,13 @@ function flatToBoard(flat, size) {
 
 const KYU_RANKS = getKyuRanks()
 const DAN_RANKS = getDanRanks()
+const MASTER_RANKS = getMasterRanks()
 
 export default function Baduk({ onBack }) {
   const [mode, setMode] = useState(null) // null | 'local' | 'ai' | 'online'
   const [size, setSize] = useState(null)
   const [aiRank, setAiRank] = useState(null) // strength 정수 0~38
-  const [rankTab, setRankTab] = useState('kyu') // 'kyu' | 'dan'
+  const [rankTab, setRankTab] = useState('kyu') // 'kyu' | 'dan' | 'master'
   const [board, setBoard] = useState([])
   const [turn, setTurn] = useState('black')
   const [captures, setCaptures] = useState({ black: 0, white: 0 })
@@ -717,9 +722,10 @@ export default function Baduk({ onBack }) {
 
   // AI 모드: 등급(급/단) 선택
   if (mode === 'ai' && size && aiRank == null) {
-    const ranks = rankTab === 'kyu' ? KYU_RANKS : DAN_RANKS
-    const cols = rankTab === 'kyu' ? 6 : 3
+    const ranks = rankTab === 'kyu' ? KYU_RANKS : rankTab === 'dan' ? DAN_RANKS : MASTER_RANKS
+    const cols = rankTab === 'kyu' ? 6 : rankTab === 'dan' ? 3 : 1
     const currentTrackMax = rankTab === 'kyu' ? progress.kyu : progress.dan
+    const isMasterTab = rankTab === 'master'
     const currentTarget = currentTrackMax + 1 // 지금 도전할 등급 strength
     const currentRank = ranks.find(r => r.strength === currentTarget)
     return (
@@ -734,12 +740,12 @@ export default function Baduk({ onBack }) {
           {size}×{size} · 약한 등급부터 차례로 도전!
         </p>
 
-        {/* 급/단 탭 */}
-        <div style={{ display: 'flex', gap: 8, maxWidth: 300, margin: '0 auto 16px' }}>
+        {/* 급/단/최강 탭 */}
+        <div style={{ display: 'flex', gap: 6, maxWidth: 360, margin: '0 auto 16px' }}>
           <button onClick={() => setRankTab('kyu')}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-              fontSize: 14, fontWeight: 700,
+              fontSize: 13, fontWeight: 700,
               background: rankTab === 'kyu' ? '#333' : '#F0F0F0',
               color: rankTab === 'kyu' ? '#FFF' : '#666',
             }}>
@@ -748,13 +754,31 @@ export default function Baduk({ onBack }) {
           <button onClick={() => setRankTab('dan')}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-              fontSize: 14, fontWeight: 700,
+              fontSize: 13, fontWeight: 700,
               background: rankTab === 'dan' ? '#333' : '#F0F0F0',
               color: rankTab === 'dan' ? '#FFF' : '#666',
             }}>
             단 (1~9단)
           </button>
+          <button onClick={() => setRankTab('master')}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 700,
+              background: rankTab === 'master' ? 'linear-gradient(135deg, #C0392B, #7B241C)' : '#F0F0F0',
+              color: rankTab === 'master' ? '#FFF' : '#666',
+            }}>
+            🔥 최강
+          </button>
         </div>
+
+        {isMasterTab && (
+          <div style={{
+            fontSize: 12, color: '#7B241C', marginBottom: 10,
+            padding: '10px 12px', background: '#FFF5F4', border: '1px solid #F5C7C2', borderRadius: 8,
+          }}>
+            <strong>최강 도전</strong> · 한 수당 최대 15초 생각. 답답할 수 있지만 가장 깊게 읽어요.
+          </div>
+        )}
 
         {/* 현재 도전 안내 */}
         {currentRank && (

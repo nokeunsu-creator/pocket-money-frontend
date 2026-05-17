@@ -40,12 +40,12 @@ function section(title) {
 section('등급 개수 및 라벨')
 // =========================================
 
-test('RANK_COUNT === 39', () => {
-  assert.equal(RANK_COUNT, 39)
+test('RANK_COUNT === 40 (급 30 + 단 9 + 최강 1)', () => {
+  assert.equal(RANK_COUNT, 40)
 })
 
-test('전체 등급 39개 반환', () => {
-  assert.equal(getAllRanks().length, 39)
+test('전체 등급 40개 반환', () => {
+  assert.equal(getAllRanks().length, 40)
 })
 
 test('급은 30개, 단은 9개', () => {
@@ -90,7 +90,7 @@ test('rankFromTypeValue 라운드트립', () => {
 
 test('모든 라벨 고유', () => {
   const labels = new Set(getAllRanks().map(r => r.label))
-  assert.equal(labels.size, 39)
+  assert.equal(labels.size, 40)
 })
 
 // =========================================
@@ -104,7 +104,7 @@ test('각 strength에 정확히 하나의 티어 매핑', () => {
     assert.ok(s.tier, `strength ${i} no tier`)
     seen.add(s.tier)
   }
-  assert.equal(seen.size, 7, '티어가 7개여야 함')
+  assert.equal(seen.size, 8, '티어가 8개여야 함 (random, capture, territory, advanced, lookahead1, lookahead2, deep, master)')
 })
 
 test('티어 경계: 30~21급 → random', () => {
@@ -268,10 +268,10 @@ test('getRankColor: 모든 등급에서 hsl 형식 반환', () => {
   }
 })
 
-test('getRankColor: 39개 색상이 모두 다름', () => {
+test('getRankColor: 40개 색상이 모두 다름', () => {
   const colors = new Set()
   for (let s = 0; s < RANK_COUNT; s++) colors.add(getRankColor(s))
-  assert.equal(colors.size, 39)
+  assert.equal(colors.size, 40)
 })
 
 test('getAiDelay: 강한 등급일수록 사고시간이 길다', () => {

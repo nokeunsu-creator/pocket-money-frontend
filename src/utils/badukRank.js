@@ -1,8 +1,9 @@
-// 바둑 등급 시스템 (30급 ~ 1급 + 1단 ~ 9단, 총 39단계)
-// strength: 0(최약, 30급) ~ 38(최강, 9단) 정수
+// 바둑 등급 시스템 (30급 ~ 1급 + 1단 ~ 9단 + 최강, 총 40단계)
+// strength: 0(최약, 30급) ~ 38(9단), 39(최강) 정수
 // 내부 비교/저장은 strength로, 표시는 label로 한다.
 
-export const RANK_COUNT = 39
+export const RANK_COUNT = 40
+export const MASTER_STRENGTH = 39
 
 // strength → 등급 객체
 export function getRank(strength) {
@@ -12,15 +13,20 @@ export function getRank(strength) {
     const kyu = 30 - s
     return { strength: s, type: 'kyu', value: kyu, label: `${kyu}급` }
   }
-  // 30 → 1단, 38 → 9단
-  const dan = s - 29
-  return { strength: s, type: 'dan', value: dan, label: `${dan}단` }
+  if (s < 39) {
+    // 30 → 1단, 38 → 9단
+    const dan = s - 29
+    return { strength: s, type: 'dan', value: dan, label: `${dan}단` }
+  }
+  // 39 → 최강
+  return { strength: s, type: 'master', value: 1, label: '최강' }
 }
 
 // type+value → strength
 export function rankFromTypeValue(type, value) {
   if (type === 'kyu') return 30 - value
-  return 29 + value
+  if (type === 'dan') return 29 + value
+  return MASTER_STRENGTH
 }
 
 // 전체 등급 목록 (약 → 강)
@@ -28,7 +34,7 @@ export function getAllRanks() {
   return Array.from({ length: RANK_COUNT }, (_, i) => getRank(i))
 }
 
-// 급/단으로 분리된 목록
+// 급/단/최강으로 분리된 목록
 export function getKyuRanks() {
   // 30급(가장 약함) → 1급 순서
   return Array.from({ length: 30 }, (_, i) => getRank(i))
@@ -37,6 +43,11 @@ export function getKyuRanks() {
 export function getDanRanks() {
   // 1단 → 9단 순서
   return Array.from({ length: 9 }, (_, i) => getRank(30 + i))
+}
+
+export function getMasterRanks() {
+  // 최강 (1개)
+  return [getRank(MASTER_STRENGTH)]
 }
 
 // ============================================================
@@ -56,6 +67,7 @@ const TIER_RANGES = [
   { tier: 'lookahead1', min: 30, max: 32 }, // 1~3단 (3)
   { tier: 'lookahead2', min: 33, max: 35 }, // 4~6단 (3)
   { tier: 'deep',       min: 36, max: 38 }, // 7~9단 (3)
+  { tier: 'master',     min: 39, max: 39 }, // 최강 (1)
 ]
 
 // 단 등급 탐색 옵션 테이블 (보드 크기별로 비슷한 체감 되도록)
@@ -76,7 +88,9 @@ const SEARCH_OPTIONS = {
     35: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 2450, useMcts: true }, // 6단
     36: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 2675, useMcts: true }, // 7단
     37: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 2900, useMcts: true }, // 8단
-    38: { maxDepth: 10, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
+    38: { maxDepth: 10, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단
+    // 최강: 시간 캡 풀고 (15초), 깊이 +2, 후보폭 +2. 한 수 답답할 수 있지만 의도된 강도.
+    39: { maxDepth: 12, candidateLimit: 14, timeBudgetMs: 15000, useMcts: true }, // 최강
   },
   13: {
     30: { maxDepth: 3, candidateLimit: 12, timeBudgetMs: 1200 }, // 1단
@@ -87,7 +101,8 @@ const SEARCH_OPTIONS = {
     35: { maxDepth: 6, candidateLimit: 12, timeBudgetMs: 2450, useMcts: true }, // 6단
     36: { maxDepth: 7, candidateLimit: 12, timeBudgetMs: 2675, useMcts: true }, // 7단
     37: { maxDepth: 8, candidateLimit: 12, timeBudgetMs: 2900, useMcts: true }, // 8단
-    38: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
+    38: { maxDepth: 9, candidateLimit: 12, timeBudgetMs: 3000, useMcts: true }, // 9단
+    39: { maxDepth: 11, candidateLimit: 14, timeBudgetMs: 15000, useMcts: true }, // 최강
   },
   19: {
     // 2026-05-16: 19x19 candidateLimit 축소(12→8~10)로 같은 시간에 깊이 +1~2.
@@ -100,7 +115,8 @@ const SEARCH_OPTIONS = {
     35: { maxDepth: 6, candidateLimit: 8,  timeBudgetMs: 2450, useMcts: true }, // 6단
     36: { maxDepth: 7, candidateLimit: 8,  timeBudgetMs: 2675, useMcts: true }, // 7단
     37: { maxDepth: 8, candidateLimit: 8,  timeBudgetMs: 2900, useMcts: true }, // 8단
-    38: { maxDepth: 9, candidateLimit: 8,  timeBudgetMs: 3000, useMcts: true }, // 9단 (최강)
+    38: { maxDepth: 9, candidateLimit: 8,  timeBudgetMs: 3000, useMcts: true }, // 9단
+    39: { maxDepth: 11, candidateLimit: 10, timeBudgetMs: 15000, useMcts: true }, // 최강
   },
 }
 
@@ -127,6 +143,7 @@ const TIER_DESC = {
   lookahead1: '한 수 앞을 내다봄',
   lookahead2: '두 수 앞을 내다봄',
   deep:       '정석과 깊은 수읽기',
+  master:     '시간 제한 풀고 가장 깊게 읽음 (한 수 ~15초)',
 }
 
 export function getRankDescription(strength) {
@@ -201,7 +218,7 @@ export function getRankColor(strength) {
   return `hsl(${hue}, ${sat}%, ${light}%)`
 }
 
-// AI 생각 시간 (ms) - 단(段) 등급은 자체 timeBudgetMs가 추가로 더해진다
+// AI 생각 시간 (ms) - 단(段)/최강 등급은 자체 timeBudgetMs가 추가로 더해진다
 export function getAiDelay(strength) {
   const strategy = rankToStrategy(strength)
   if (strategy.tier === 'random') return 250
@@ -210,7 +227,8 @@ export function getAiDelay(strength) {
   if (strategy.tier === 'advanced') return 550
   if (strategy.tier === 'lookahead1') return 700
   if (strategy.tier === 'lookahead2') return 900
-  return 1100 // deep
+  if (strategy.tier === 'deep') return 1100
+  return 1300 // master
 }
 
 function clamp(n, lo, hi) {
