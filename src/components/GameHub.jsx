@@ -6,6 +6,7 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
         { key: 'baduk-ai', icon: '🧠', title: 'AI 바둑', desc: '강화 AI · 같은 등급이라도 더 강함', color: '#8E44AD' },
         { key: 'baduk-neural', icon: '🧬', title: '신경망 AI 바둑', desc: 'CNN 정책망/가치망 + MCTS (PUCT)', color: '#16A085' },
+        { key: 'baduk-katago', icon: '⚡', title: 'KataGo AI 바둑', desc: '실제 학습된 KataGo · 19×19 · 약 1~2단', color: '#6A1B9A' },
         { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
         { key: 'janggi', icon: '將', title: '장기', desc: 'AI 10단계 · 2인 · 온라인', color: '#8B0000' },
       ],
