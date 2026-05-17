@@ -8,14 +8,17 @@
 import {
   isLegalMove, simulateMove, boardToString, getGroup, STAR_POINTS,
 } from '../badukEngine.js'
-import { quickMoveScore } from '../badukEval.js'
+import { quickMoveScore, evaluatePosition } from '../badukEval.js'
 import { makeInputPlanes } from './featurePlanes.js'
 import { forward } from './cnn.js'
 
-const C_PUCT = 1.4
-const POLICY_TEMP = 1.0
-// 신경망 prior와 휴리스틱 prior 혼합 비율
-const HEURISTIC_MIX = 0.45
+const C_PUCT = 1.6
+// 신경망 prior와 휴리스틱 prior 혼합 비율 (학습 안 된 신경망 보강)
+const HEURISTIC_MIX = 0.78
+// Leaf 평가: 신경망 value와 휴리스틱 평가의 혼합 비율 (휴리스틱 우세)
+const HEURISTIC_VALUE_MIX = 0.75
+// 짧은 rollout 깊이 (평가 잡음 감소)
+const ROLLOUT_DEPTH = 8
 
 function legalMaskOf(board, size, color, prevBoardStr) {
   const mask = new Float32Array(size * size)
@@ -80,6 +83,50 @@ function mixPolicy(nn, heur, size) {
   }
   if (sum > 0) for (let p = 0; p < HW; p++) out[p] /= sum
   return out
+}
+
+// 짧은 휴리스틱 rollout: 상위 후보 가중 랜덤으로 N수 두고 평가
+function shortRollout(board, size, color, prevBoardStr, komi, depth) {
+  let curBoard = board.map(r => [...r])
+  let curColor = color
+  let curPrev = prevBoardStr
+  let passes = 0
+
+  for (let d = 0; d < depth; d++) {
+    // 후보 수집: 빈칸 중 합법수
+    const moves = []
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (curBoard[r][c] !== null) continue
+        if (!isLegalMove(curBoard, r, c, curColor, size, curPrev)) continue
+        const sim = simulateMove(curBoard, r, c, curColor, size)
+        const g = getGroup(sim.board, r, c, size)
+        if (g.liberties === 0) continue
+        if (g.liberties === 1 && sim.captured === 0) continue
+        const s = quickMoveScore(curBoard, size, r, c, curColor, sim.captured, g.liberties)
+        moves.push({ r, c, s })
+      }
+    }
+    if (moves.length === 0) {
+      passes++
+      if (passes >= 2) break
+      curColor = curColor === 'black' ? 'white' : 'black'
+      continue
+    }
+    passes = 0
+    moves.sort((a, b) => b.s - a.s)
+    const top = moves.slice(0, Math.min(4, moves.length))
+    // top 강하게 편향
+    const idx = Math.min(top.length - 1, Math.floor(Math.pow(Math.random(), 3) * top.length))
+    const m = top[idx]
+    const after = simulateMove(curBoard, m.r, m.c, curColor, size)
+    curPrev = boardToString(curBoard)
+    curBoard = after.board
+    curColor = curColor === 'black' ? 'white' : 'black'
+  }
+  // 평가는 원래 color 관점
+  const raw = evaluatePosition(curBoard, size, color, komi)
+  return Math.tanh(raw / 25)
 }
 
 // MCTS 노드
@@ -163,10 +210,17 @@ function simulate(root, rootState, weights, size, komi) {
       node.children.set('pass', new Node(node, Math.max(pass, hasLegal ? 0.001 : 0.5)))
     }
     node.expanded = true
-    node.value = value
-    leafValue = value
+
+    // 휴리스틱 leaf 평가 + 짧은 rollout 결합 (학습 안 된 신경망 value 보강)
+    const heurValRaw = evaluatePosition(state.board, size, state.color, komi)
+    const heurVal = Math.tanh(heurValRaw / 25)
+    const rolloutVal = shortRollout(state.board, size, state.color, state.prevBoardStr, komi, ROLLOUT_DEPTH)
+    // 휴리스틱 75% (eval 60% + rollout 40% 의 혼합) + 신경망 25%
+    const combinedHeur = heurVal * 0.6 + rolloutVal * 0.4
+    const combined = HEURISTIC_VALUE_MIX * combinedHeur + (1 - HEURISTIC_VALUE_MIX) * value
+    node.value = combined
+    leafValue = combined
   } else {
-    // 더 이상 확장 불가 - 자체 가치 사용
     leafValue = node.value
   }
 
@@ -208,7 +262,8 @@ export function neuralSearch({ board, size, color, prevBoardStr, komi }, weights
   }
   if (pass > 0.1) root.children.set('pass', new Node(root, pass))
   root.expanded = true
-  root.value = value
+  const rootHeurRaw = evaluatePosition(board, size, color, komi)
+  root.value = HEURISTIC_VALUE_MIX * Math.tanh(rootHeurRaw / 25) + (1 - HEURISTIC_VALUE_MIX) * value
 
   let count = 0
   while (count < sims && Date.now() - startTime < timeBudgetMs) {
