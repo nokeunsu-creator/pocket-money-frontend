@@ -311,6 +311,36 @@ console.log('\n[Test 5] 보물 획득 & 게임 종료')
 }
 
 // ────────────────────────────────────────────────────────────
+// 시나리오 6 (보너스): Firebase 직렬화 라운드트립 — 온라인 모드용
+console.log('\n[Test 6] 직렬화 라운드트립 (온라인 모드 wire 포맷)')
+{
+  // mineMemoryLogic에서 임포트
+  const mod = await import('../src/utils/mineMemoryLogic.js')
+  const original = mod.initialGameState()
+  original.mines[1].add(key(3, 3))
+  original.mines[1].add(key(4, 4))
+  original.mines[2].add(key(5, 5))
+  original.scoredCells.add(key(6, 6))
+  original.treasures[key(0, 0)] = { player: 1, order: 1 }
+  original.treasureCount = 1
+  original.scores[1] = 10
+  original.pendingTeleport = 2
+
+  const wire = mod.serializeForWire(original)
+  // Firebase는 JSON-serializable해야 함
+  const cloned = JSON.parse(JSON.stringify(wire))
+  const back = mod.deserializeFromWire(cloned)
+
+  assert('mines.1 Set 복원', back.mines[1].size === 2 && back.mines[1].has(key(3, 3)) && back.mines[1].has(key(4, 4)))
+  assert('mines.2 Set 복원', back.mines[2].size === 1 && back.mines[2].has(key(5, 5)))
+  assert('scoredCells Set 복원', back.scoredCells.has(key(6, 6)))
+  assert('treasures 객체 키 숫자 복원', back.treasures[key(0, 0)]?.order === 1)
+  assert('treasureCount 보존', back.treasureCount === 1)
+  assert('scores 보존', back.scores[1] === 10)
+  assert('pendingTeleport 보존', back.pendingTeleport === 2)
+  assert('pieces 보존', back.pieces[1] === key(0, 10) && back.pieces[2] === key(10, 0))
+}
+
 console.log(`\n결과: ${pass} 통과 / ${fail} 실패`)
 if (fail > 0) {
   console.log('\n실패 항목:')
