@@ -126,40 +126,36 @@ async function pickMove({ board, color, history, prevBoardStr, komi }) {
   })
   const arr = Array.isArray(results) ? results : [results]
 
-  // policy 텐서를 모양으로 자동 감지 (361 또는 362 길이 = 19*19 + pass)
-  let policy = null
-  let policyIdx = -1
-  for (let i = 0; i < arr.length; i++) {
-    const t = arr[i]
-    const n = t.size
-    if (n === 361 || n === 362) { policy = t; policyIdx = i; break }
-  }
+  // KataGo 출력 시그니처 (4개):
+  //   [0] ownership_output  shape [1, 19, 19]   size 361
+  //   [1] policy_output     shape [1, 2, 362]   size 724  ← 이걸 써야 함
+  //   [2] miscvalues_output shape [1, 10]       size 10
+  //   [3] value_output      shape [1, 3]        size 3
+  // policy는 두 head(메인, 상대) × 362 위치. 메인 head의 보드 영역(인덱스 0~360)만 사용.
+  // 자동감지: size 724인 텐서를 우선, 없으면 arr[1] 폴백
+  let policy = arr.find(t => t.size === 724) || arr[1] || arr[0]
+
   if (!loggedShapes) {
     loggedShapes = true
     const shapes = arr.map((t, i) => `[${i}]=${JSON.stringify(t.shape)}(size=${t.size})`).join(', ')
     // eslint-disable-next-line no-console
-    console.log(`[KataGo] backend=${tf.getBackend()} outputs: ${shapes}, policyIdx=${policyIdx}`)
+    console.log(`[KataGo] backend=${tf.getBackend()} outputs: ${shapes}`)
   }
-  if (!policy) {
-    // 폴백: 레퍼런스대로 arr[1]
-    policy = arr[1] || arr[0]
-  }
+
   const flat = await policy.reshape([-1]).array()
   binTensor.dispose()
   globalTensor.dispose()
   arr.forEach(t => t.dispose())
 
-  // top-30 후보 → 합법수 + 자살수 아닌 첫 번째
-  // 보드 좌표 범위만 (361) 고려, 362 길이일 때 마지막은 pass logit이라 자동 제외
-  const ranked = flat
+  // 메인 정책 head의 보드 영역만 [0..360]. 361은 메인 pass, 362+는 상대 head라 제외.
+  const boardLogits = flat.slice(0, HW)
+  const ranked = boardLogits
     .map((p, i) => ({ p, i }))
-    .filter(({ i }) => i < HW)
     .sort((a, b) => b.p - a.p)
     .slice(0, 30)
   for (const { i } of ranked) {
     const r = Math.floor(i / SIZE)
     const c = i % SIZE
-    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) continue
     if (board[r][c] !== null) continue
     if (!isLegal(board, r, c, color, prevBoardStr)) continue
     return [r, c]
