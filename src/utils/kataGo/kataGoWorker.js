@@ -142,7 +142,11 @@ async function pickMove({ board, color, history, prevBoardStr, komi }) {
     console.log(`[KataGo] backend=${tf.getBackend()} outputs: ${shapes}`)
   }
 
-  const flat = await policy.reshape([-1]).array()
+  // 주의: @tensorflow/tfjs-core만 import하면 Tensor.prototype.reshape이 없음.
+  // namespaced tf.reshape를 사용해야 함. (예전엔 매번 TypeError → JSX가 패스로 폴백 → "백이 계속 패스" 버그)
+  const flatTensor = tf.reshape(policy, [-1])
+  const flat = await flatTensor.array()
+  flatTensor.dispose()
   binTensor.dispose()
   globalTensor.dispose()
   arr.forEach(t => t.dispose())
