@@ -3,6 +3,7 @@ export default function GameHub({ onBack, onSelectGame }) {
     {
       label: '🧩 보드게임', games: [
         { key: 'omok', icon: '⚫', title: '오목', desc: 'AI · 2인 · 온라인', color: '#333' },
+        { key: 'minemem', icon: '💣', title: '망각의 지뢰', desc: '11×11 · 2인 패스앤플레이 · 기억력', color: '#7E57C2' },
         { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
         { key: 'baduk-neural', icon: '🧬', title: '신경망 AI 바둑', desc: 'CNN 정책망/가치망 + MCTS (PUCT)', color: '#16A085' },
         { key: 'baduk-katago', icon: '⚡', title: 'KataGo AI 바둑', desc: '실제 학습된 KataGo · 19×19 · 약 1~2단', color: '#6A1B9A' },

@@ -20,6 +20,7 @@ import Hula from './components/Hula'
 import Chess from './components/Chess'
 import Janggi from './components/Janggi'
 import Omok from './components/Omok'
+import MineMemory from './components/MineMemory'
 import Baduk from './components/Baduk'
 import BadukNeural from './components/BadukNeural'
 import BadukKataGo from './components/BadukKataGo'
@@ -399,6 +400,9 @@ export default function App() {
       )}
       {currentPage === 'game-omok' && (
         <Omok onBack={goBack} />
+      )}
+      {currentPage === 'game-minemem' && (
+        <MineMemory onBack={goBack} />
       )}
       {currentPage === 'game-baduk' && (
         <Baduk onBack={goBack} />
