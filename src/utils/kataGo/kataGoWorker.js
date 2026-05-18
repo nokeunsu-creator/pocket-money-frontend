@@ -115,7 +115,40 @@ function makeInputs(board, color, history, komi) {
 
 let loggedShapes = false
 
-async function pickMove({ board, color, history, prevBoardStr, komi }) {
+// 단 → { topK, temperature }
+// 9단: 정책망 top-1 (모델 자연 상한 ~ 실제 1~2단)
+// 1단: top-50을 높은 온도로 거의 무작위 선택
+const LEVEL_TABLE = {
+  9: { topK: 1,  temp: 0 },
+  8: { topK: 3,  temp: 0.5 },
+  7: { topK: 5,  temp: 0.8 },
+  6: { topK: 8,  temp: 1.2 },
+  5: { topK: 12, temp: 1.5 },
+  4: { topK: 18, temp: 2.0 },
+  3: { topK: 25, temp: 2.5 },
+  2: { topK: 35, temp: 3.0 },
+  1: { topK: 50, temp: 4.0 },
+}
+
+function pickFromCandidates(candidates, temp) {
+  if (candidates.length === 0) return null
+  if (candidates.length === 1 || temp <= 0) {
+    return [candidates[0].r, candidates[0].c]
+  }
+  // softmax(weight = (p - max) / temp)
+  const maxP = candidates[0].p
+  const weights = candidates.map(({ p }) => Math.exp((p - maxP) / temp))
+  const sum = weights.reduce((a, b) => a + b, 0)
+  if (!isFinite(sum) || sum <= 0) return [candidates[0].r, candidates[0].c]
+  let rand = Math.random() * sum
+  for (let k = 0; k < candidates.length; k++) {
+    rand -= weights[k]
+    if (rand <= 0) return [candidates[k].r, candidates[k].c]
+  }
+  return [candidates[0].r, candidates[0].c]
+}
+
+async function pickMove({ board, color, history, prevBoardStr, komi, level }) {
   const m = await getModel()
   const { bin, global } = makeInputs(board, color, history || [], komi ?? 7.5)
   const binTensor = tf.tensor(bin, [1, HW, CHANNELS], 'float32')
@@ -153,18 +186,27 @@ async function pickMove({ board, color, history, prevBoardStr, komi }) {
 
   // 메인 정책 head의 보드 영역만 [0..360]. 361은 메인 pass, 362+는 상대 head라 제외.
   const boardLogits = flat.slice(0, HW)
-  const ranked = boardLogits
+
+  // 단(난이도) 결정: 1~9. 기본 9단 (top-1 greedy).
+  const lvl = Math.max(1, Math.min(9, Number(level) || 9))
+  const cfg = LEVEL_TABLE[lvl]
+
+  // 합법수 + 자살수 아닌 후보를 정책 순으로 최대 topK개까지 수집
+  const sortedAll = boardLogits
     .map((p, i) => ({ p, i }))
     .sort((a, b) => b.p - a.p)
-    .slice(0, 30)
-  for (const { i } of ranked) {
+  const candidates = []
+  for (const { p, i } of sortedAll) {
+    if (candidates.length >= cfg.topK) break
     const r = Math.floor(i / SIZE)
     const c = i % SIZE
     if (board[r][c] !== null) continue
     if (!isLegal(board, r, c, color, prevBoardStr)) continue
-    return [r, c]
+    candidates.push({ p, i, r, c })
   }
-  return null // 패스
+  if (candidates.length === 0) return null // 합법수 없음 → 패스
+
+  return pickFromCandidates(candidates, cfg.temp)
 }
 
 // 자살수/패 검증 — badukEngine과 호환되게 단순화

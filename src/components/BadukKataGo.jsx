@@ -10,6 +10,7 @@ const SIZE = 19
 const KOMI = 7.5
 
 export default function BadukKataGo({ onBack }) {
+  const [level, setLevel] = useState(null) // 1~9, null이면 단 선택 화면
   const [board, setBoard] = useState(() => createBoard(SIZE))
   const [turn, setTurn] = useState('black')
   const [captures, setCaptures] = useState({ black: 0, white: 0 })
@@ -73,6 +74,7 @@ export default function BadukKataGo({ onBack }) {
 
   // AI 차례
   useEffect(() => {
+    if (level == null) return
     if (turn !== 'white' || gameOver) return
     if (board.length === 0) return
     if (aiThinkingRef.current) return
@@ -141,14 +143,16 @@ export default function BadukKataGo({ onBack }) {
       history: moveLog,
       prevBoardStr,
       komi: KOMI,
+      level: level ?? 9,
       requestId,
     })
 
     return () => worker.removeEventListener('message', handler)
-  }, [turn, gameOver, board, prevBoardStr, captures, passCount, moveLog, loadStage])
+  }, [turn, gameOver, board, prevBoardStr, captures, passCount, moveLog, loadStage, level])
 
   const place = useCallback((r, c) => {
     if (loadStage !== 'model-ready') return
+    if (level == null) return
     if (board[r][c] || gameOver) return
     if (turn !== 'black' || aiThinking) return
 
@@ -183,7 +187,7 @@ export default function BadukKataGo({ onBack }) {
     setPassCount(0)
     setTurn('white')
     setMessage('')
-  }, [board, turn, gameOver, prevBoardStr, captures, history, moveLog, aiThinking, loadStage])
+  }, [board, turn, gameOver, prevBoardStr, captures, history, moveLog, aiThinking, loadStage, level])
 
   const pass = () => {
     if (gameOver) return
@@ -247,6 +251,37 @@ export default function BadukKataGo({ onBack }) {
     setAiThinking(false)
   }
 
+  const changeLevel = () => {
+    if (!gameOver && history.length > 0) {
+      if (!window.confirm('현재 게임을 끝내고 단을 다시 고를까요?')) return
+    }
+    setLevel(null)
+    setBoard(createBoard(SIZE))
+    setTurn('black')
+    setCaptures({ black: 0, white: 0 })
+    setLastMove(null)
+    setPrevBoardStr('')
+    setPassCount(0)
+    setGameOver(false)
+    setScore(null)
+    setHistory([])
+    setMoveLog([])
+    setMessage('')
+    setAiThinking(false)
+  }
+
+  const LEVELS = [
+    { v: 1, label: '1단', desc: '거의 무작위 · 입문자' },
+    { v: 2, label: '2단', desc: '실수 잦음' },
+    { v: 3, label: '3단', desc: '약함' },
+    { v: 4, label: '4단', desc: '초·중급' },
+    { v: 5, label: '5단', desc: '중급' },
+    { v: 6, label: '6단', desc: '중상급' },
+    { v: 7, label: '7단', desc: '상급' },
+    { v: 8, label: '8단', desc: '최선에 가까움' },
+    { v: 9, label: '9단', desc: '모델 한계 (top-1) · 가장 강함' },
+  ]
+
   const isPC = vw >= 768
   const maxCell = isPC ? 36 : 20
   const effectiveWidth = isPC ? Math.min(vw - 40, 900) : vw - 32
@@ -293,6 +328,44 @@ export default function BadukKataGo({ onBack }) {
     )
   }
 
+  // 단 선택 화면
+  if (level == null) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1rem', textAlign: 'center' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 12 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 56, marginBottom: 8 }}>⚡</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>KataGo · 단 선택</h2>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>19×19 · 같은 모델을 무작위성으로 약화</p>
+        <p style={{ fontSize: 10, color: '#AAA', marginBottom: 16 }}>※ 상대적 난이도 표시 (실제 단급 ≠ 정확히 일치)</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, maxWidth: 360, margin: '0 auto' }}>
+          {LEVELS.map(l => {
+            const intensity = l.v / 9
+            const bg = `rgb(${Math.round(180 - 130*intensity)}, ${Math.round(120 - 90*intensity)}, ${Math.round(220 - 100*intensity)})`
+            return (
+              <button key={l.v} onClick={() => setLevel(l.v)}
+                style={{
+                  padding: '14px 4px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: bg, color: '#FFF',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  boxShadow: `0 2px 6px ${bg}55`,
+                }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{l.label}</div>
+                <div style={{ fontSize: 9, opacity: 0.95, lineHeight: 1.2 }}>{l.desc}</div>
+              </button>
+            )
+          })}
+        </div>
+        <p style={{ fontSize: 11, color: '#AAA', marginTop: 16, lineHeight: 1.5 }}>
+          9단: 정책망 그대로 (가장 강함)<br/>
+          1단: top-50을 무작위로 → 입문자용
+        </p>
+      </div>
+    )
+  }
+
   const turnLabel = (() => {
     if (gameOver) return '종료'
     if (aiThinking) return '⚡ KataGo 수읽기...'
@@ -307,11 +380,11 @@ export default function BadukKataGo({ onBack }) {
         color: '#FFF', padding: '1rem 1.25rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onBack}
+          <button onClick={changeLevel}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 14, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
-            ← 돌아가기
+            ← 단 변경
           </button>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>⚡ KataGo (19×19)</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>⚡ KataGo · {level}단</span>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={undo} disabled={aiThinking}
               style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', fontSize: 12, borderRadius: 20, padding: '4px 10px', cursor: 'pointer', opacity: aiThinking ? 0.4 : 1 }}>↩</button>
@@ -437,13 +510,17 @@ export default function BadukKataGo({ onBack }) {
               </div>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={resetGame}
-              style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#333', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#333', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
               다시 하기
             </button>
+            <button onClick={changeLevel}
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#6A1B9A', color: '#FFF', fontSize: 14, fontWeight: 600 }}>
+              단 변경
+            </button>
             <button onClick={onBack}
-              style={{ padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F0F0F0', color: '#666', fontSize: 14, fontWeight: 600 }}>
               나가기
             </button>
           </div>
