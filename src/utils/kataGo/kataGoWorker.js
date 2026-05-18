@@ -24,11 +24,16 @@ let model = null
 let loadingPromise = null
 
 async function ensureBackend() {
+  // 레퍼런스 구현(maksimKorzh/kata-model-js)이 CPU 백엔드 전용으로 검증되어 있어
+  // WASM에서 일부 op이 누락되거나 executeAsync가 실패해 매번 패스로 떨어지는 사례가 있음.
+  // 안정성 우선 → CPU 먼저 시도, 그 다음 WASM 폴백.
   try {
-    setWasmPaths(`https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${tf.version_core}/dist/`)
-    await tf.setBackend('wasm')
+    await tf.setBackend('cpu')
   } catch (e) {
-    try { await tf.setBackend('cpu') } catch (_) {}
+    try {
+      setWasmPaths(`https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${tf.version_core}/dist/`)
+      await tf.setBackend('wasm')
+    } catch (_) {}
   }
   await tf.ready()
 }
@@ -108,6 +113,8 @@ function makeInputs(board, color, history, komi) {
   return { bin, global }
 }
 
+let loggedShapes = false
+
 async function pickMove({ board, color, history, prevBoardStr, komi }) {
   const m = await getModel()
   const { bin, global } = makeInputs(board, color, history || [], komi ?? 7.5)
@@ -118,18 +125,41 @@ async function pickMove({ board, color, history, prevBoardStr, komi }) {
     'swa_model/global_inputs': globalTensor,
   })
   const arr = Array.isArray(results) ? results : [results]
-  // results[1] = policy (361)
-  const policy = arr[1]
+
+  // policy 텐서를 모양으로 자동 감지 (361 또는 362 길이 = 19*19 + pass)
+  let policy = null
+  let policyIdx = -1
+  for (let i = 0; i < arr.length; i++) {
+    const t = arr[i]
+    const n = t.size
+    if (n === 361 || n === 362) { policy = t; policyIdx = i; break }
+  }
+  if (!loggedShapes) {
+    loggedShapes = true
+    const shapes = arr.map((t, i) => `[${i}]=${JSON.stringify(t.shape)}(size=${t.size})`).join(', ')
+    // eslint-disable-next-line no-console
+    console.log(`[KataGo] backend=${tf.getBackend()} outputs: ${shapes}, policyIdx=${policyIdx}`)
+  }
+  if (!policy) {
+    // 폴백: 레퍼런스대로 arr[1]
+    policy = arr[1] || arr[0]
+  }
   const flat = await policy.reshape([-1]).array()
   binTensor.dispose()
   globalTensor.dispose()
   arr.forEach(t => t.dispose())
 
   // top-30 후보 → 합법수 + 자살수 아닌 첫 번째
-  const ranked = flat.map((p, i) => ({ p, i })).sort((a, b) => b.p - a.p).slice(0, 30)
+  // 보드 좌표 범위만 (361) 고려, 362 길이일 때 마지막은 pass logit이라 자동 제외
+  const ranked = flat
+    .map((p, i) => ({ p, i }))
+    .filter(({ i }) => i < HW)
+    .sort((a, b) => b.p - a.p)
+    .slice(0, 30)
   for (const { i } of ranked) {
     const r = Math.floor(i / SIZE)
     const c = i % SIZE
+    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) continue
     if (board[r][c] !== null) continue
     if (!isLegal(board, r, c, color, prevBoardStr)) continue
     return [r, c]
