@@ -365,6 +365,124 @@ console.log('\n[Test 6] 직렬화 라운드트립 (온라인 모드 wire 포맷)
   assert('pieces 보존', back.pieces[1] === key(0, 10) && back.pieces[2] === key(10, 0))
 }
 
+// ────────────────────────────────────────────────────────────
+// 시나리오 7: 지뢰 → 텔레포트 → 다음 이동 연쇄 흐름
+console.log('\n[Test 7] 지뢰 밟은 후 텔레포트 강제 이동 흐름')
+{
+  const s = makeInitialState([], [key(5, 4)])
+  s.pieces[1] = key(4, 4) // e5
+  const r1 = resolveMove(s, 1, key(5, 4))
+  assert('1단계: 지뢰 밟음 이벤트', r1.event.type === 'mine')
+  assert('1단계: pendingTeleport=1', r1.pendingTeleport === 1)
+  const tele = getMovableCells(r1, 1)
+  assert('2단계: 텔레포트 후보 정확히 3칸', tele.size === 3)
+  assert('2단계: j1 후보', tele.has(key(0, 9)))
+  assert('2단계: k2 후보', tele.has(key(1, 10)))
+  assert('2단계: j2 후보', tele.has(key(1, 9)))
+  // P1 j2로 텔레포트 (안전 칸)
+  const r2 = resolveMove(r1, 1, key(1, 9))
+  assert('3단계: 텔레포트 후 score 이벤트', r2.event.type === 'score')
+  assert('3단계: pendingTeleport 해제', r2.pendingTeleport === null)
+  assert('3단계: P1 말이 j2로 이동', r2.pieces[1] === key(1, 9))
+}
+
+// ────────────────────────────────────────────────────────────
+// 시나리오 8: 텔레포트 후보 칸 자체가 지뢰 배치 금지 영역인지 검증
+console.log('\n[Test 8] 텔레포트 후보 칸은 모두 지뢰 금지 영역 (안전 보장)')
+{
+  for (const target of [[0, 9], [1, 10], [1, 9]]) {
+    assert(`P1 텔레포트 후보 ${toId(target[0], target[1])}는 지뢰 금지 영역 (안전)`,
+      !isMinePlacementAllowed(target[0], target[1]))
+  }
+  for (const target of [[9, 0], [10, 1], [9, 1]]) {
+    assert(`P2 텔레포트 후보 ${toId(target[0], target[1])}는 지뢰 금지 영역 (안전)`,
+      !isMinePlacementAllowed(target[0], target[1]))
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// 시나리오 9: 상대 점유로 텔레포트 후보 축소
+console.log('\n[Test 9] 상대 말이 텔레포트 후보 칸 점유 시 제외')
+{
+  let s = makeInitialState([], [key(5, 4)])
+  s.pieces[1] = key(4, 4)
+  s.pieces[2] = key(1, 9) // P2가 j2에 있음
+  const r1 = resolveMove(s, 1, key(5, 4))
+  r1.pieces[2] = key(1, 9)
+  const tele = getMovableCells(r1, 1)
+  assert('상대 점유 칸 제외 → 후보 2칸', tele.size === 2)
+  assert('j2(상대 위치) 제외', !tele.has(key(1, 9)))
+  assert('j1 유지', tele.has(key(0, 9)))
+  assert('k2 유지', tele.has(key(1, 10)))
+}
+
+// ────────────────────────────────────────────────────────────
+// 시나리오 10: 다턴 시뮬레이션 — 점수 누적 + 보물 + 종료
+console.log('\n[Test 10] 다턴 시뮬레이션 — 점수/보물/종료')
+{
+  let s = makeInitialState([key(5, 4)], [key(0, 1)])
+  s.pieces[1] = key(0, 10)
+  // T1: P1 j1 = (0,9). 인접에 b1(0,1)/e6(5,4) 둘 다 멀음 → 0점
+  s = resolveMove(s, 1, key(0, 9))
+  assert('T1: P1 j1 → 0점', s.event.points === 0 && s.scores[1] === 0)
+  // T2: P2 b11=(10,1). 인접 8칸 그냥 빈칸 → 0점
+  s = resolveMove(s, 2, key(10, 1))
+  assert('T2: P2 b11 → 0점', s.event.points === 0)
+
+  // 위치 강제 이동(테스트 단순화)
+  s.pieces[1] = key(5, 3) // d6
+  s = resolveMove(s, 1, key(4, 3)) // d5 인접에 e6(5,4) → 1점
+  assert('T3: P1 d5 → 1점 (인접 e6 지뢰)', s.event.points === 1 && s.scores[1] === 1)
+
+  // P1 보물 a1 획득
+  s.pieces[1] = key(0, 1)
+  s = resolveMove(s, 1, key(0, 0))
+  assert('T4: P1 첫 보물 a1 → +10점', s.event.type === 'treasure' && s.event.points === 10)
+  assert('T4 누적 P1: 1 + 10 = 11', s.scores[1] === 11)
+
+  // P2 보물 f6
+  s.pieces[2] = key(5, 4)
+  s = resolveMove(s, 2, key(5, 5))
+  assert('T5: P2 둘째 보물 f6 → +15점', s.event.type === 'treasure' && s.event.points === 15)
+  assert('T5 P2 점수 = 15', s.scores[2] === 15)
+
+  // P1 마지막 보물 k11 → 종료
+  s.pieces[1] = key(10, 9)
+  s = resolveMove(s, 1, key(10, 10))
+  assert('T6: P1 셋째 보물 k11 → +20점', s.event.type === 'treasure' && s.event.points === 20)
+  assert('T6: treasureCount === 3', s.treasureCount === 3)
+  assert('T6: 최종 P1 = 11 + 20 = 31', s.scores[1] === 31)
+  assert('T6: 최종 P2 = 15', s.scores[2] === 15)
+  assert('T6: P1 승리', s.scores[1] > s.scores[2])
+}
+
+// ────────────────────────────────────────────────────────────
+// 시나리오 11: 상태 불변량
+console.log('\n[Test 11] 상태 불변량 검증')
+{
+  const s = makeInitialState([key(5, 5)], [key(5, 5)])
+  s.pieces[1] = key(0, 1)
+  const r = resolveMove(s, 1, key(0, 0))
+  assert('보물 획득 시 scoredCells에 보물칸 미추가', !r.scoredCells.has(key(0, 0)))
+
+  const s2 = makeInitialState([key(0, 5)], [])
+  s2.pieces[1] = key(0, 3)
+  const r2 = resolveMove(s2, 1, key(0, 4))
+  assert('일반 칸 점수 후 scoredCells 등록', r2.scoredCells.has(key(0, 4)) && r2.event.points === 1)
+
+  const s3 = makeInitialState([], [key(5, 4)])
+  s3.pieces[1] = key(4, 4)
+  const r3 = resolveMove(s3, 1, key(5, 4))
+  assert('지뢰 밟은 칸은 scoredCells 미추가', !r3.scoredCells.has(key(5, 4)))
+
+  // immutability
+  const s4 = makeInitialState([key(3, 3)], [])
+  s4.pieces[1] = key(2, 3)
+  const r4 = resolveMove(s4, 1, key(3, 3))
+  assert('원본 state 불변 — pieces 별개', s4.pieces[1] === key(2, 3) && r4.pieces[1] === key(3, 3))
+  assert('원본 state 불변 — mines 별개', s4.mines[1].has(key(3, 3)) && !r4.mines[1].has(key(3, 3)))
+}
+
 console.log(`\n결과: ${pass} 통과 / ${fail} 실패`)
 if (fail > 0) {
   console.log('\n실패 항목:')
