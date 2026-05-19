@@ -21,6 +21,7 @@ import Chess from './components/Chess'
 import Janggi from './components/Janggi'
 import Omok from './components/Omok'
 import MineMemory from './components/MineMemory'
+import LanguagePiece from './components/LanguagePiece'
 import Baduk from './components/Baduk'
 import BadukKataGo from './components/BadukKataGo'
 import BadukClassroom from './components/BadukClassroom'
@@ -402,6 +403,9 @@ export default function App() {
       )}
       {currentPage === 'game-minemem' && (
         <MineMemory onBack={goBack} />
+      )}
+      {currentPage === 'game-langpiece' && (
+        <LanguagePiece onBack={goBack} />
       )}
       {currentPage === 'game-baduk' && (
         <Baduk onBack={goBack} />

@@ -4,6 +4,7 @@ export default function GameHub({ onBack, onSelectGame }) {
       label: '🧩 보드게임', games: [
         { key: 'omok', icon: '⚫', title: '오목', desc: 'AI · 2인 · 온라인', color: '#333' },
         { key: 'minemem', icon: '💣', title: '망각의 지뢰', desc: '11×11 · 2인 패스앤플레이 · 기억력', color: '#7E57C2' },
+        { key: 'langpiece', icon: '🔤', title: '언어의 조각', desc: '한글 자모 워들 · 2인 · 5라운드', color: '#7E57C2' },
         { key: 'baduk', icon: '⚪', title: '바둑', desc: 'AI 1~10단계 · 2인 · 온라인', color: '#1a1a1a' },
         { key: 'baduk-katago', icon: '⚡', title: 'KataGo AI 바둑', desc: '실제 학습된 KataGo · 19×19 · 약 1~2단', color: '#6A1B9A' },
         { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
