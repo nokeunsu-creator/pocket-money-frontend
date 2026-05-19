@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useMultiGameRoom } from '../utils/useMultiGameRoom'
 
 // 규칙 (라이어 게임 / 나무위키):
 // - 5명의 플레이어가 매 라운드 1~99 중 정수 1개 선택 (비밀)
@@ -55,7 +56,37 @@ const AI_NAMES = ['🤖 알파', '🤖 베타', '🤖 감마', '🤖 델타']
 const AI_STRATS = ['safe', 'greedy', 'avoid', 'random']
 
 export default function PrimeMonopoly({ onBack }) {
-  const [phase, setPhase] = useState('menu') // menu | playing | reveal | gameOver
+  const [mode, setMode] = useState(null)
+  if (!mode) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16, display: 'block' }}>← 돌아가기</button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>🔢</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>소수 독점 게임</h2>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 20, lineHeight: 1.7 }}>
+          1~99 동시 공개. 중복 0, 소수 +, 합성수 -<br />
+          {ROUNDS}라운드 누적 점수 최대 승!
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 280, margin: '0 auto' }}>
+          <button onClick={() => setMode('ai')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #1F77B4, #0D3D6B)', color: '#FFF', fontSize: 16, fontWeight: 700 }}>
+            🤖 AI 5인전
+          </button>
+          <button onClick={() => setMode('online')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #4895EF, #1F77B4)', color: '#FFF', fontSize: 16, fontWeight: 700 }}>
+            🌐 온라인 3~6인
+          </button>
+        </div>
+      </div>
+    )
+  }
+  if (mode === 'ai') return <PrimeAI onBack={() => setMode(null)} />
+  return <PrimeOnline onBack={() => setMode(null)} />
+}
+
+function PrimeAI({ onBack }) {
+  const [phase, setPhase] = useState('intro') // intro | playing | reveal | gameOver
   const [round, setRound] = useState(0)
   const [myPick, setMyPick] = useState('')
   const [picks, setPicks] = useState([]) // 이번 라운드 [n, n, n, n, n]
@@ -109,28 +140,18 @@ export default function PrimeMonopoly({ onBack }) {
     }
   }
 
-  if (phase === 'menu') {
+  if (phase === 'intro') {
     return (
       <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
         <button onClick={onBack}
-          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16, display: 'block' }}>
-          ← 돌아가기
-        </button>
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16, display: 'block' }}>← 돌아가기</button>
         <div style={{ fontSize: 64, marginBottom: 12 }}>🔢</div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>소수 독점 게임</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>소수 독점 (AI 5인전)</h2>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 16, lineHeight: 1.7 }}>
-          5명이 1~99 중 정수 1개 동시 공개<br />
-          <b>같은 수 → 0점</b> (중복 처리)<br />
-          남은 사람: <b>소수면 +수</b>, 합성수(1 포함)면 <b>-수</b><br />
-          {ROUNDS}라운드 누적 점수 최대 승!
+          5명이 1~99 동시 공개<br />
+          중복 0, 소수 +, 합성수(1 포함) -<br />
+          {ROUNDS}라운드 누적 최대 승
         </p>
-        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 12, fontSize: 11, color: '#555', marginBottom: 20, textAlign: 'left' }}>
-          💡 <b>전략 팁</b><br />
-          • 큰 소수는 위험하지만 점수가 크다 (97 = +97 or 0)<br />
-          • 작은 소수는 다른 사람도 노릴 가능성 ↑<br />
-          • 합성수는 절대 금지 (-점수)<br />
-          • 1은 소수 아님! (-1)
-        </div>
         <button onClick={start}
           style={{ padding: '16px 40px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #1F77B4, #0D3D6B)', color: '#FFF', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
           🎯 시작
@@ -170,7 +191,7 @@ export default function PrimeMonopoly({ onBack }) {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={start} style={{ flex: 1, padding: '14px 0', borderRadius: 12, border: 'none', background: '#1F77B4', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>다시</button>
-          <button onClick={() => setPhase('menu')} style={{ flex: 1, padding: '14px 0', borderRadius: 12, border: 'none', background: '#F0F0F0', color: '#555', fontWeight: 700, cursor: 'pointer' }}>메뉴</button>
+          <button onClick={() => setPhase('intro')} style={{ flex: 1, padding: '14px 0', borderRadius: 12, border: 'none', background: '#F0F0F0', color: '#555', fontWeight: 700, cursor: 'pointer' }}>메뉴</button>
         </div>
       </div>
     )
@@ -179,7 +200,7 @@ export default function PrimeMonopoly({ onBack }) {
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={() => setPhase('menu')}
+        <button onClick={() => setPhase('intro')}
           style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#555' }}>←</button>
         <h2 style={{ fontSize: 15, fontWeight: 700 }}>🔢 R{round + 1}/{ROUNDS}</h2>
         <div style={{ fontSize: 14, fontWeight: 700, color: scores[0] >= 0 ? '#1B5E20' : '#C62828' }}>
@@ -269,6 +290,319 @@ export default function PrimeMonopoly({ onBack }) {
             style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: '#1F77B4', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>
             {round + 1 >= ROUNDS ? '최종 결과 보기' : '다음 라운드'}
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── 온라인 3~6인 ───
+// state = {
+//   round, scores: {slot:n}, picks: {slot:n}|null,  // 모든 슬롯이 픽하면 자동 공개
+//   phase: 'picking' | 'reveal' | 'over',
+//   results: [{slot, picked, score, reason}],
+// }
+function PrimeOnline({ onBack }) {
+  const mr = useMultiGameRoom('prime')
+  const [joinCode, setJoinCode] = useState('')
+  const [myName, setMyName] = useState(() => {
+    try { return localStorage.getItem('prime-name') || '' } catch { return '' }
+  })
+  const [chosenMax, setChosenMax] = useState(5)
+  const [tempPick, setTempPick] = useState('')
+
+  const saveName = (n) => {
+    setMyName(n)
+    try { localStorage.setItem('prime-name', n) } catch (_) {}
+  }
+
+  if (!mr.roomCode) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>← 돌아가기</button>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 56 }}>🔢</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700 }}>소수 독점 온라인</h2>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>내 이름</div>
+          <input value={myName} onChange={e => saveName(e.target.value.slice(0, 8))}
+            placeholder="2~8자"
+            style={{ width: '100%', padding: '14px', fontSize: 16, borderRadius: 12, border: '1.5px solid #DDD', boxSizing: 'border-box', minWidth: 0 }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>최대 인원 (방장만 선택)</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[3, 4, 5, 6].map(n => (
+              <button key={n} onClick={() => setChosenMax(n)}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 10, border: 'none',
+                  background: chosenMax === n ? '#1F77B4' : '#F0F0F0',
+                  color: chosenMax === n ? '#FFF' : '#555', fontWeight: 700, cursor: 'pointer',
+                }}>{n}</button>
+            ))}
+          </div>
+        </div>
+        <button onClick={() => mr.createRoom(chosenMax, myName || '호스트')}
+          disabled={!myName}
+          style={{ width: '100%', padding: '16px 0', borderRadius: 14, border: 'none', background: myName ? '#1F77B4' : '#DDD', color: '#FFF', fontSize: 16, fontWeight: 700, cursor: myName ? 'pointer' : 'default', marginBottom: 12 }}>
+          ➕ 방 만들기 ({chosenMax}인)
+        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={joinCode} onChange={e => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
+            placeholder="방 코드 2자리" inputMode="numeric"
+            style={{ flex: 1, padding: '14px', fontSize: 16, borderRadius: 12, border: '1.5px solid #DDD', minWidth: 0, boxSizing: 'border-box', textAlign: 'center' }} />
+          <button onClick={() => mr.joinRoom(joinCode, myName || '게스트')}
+            disabled={joinCode.length !== 2 || !myName}
+            style={{ padding: '0 18px', borderRadius: 12, border: 'none', background: (joinCode.length === 2 && myName) ? '#4895EF' : '#DDD', color: '#FFF', fontWeight: 700, cursor: (joinCode.length === 2 && myName) ? 'pointer' : 'default' }}>참가</button>
+        </div>
+        {mr.error && <p style={{ color: '#C62828', textAlign: 'center', marginTop: 10 }}>{mr.error}</p>}
+      </div>
+    )
+  }
+
+  const room = mr.room
+  if (!room) return <div style={{ padding: 20, textAlign: 'center' }}>로딩 중...</div>
+  const players = room.players || {}
+  const playerSlots = Object.keys(players).map(Number).sort((a, b) => a - b)
+  const mySlot = mr.mySlot
+  const isHost = mr.isHost
+
+  // 로비
+  if (room.status === 'lobby') {
+    const startGame = () => {
+      const scores = {}, picks = {}
+      playerSlots.forEach(sl => { scores[sl] = 0; picks[sl] = null })
+      mr.startGame({
+        round: 1, scores, picks, phase: 'picking', results: null,
+      })
+    }
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700 }}>방 코드</h2>
+          <div style={{ fontSize: 48, fontWeight: 800, color: '#1F77B4', letterSpacing: 8, fontFamily: 'monospace' }}>{mr.roomCode}</div>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>최대 {room.maxPlayers}인</div>
+        </div>
+        <div style={{ background: '#FFF', borderRadius: 14, padding: 12, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          {Array.from({ length: room.maxPlayers }).map((_, slot) => (
+            <div key={slot} style={{
+              padding: '10px 6px', display: 'flex', justifyContent: 'space-between',
+              borderBottom: slot < room.maxPlayers - 1 ? '1px solid #EEE' : 'none',
+              background: slot === mySlot ? '#FFF3CD' : 'transparent',
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>
+                {slot === 0 ? '👑' : '👤'} 슬롯 {slot + 1}
+              </span>
+              <span style={{ fontSize: 14, color: players[slot] ? '#1B5E20' : '#888' }}>
+                {players[slot] ? players[slot].name : '대기 중'}
+              </span>
+            </div>
+          ))}
+        </div>
+        {isHost ? (
+          <button onClick={startGame} disabled={playerSlots.length < 3}
+            style={{ width: '100%', padding: '16px 0', borderRadius: 14, border: 'none', background: playerSlots.length >= 3 ? '#1F77B4' : '#DDD', color: '#FFF', fontWeight: 800, fontSize: 16, cursor: playerSlots.length >= 3 ? 'pointer' : 'default' }}>
+            🎯 게임 시작 ({playerSlots.length}인, 최소 3인)
+          </button>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#888' }}>호스트 시작 대기...</p>
+        )}
+        <button onClick={() => mr.leaveRoom()}
+          style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 12, border: 'none', background: '#F0F0F0', color: '#555', fontWeight: 700, cursor: 'pointer' }}>
+          나가기
+        </button>
+      </div>
+    )
+  }
+
+  const s = room.state
+  if (!s) return null
+  const playerName = sl => players[sl]?.name || `슬롯${sl + 1}`
+  const myScore = s.scores?.[mySlot] || 0
+  const myPicked = s.picks?.[mySlot]
+
+  const submit = () => {
+    const n = parseInt(tempPick, 10)
+    if (!Number.isInteger(n) || n < 1 || n > 99) {
+      alert('1~99 사이 정수를 입력하세요')
+      return
+    }
+    const newPicks = { ...s.picks, [mySlot]: n }
+    // 모두 픽했는지 확인
+    const allPicked = playerSlots.every(sl => newPicks[sl] != null)
+    if (allPicked) {
+      // 결과 계산
+      const counts = {}
+      playerSlots.forEach(sl => { const v = newPicks[sl]; counts[v] = (counts[v] || 0) + 1 })
+      const results = playerSlots.map(sl => {
+        const p = newPicks[sl]
+        if (counts[p] > 1) return { slot: sl, picked: p, score: 0, reason: '중복' }
+        if (isPrime(p)) return { slot: sl, picked: p, score: p, reason: '소수' }
+        return { slot: sl, picked: p, score: -p, reason: p === 1 ? '1' : '합성수' }
+      })
+      const newScores = { ...s.scores }
+      results.forEach(r => { newScores[r.slot] = (newScores[r.slot] || 0) + r.score })
+      mr.updateState({
+        ...s, picks: newPicks, phase: 'reveal', results, scores: newScores,
+      })
+    } else {
+      mr.updateState({ ...s, picks: newPicks })
+    }
+    setTempPick('')
+  }
+
+  const nextRound = () => {
+    if (!isHost) return
+    if (s.round >= ROUNDS) {
+      mr.updateState({ ...s, phase: 'over' })
+      return
+    }
+    const newPicks = {}
+    playerSlots.forEach(sl => { newPicks[sl] = null })
+    mr.updateState({
+      ...s, round: s.round + 1, picks: newPicks, phase: 'picking', results: null,
+    })
+  }
+
+  if (s.phase === 'over') {
+    const ranking = playerSlots.map(sl => ({ slot: sl, score: s.scores[sl] || 0, name: playerName(sl) }))
+      .sort((a, b) => b.score - a.score)
+    const myRank = ranking.findIndex(r => r.slot === mySlot) + 1
+    const iWon = myRank === 1
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ padding: 24, borderRadius: 18, textAlign: 'center', marginBottom: 16,
+          background: iWon ? 'linear-gradient(135deg, #D4EDDA, #A8E6CF)' : '#F5F5F5' }}>
+          <div style={{ fontSize: 56 }}>{iWon ? '🏆' : myRank <= 2 ? '🥈' : '😵'}</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{iWon ? '우승!' : `${myRank}위`}</div>
+          <div style={{ fontSize: 14, color: '#555' }}>최종 {myScore}점</div>
+        </div>
+        <div style={{ padding: 14, borderRadius: 12, background: '#FFF', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+          {ranking.map((r, i) => (
+            <div key={r.slot} style={{
+              display: 'flex', justifyContent: 'space-between', padding: '8px 4px',
+              borderBottom: i < ranking.length - 1 ? '1px solid #EEE' : 'none',
+              background: r.slot === mySlot ? '#FFF3CD' : 'transparent', borderRadius: 6,
+            }}>
+              <div style={{ fontWeight: 700 }}>{i + 1}위 · {r.name}</div>
+              <div style={{ fontWeight: 800, color: r.score >= 0 ? '#1B5E20' : '#C62828' }}>{r.score}</div>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => mr.leaveRoom()}
+          style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: '#F0F0F0', color: '#555', fontWeight: 700, cursor: 'pointer' }}>
+          나가기
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <button onClick={() => mr.leaveRoom()}
+          style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#555' }}>←</button>
+        <h2 style={{ fontSize: 14, fontWeight: 700 }}>방 {mr.roomCode} · R{s.round}/{ROUNDS}</h2>
+        <div style={{ fontSize: 13, fontWeight: 700, color: myScore >= 0 ? '#1B5E20' : '#C62828' }}>
+          내 점수 {myScore}
+        </div>
+      </div>
+
+      {/* 점수판 */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {playerSlots.map(sl => (
+          <div key={sl} style={{
+            padding: '6px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+            background: sl === mySlot ? '#E3F2FD' : '#F5F5F5',
+            color: (s.scores?.[sl] || 0) >= 0 ? '#1B5E20' : '#C62828',
+            border: sl === mySlot ? '2px solid #1F77B4' : '2px solid transparent',
+          }}>
+            {playerName(sl)}<br />
+            <span style={{ fontSize: 14 }}>{s.scores?.[sl] || 0}</span>
+            {s.phase === 'picking' && (
+              <div style={{ fontSize: 10, color: s.picks?.[sl] != null ? '#27AE60' : '#888', marginTop: 2 }}>
+                {s.picks?.[sl] != null ? '✓ 제출' : '대기'}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {s.phase === 'picking' && (
+        <div>
+          {myPicked != null ? (
+            <div style={{ textAlign: 'center', padding: 20, borderRadius: 14, background: '#FFF3CD' }}>
+              <div style={{ fontSize: 13, color: '#856404' }}>내 선택: <b>{myPicked}</b></div>
+              <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>다른 사람 기다리는 중...</div>
+            </div>
+          ) : (
+            <div>
+              <p style={{ textAlign: 'center', fontSize: 14, color: '#555', marginBottom: 12 }}>
+                1~99 중 정수 하나 선택!
+              </p>
+              <input
+                type="number" inputMode="numeric"
+                min="1" max="99" value={tempPick}
+                onChange={e => setTempPick(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                placeholder="예: 47"
+                style={{
+                  width: '100%', padding: 16, fontSize: 24, fontWeight: 800, borderRadius: 14,
+                  border: '2px solid #1F77B4', textAlign: 'center', marginBottom: 14,
+                  minWidth: 0, boxSizing: 'border-box', fontFamily: 'monospace',
+                }} />
+              <button onClick={submit} disabled={!tempPick}
+                style={{
+                  width: '100%', padding: '16px 0', borderRadius: 12, border: 'none',
+                  background: tempPick ? '#1F77B4' : '#DDD', color: '#FFF',
+                  fontWeight: 800, fontSize: 16, cursor: tempPick ? 'pointer' : 'default',
+                }}>
+                제출
+              </button>
+              <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: '#F5F5F5', fontSize: 12, color: '#555' }}>
+                {tempPick && (
+                  isPrime(parseInt(tempPick, 10))
+                    ? <span>{tempPick}은 <b style={{ color: '#1B5E20' }}>소수</b>예요</span>
+                    : <span>{tempPick}은 <b style={{ color: '#C62828' }}>{tempPick === '1' ? '1 (소수 아님)' : '합성수'}</b>예요</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {s.phase === 'reveal' && s.results && (
+        <div>
+          <div style={{ padding: 14, borderRadius: 14, background: '#FFF', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, textAlign: 'center', color: '#1F77B4' }}>
+              R{s.round} 결과
+            </div>
+            {s.results.map((r, i) => (
+              <div key={r.slot} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 4px', borderBottom: i < s.results.length - 1 ? '1px solid #EEE' : 'none',
+                background: r.slot === mySlot ? '#FFFBEA' : 'transparent', borderRadius: 6,
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{playerName(r.slot)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, fontFamily: 'monospace' }}>{r.picked}</span>
+                  <span style={{ fontSize: 11, color: '#888', minWidth: 50, textAlign: 'right' }}>{r.reason}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: r.score > 0 ? '#1B5E20' : r.score < 0 ? '#C62828' : '#888', minWidth: 40, textAlign: 'right' }}>
+                    {r.score > 0 ? `+${r.score}` : r.score}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {isHost ? (
+            <button onClick={nextRound}
+              style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: '#1F77B4', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>
+              {s.round >= ROUNDS ? '최종 결과 보기' : '다음 라운드'}
+            </button>
+          ) : (
+            <p style={{ textAlign: 'center', color: '#888' }}>호스트가 진행 중...</p>
+          )}
         </div>
       )}
     </div>
