@@ -1,7 +1,7 @@
 // 언어의 조각 — 온라인 2인 모드 (host=P1, guest=P2)
 // useGameRoom 사용. 본인은 위치별 색상, 상대는 색상별 개수만 공개.
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import {
   decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
@@ -38,10 +38,12 @@ function initialState() {
     phase: 'lobby',
     round: 1,
     scores: { 1: 0, 2: 0 },
+    firstPlayer: 1,
+    currentPlayer: 1,
     roundData: null,
-    attempts: { 1: null, 2: null },
+    attempts: { 1: { history: [] }, 2: { history: [] } },
     usedWords: [],
-    roundStartedAt: 0,
+    turnStartedAt: 0,
   }
 }
 
@@ -145,6 +147,9 @@ function InRoom({ room, onBack }) {
         phase: 'round-intro',
         roundData: rd,
         usedWords: [...(state.usedWords || []), word],
+        firstPlayer: 1,
+        currentPlayer: 1,
+        attempts: { 1: { history: [] }, 2: { history: [] } },
       })
     }
   }, [isHost, state, room])
@@ -193,85 +198,83 @@ function LobbyScreen({ room, state, isHost }) {
 // ────────────────────────────────────────────────────────────
 function RoundIntro({ room, state, myPlayer }) {
   const len = ROUND_LEN[state.round - 1]
+  const firstP = state.firstPlayer || 1
   const startTurn = useCallback(() => {
     room.updateState({
       ...state,
       phase: 'p-turn',
-      attempts: { 1: null, 2: null },
-      roundStartedAt: Date.now(),
+      currentPlayer: firstP,
+      turnStartedAt: Date.now(),
     })
-  }, [room, state])
+  }, [room, state, firstP])
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
       <div style={{ fontSize: 32, color: ACCENT, fontWeight: 800 }}>라운드 {state.round}</div>
       <div style={{ fontSize: 48, fontWeight: 900, margin: '8px 0' }}>{len}글자</div>
+      <div style={{ fontSize: 14, color: '#555', marginBottom: 12 }}>
+        선공: <b style={{ color: firstP === 1 ? COLOR_P1 : COLOR_P2 }}>{firstP}P</b>
+        {firstP === myPlayer && <span style={{ color: '#2E7D32', marginLeft: 6, fontWeight: 700 }}>(나)</span>}
+      </div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
         <ScoreCard player={1} score={state.scores[1]} active={myPlayer === 1} />
         <ScoreCard player={2} score={state.scores[2]} active={myPlayer === 2} />
       </div>
-      <button onClick={startTurn} style={btnPrimary(ACCENT)}>시작 (둘 다 동시)</button>
-      <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>※ 어느 쪽이든 누르면 두 사람 모두 시작됩니다.</p>
+      <button onClick={startTurn} style={btnPrimary(ACCENT)}>시작</button>
+      <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>※ 한 번씩 번갈아 등록합니다. 누군가 모두 초록 만들면 라운드 끝.</p>
     </div>
   )
 }
 
 // ────────────────────────────────────────────────────────────
-// 본 게임 — 양쪽 동시 진행, 본인은 위치별 색 / 상대는 갯수만
+// 본 게임 — 턴제 진행 (한 번씩 번갈아). 본인은 자기 색상/카운트만, 상대에게는 단어만 공개.
 function TurnScreen({ room, state, myPlayer, oppPlayer }) {
   const rd = state.roundData
   const slotCount = rd?.len ?? rd?.hasJong?.length ?? 0
-  // 로컬 시도 (각 클라이언트가 본인 상태를 따로 유지)
+  const isMyTurn = state.currentPlayer === myPlayer
+
+  // 로컬 슬롯/타일 (내 턴일 때만 의미 있음)
   const [localSlots, setLocalSlots] = useState(() => makeEmptySlots(slotCount))
   const [localTilePool, setLocalTilePool] = useState(() => rd?.tilePool ? rd.tilePool.map(t => ({ ...t, used: false })) : [])
   const [selectedTile, setSelectedTile] = useState(null)
   const [now, setNow] = useState(() => Date.now())
-  const myAttempt = state.attempts?.[myPlayer]
-  const oppAttempt = state.attempts?.[oppPlayer]
-  // 새 룰: 올초록일 때만 잠금. 그 외엔 슬롯 수정 후 재시도 가능
-  const myWon = myAttempt?.result?.colors?.every(c => c === 'green') || false
-  const submitted = myWon
 
-  // 타이머
+  const myHistory = state.attempts?.[myPlayer]?.history || []
+  const oppHistory = state.attempts?.[oppPlayer]?.history || []
+
+  // 타이머 (턴 단위)
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(iv)
   }, [])
-  const started = state.roundStartedAt || now
+  const started = state.turnStartedAt || now
   const elapsed = Math.max(0, Math.floor((now - started) / 1000))
   const secondsLeft = Math.max(0, TURN_SECONDS - elapsed)
   const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60
   const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   const timeOver = secondsLeft === 0
 
-  // 라운드 변경 감지 — 로컬 상태 리셋
+  // 슬롯 리셋: "내 턴 시작" 시점에만 (라운드 변경 또는 내가 직전 시도 후 다시 내 차례).
+  // 상대 등록(=상태 갱신)으로는 절대 리셋하지 않음.
+  const lastResetKey = useRef(null)
   useEffect(() => {
-    if (!rd) return
+    if (!rd || !isMyTurn) return
+    const key = `${state.round}-${myHistory.length}`
+    if (lastResetKey.current === key) return
+    lastResetKey.current = key
     const len = rd.len ?? rd.hasJong?.length ?? 0
     setLocalSlots(makeEmptySlots(len))
     setLocalTilePool(rd.tilePool ? rd.tilePool.map(t => ({ ...t, used: false })) : [])
     setSelectedTile(null)
-  }, [rd, state.round])
-
-  // 누군가 모두 초록 만들면 → round-end 전환 (정답 맞을 때까지 룰)
-  useEffect(() => {
-    if (state.phase !== 'p-turn') return
-    const a1 = state.attempts?.[1]
-    const a2 = state.attempts?.[2]
-    const win1 = a1?.result?.colors?.every(c => c === 'green')
-    const win2 = a2?.result?.colors?.every(c => c === 'green')
-    if (win1 || win2) {
-      room.updateState({ ...state, phase: 'round-end' })
-    }
-  }, [state, room])
+  }, [rd, isMyTurn, state.round, myHistory.length])
 
   const pickTile = useCallback((tileId) => {
-    if (submitted) return
+    if (!isMyTurn) return
     setSelectedTile(prev => (prev === tileId ? null : tileId))
-  }, [submitted])
+  }, [isMyTurn])
 
   const placeOrRemove = useCallback((charIdx, kind) => {
-    if (submitted) return
+    if (!isMyTurn) return
     setLocalSlots(prevSlots => {
       const slots = prevSlots.map(x => ({ ...x }))
       const slot = slots[charIdx]
@@ -292,7 +295,7 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
       setSelectedTile(null)
       return slots
     })
-  }, [submitted, selectedTile, localTilePool])
+  }, [isMyTurn, selectedTile, localTilePool])
 
   const tileJamoOfSlot = useCallback((charIdx, kind) => {
     const tileId = localSlots[charIdx]?.[kind]
@@ -301,7 +304,7 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
   }, [localSlots, localTilePool])
 
   const submit = useCallback(() => {
-    if (submitted || !rd) return
+    if (!isMyTurn || !rd) return
     const slotsJamo = localSlots.map(s => ({
       cho: s.cho != null ? localTilePool.find(t => t.id === s.cho)?.jamo : null,
       jung: s.jung != null ? localTilePool.find(t => t.id === s.jung)?.jamo : null,
@@ -310,19 +313,30 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
     const guess = slotsToWord(slotsJamo)
     if (!guess) { alert('글자를 모두 완성하세요 (자음/모음)'); return }
     const result = evaluateGuess(guess, rd.answer)
-    room.updateState({
-      ...state,
-      attempts: { ...state.attempts, [myPlayer]: { guess, result } },
-    })
-  }, [submitted, rd, localSlots, localTilePool, room, state, myPlayer])
+    const allGreen = result.colors.every(c => c === 'green')
+    const newHistory = [...myHistory, { guess, result }]
+    const newAttempts = {
+      ...state.attempts,
+      [myPlayer]: { history: newHistory },
+    }
+    if (allGreen) {
+      // 라운드 승: round-end로
+      room.updateState({ ...state, attempts: newAttempts, phase: 'round-end' })
+    } else {
+      // 턴 넘김
+      room.updateState({
+        ...state,
+        attempts: newAttempts,
+        currentPlayer: oppPlayer,
+        turnStartedAt: Date.now(),
+      })
+    }
+  }, [isMyTurn, rd, localSlots, localTilePool, room, state, myPlayer, oppPlayer, myHistory])
 
   if (!rd) return <div style={{ padding: 24, textAlign: 'center' }}>라운드 데이터 로딩…</div>
 
   const color = myPlayer === 1 ? COLOR_P1 : COLOR_P2
   const isComplete = localSlots.every(s => s.cho != null && s.jung != null)
-
-  // 상대 진행 상태
-  const oppSummary = oppAttempt?.result ? oppAttempt.result.colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {}) : null
 
   return (
     <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto' }}>
@@ -341,25 +355,17 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
         <ScoreCard player={2} score={state.scores[2]} active={myPlayer === 2} />
       </div>
 
-      {/* 상대 상황 */}
-      <OpponentBox oppPlayer={oppPlayer} submitted={!!oppAttempt} summary={oppSummary} />
+      {/* 턴 표시 */}
+      <TurnIndicator isMyTurn={isMyTurn} myPlayer={myPlayer} oppPlayer={oppPlayer} />
 
-      {submitted ? (
-        <SelfSubmittedBox myPlayer={myPlayer} attempt={myAttempt} />
-      ) : (
+      {/* 상대 시도 단어 (단어만 — 색상/카운트는 비공개) */}
+      <OpponentHistoryBox oppPlayer={oppPlayer} history={oppHistory} />
+
+      {/* 내 시도 히스토리 (단어 + 색상 + 카운트, 나만 봄) */}
+      {myHistory.length > 0 && <MyHistoryBox history={myHistory} />}
+
+      {isMyTurn ? (
         <>
-          {/* 내 마지막 시도 (비-올초록) — 재시도 시 참고 */}
-          {myAttempt?.result && (
-            <div style={{ padding: 10, background: '#FFFBE0', borderRadius: 10, marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>내 마지막 시도</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{myAttempt.guess}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                {myAttempt.result.chars.map((c, i) => <JamoBadge key={i} jamo={c} color={myAttempt.result.colors[i]} />)}
-              </div>
-              <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>슬롯을 수정해서 다시 등록하세요.</div>
-            </div>
-          )}
-
           {/* 정답 슬롯 */}
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
             {localSlots.map((slot, i) => (
@@ -392,50 +398,73 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
             {isComplete ? '✓ 등록' : '글자 모두 완성하세요'}
           </button>
         </>
+      ) : (
+        <WaitingForOpponent oppPlayer={oppPlayer} />
       )}
     </div>
   )
 }
 
-function OpponentBox({ oppPlayer, submitted, summary }) {
-  const color = oppPlayer === 1 ? COLOR_P1 : COLOR_P2
-  if (!submitted) {
-    return (
-      <div style={{ padding: '6px 12px', borderRadius: 8, background: '#F0F0F0', fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 8 }}>
-        ⏳ {oppPlayer}P 진행 중...
-      </div>
-    )
-  }
+function TurnIndicator({ isMyTurn, myPlayer, oppPlayer }) {
+  const activeP = isMyTurn ? myPlayer : oppPlayer
+  const activeColor = activeP === 1 ? COLOR_P1 : COLOR_P2
   return (
-    <div style={{ padding: '8px 12px', borderRadius: 10, background: color + '15', border: `1px solid ${color}33`, marginBottom: 8 }}>
-      <div style={{ fontSize: 12, color, fontWeight: 700, marginBottom: 4 }}>{oppPlayer}P 제출 완료</div>
-      <div style={{ display: 'flex', gap: 12, fontSize: 14, fontWeight: 700 }}>
-        <span style={{ color: '#2E7D32' }}>🟢 {summary?.green || 0}</span>
-        <span style={{ color: '#F9A825' }}>🟡 {summary?.yellow || 0}</span>
-        <span style={{ color: '#C62828' }}>🔴 {summary?.red || 0}</span>
-        <span style={{ color: '#888', fontSize: 11, marginLeft: 'auto' }}>위치는 라운드 끝나면 공개</span>
+    <div style={{ padding: '8px 12px', borderRadius: 10, background: activeColor + '20', border: `2px solid ${activeColor}`, marginBottom: 8, textAlign: 'center' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: activeColor }}>
+        {isMyTurn ? `🎯 내 차례 (${myPlayer}P)` : `⏳ ${oppPlayer}P 차례 — 기다리는 중`}
       </div>
     </div>
   )
 }
 
-function SelfSubmittedBox({ myPlayer, attempt }) {
-  const color = myPlayer === 1 ? COLOR_P1 : COLOR_P2
-  const { chars, colors } = attempt.result
-  const summary = colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})
-  const allGreen = colors.every(c => c === 'green')
+function WaitingForOpponent({ oppPlayer }) {
+  const color = oppPlayer === 1 ? COLOR_P1 : COLOR_P2
   return (
-    <div style={{ padding: 16, borderRadius: 12, background: color + '15', border: `2px solid ${color}`, marginBottom: 12, textAlign: 'center' }}>
-      <div style={{ fontSize: 32, marginBottom: 4 }}>{allGreen ? '🏆' : '✓'}</div>
-      <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 4 }}>{myPlayer}P 제출 완료</div>
-      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{attempt.guess}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginBottom: 8 }}>
-        {chars.map((c, i) => <JamoBadge key={i} jamo={c} color={colors[i]} />)}
+    <div style={{ padding: 24, textAlign: 'center', background: '#F8F4FF', borderRadius: 12 }}>
+      <div style={{ fontSize: 48, marginBottom: 8 }}>⏳</div>
+      <div style={{ fontSize: 15, color, fontWeight: 700 }}>{oppPlayer}P가 단어를 만드는 중...</div>
+      <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>등록하면 화면이 자동으로 넘어와요.</div>
+    </div>
+  )
+}
+
+function OpponentHistoryBox({ oppPlayer, history }) {
+  if (!history?.length) return null
+  const color = oppPlayer === 1 ? COLOR_P1 : COLOR_P2
+  return (
+    <div style={{ padding: 10, borderRadius: 10, background: color + '10', border: `1px solid ${color}33`, marginBottom: 8 }}>
+      <div style={{ fontSize: 11, color, fontWeight: 700, marginBottom: 4 }}>{oppPlayer}P 시도 ({history.length}회) · 색상 비공개</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {history.map((h, idx) => (
+          <div key={idx} style={{ padding: '4px 10px', background: '#FFF', border: '1px solid #DDD', borderRadius: 6, fontSize: 14, fontWeight: 700 }}>
+            {h.guess}
+          </div>
+        ))}
       </div>
-      <div style={{ fontSize: 12, color: '#666' }}>
-        🟢 {summary.green || 0}  🟡 {summary.yellow || 0}  🔴 {summary.red || 0}
-      </div>
-      <div style={{ fontSize: 11, color: '#999', marginTop: 8 }}>상대가 제출할 때까지 기다리는 중...</div>
+    </div>
+  )
+}
+
+function MyHistoryBox({ history }) {
+  return (
+    <div style={{ padding: 10, borderRadius: 10, background: '#FFFBE0', marginBottom: 8 }}>
+      <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>내 시도 ({history.length}회)</div>
+      {history.map((h, idx) => {
+        const summary = h.result.colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})
+        return (
+          <div key={idx} style={{ marginBottom: idx === history.length - 1 ? 0 : 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{h.guess}</div>
+              <div style={{ fontSize: 11, color: '#666' }}>
+                🟢{summary.green || 0} 🟡{summary.yellow || 0} 🔴{summary.red || 0}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              {h.result.chars.map((c, i) => <JamoBadge key={i} jamo={c} color={h.result.colors[i]} />)}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -493,10 +522,12 @@ function JamoBadge({ jamo, color }) {
 // ────────────────────────────────────────────────────────────
 function RoundEndScreen({ room, state, myPlayer, isHost }) {
   const len = ROUND_LEN[state.round - 1]
-  const a1 = state.attempts[1]
-  const a2 = state.attempts[2]
-  const win1 = a1?.result?.colors?.every(c => c === 'green')
-  const win2 = a2?.result?.colors?.every(c => c === 'green')
+  const h1 = state.attempts?.[1]?.history || []
+  const h2 = state.attempts?.[2]?.history || []
+  const last1 = h1[h1.length - 1]
+  const last2 = h2[h2.length - 1]
+  const win1 = !!last1?.result?.colors?.every(c => c === 'green')
+  const win2 = !!last2?.result?.colors?.every(c => c === 'green')
 
   const proceedNext = useCallback(() => {
     if (!isHost) return
@@ -512,13 +543,16 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
     const exclude = new Set(state.usedWords || [])
     const word = pickRandomWord(nextLen, exclude)
     const rd = buildRoundData(word)
+    const nextFirstPlayer = (state.firstPlayer || 1) === 1 ? 2 : 1
     room.updateState({
       ...state,
       phase: 'round-intro',
       round: nextRound,
       scores: newScores,
+      firstPlayer: nextFirstPlayer,
+      currentPlayer: nextFirstPlayer,
       roundData: rd,
-      attempts: { 1: null, 2: null },
+      attempts: { 1: { history: [] }, 2: { history: [] } },
       usedWords: [...(state.usedWords || []), word],
     })
   }, [isHost, room, state, win1, win2, len])
@@ -535,8 +569,8 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
         <div style={{ fontSize: 30, fontWeight: 900, margin: '4px 0' }}>{state.roundData?.answer}</div>
       </div>
 
-      <PlayerResultRow player={1} attempt={a1} win={win1} len={len} />
-      <PlayerResultRow player={2} attempt={a2} win={win2} len={len} />
+      <PlayerResultRow player={1} attempt={last1} attempts={h1.length} win={win1} len={len} />
+      <PlayerResultRow player={2} attempt={last2} attempts={h2.length} win={win2} len={len} />
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <ScoreCard player={1} score={previewP1} active={win1} delta={win1 ? len : 0} />
@@ -556,12 +590,12 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
   )
 }
 
-function PlayerResultRow({ player, attempt, win, len }) {
+function PlayerResultRow({ player, attempt, attempts, win, len }) {
   const color = player === 1 ? COLOR_P1 : COLOR_P2
   return (
     <div style={{ padding: 12, border: `2px solid ${win ? '#2E7D32' : color + '44'}`, borderRadius: 12, marginBottom: 8, background: win ? '#E8F5E9' : '#FFF' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color }}>{player}P</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>{player}P · {attempts || 0}번 시도</div>
         <div style={{ fontSize: 13 }}>{win ? <span style={{ color: '#2E7D32', fontWeight: 700 }}>✓ +{len}점</span> : <span style={{ color: '#999' }}>0점</span>}</div>
       </div>
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{attempt?.guess || '미제출'}</div>
