@@ -2,12 +2,12 @@
 // 데스게임: 천만원을 걸어라 4회차 게임 룰 재현
 //
 // 룰:
-// - 1라운드 = 3글자, 라운드마다 +1, 5라운드까지
+// - 1라운드 = 3글자, 라운드마다 +1, 3라운드까지
 // - 각 라운드 정답 단어 결정 → 자모 타일 풀(정답에 쓰이는 자모만, 셔플) 제공
 // - P1·P2가 각자 1분 안에 타일을 슬롯에 배치 → 등록
 // - 등록 결과: 본인은 위치별 색(🟢/🟡/🔴), 라운드 결과 화면에선 양쪽 결과 전부 공개
 // - 모든 칸 초록 = 라운드 승점 (글자 수)
-// - 13점 먼저 도달 = 게임 승
+// - 3라운드 종료 후 점수가 높은 사람이 게임 승
 
 import { useState, useCallback, useEffect } from 'react'
 import {
@@ -15,8 +15,8 @@ import {
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
 
-const ROUND_LEN = [3, 4, 5, 6, 7] // 라운드 1~5
-const TARGET_SCORE = 13
+const ROUND_LEN = [3, 4, 5] // 라운드 1~3 (6글자 이상 단어 제외)
+const TARGET_SCORE = 13 // 사실상 도달 불가 — 라운드 수 한계로 게임 종료
 const TURN_SECONDS = 60
 
 const COLOR_P1 = '#3A7BD5'
@@ -211,7 +211,7 @@ export default function LanguagePieceLocal({ onBack }) {
     const allGreen = attempt[cp]?.result?.colors?.every(c => c === 'green')
     if (allGreen) newScores[cp] += ROUND_LEN[round - 1]
     setScores(newScores)
-    if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || round >= 5) {
+    if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || round >= ROUND_LEN.length) {
       setPhase('end')
       return
     }
@@ -598,7 +598,7 @@ function RoundEndScreen({ round, answer, attempt, scores, len, onNext }) {
       </div>
 
       <button onClick={onNext} style={btnPrimary(ACCENT)}>
-        {newP1 >= TARGET_SCORE || newP2 >= TARGET_SCORE || round >= 5 ? '게임 결과' : '다음 라운드'}
+        {newP1 >= TARGET_SCORE || newP2 >= TARGET_SCORE || round >= ROUND_LEN.length ? '게임 결과' : '다음 라운드'}
       </button>
     </div>
   )

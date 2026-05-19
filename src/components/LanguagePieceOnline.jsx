@@ -8,8 +8,8 @@ import {
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
 
-const ROUND_LEN = [3, 4, 5, 6, 7]
-const TARGET_SCORE = 13
+const ROUND_LEN = [3, 4, 5]
+const TARGET_SCORE = 13 // 사실상 도달 불가 — 라운드 수 한계로 게임 종료
 const TURN_SECONDS = 60
 
 const COLOR_P1 = '#3A7BD5'
@@ -534,7 +534,7 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
     const newScores = { ...state.scores }
     if (win1) newScores[1] += len
     if (win2) newScores[2] += len
-    if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || state.round >= 5) {
+    if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || state.round >= ROUND_LEN.length) {
       room.updateState({ ...state, scores: newScores, phase: 'end' })
       return
     }
@@ -579,7 +579,7 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
 
       {isHost ? (
         <button onClick={proceedNext} style={btnPrimary(ACCENT)}>
-          {previewP1 >= TARGET_SCORE || previewP2 >= TARGET_SCORE || state.round >= 5 ? '게임 결과' : '다음 라운드 (방장)'}
+          {previewP1 >= TARGET_SCORE || previewP2 >= TARGET_SCORE || state.round >= ROUND_LEN.length ? '게임 결과' : '다음 라운드 (방장)'}
         </button>
       ) : (
         <div style={{ padding: 12, background: '#F8F4FF', borderRadius: 10, fontSize: 13, textAlign: 'center', color: '#666', marginTop: 14 }}>
