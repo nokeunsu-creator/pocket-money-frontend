@@ -5,7 +5,9 @@ export const SIZE = 11
 export const MINES_PER_PLAYER = 15
 export const TREASURE_POINTS = [10, 15, 20]
 export const MINE_PENALTY = -5
-export const MINE_FORBID_SIZE = 2  // 출발 코너 안쪽 2×2 (4칸) 지뢰 금지
+// 원작 룰: "자신·상대방의 출발 지점으로부터 가로/세로 2칸 반경" = Chebyshev 거리 ≤ 2
+// 코너 시작이라 한 출발지당 3×3(=9칸), 양쪽 합쳐 18칸 지뢰 금지
+export const MINE_FORBID_SIZE = 3  // 코너 안쪽 quadrant 크기 (3×3)
 // 원작 룰: 지뢰 밟으면 "출발지 주변 3칸(인접 8방향 중 in-bounds, 코너에선 3개)" 중 1칸으로 강제 이동
 
 // P1=k1(우상), P2=a11(좌하)
