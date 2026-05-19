@@ -222,7 +222,9 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
   const [now, setNow] = useState(() => Date.now())
   const myAttempt = state.attempts?.[myPlayer]
   const oppAttempt = state.attempts?.[oppPlayer]
-  const submitted = !!myAttempt
+  // 새 룰: 올초록일 때만 잠금. 그 외엔 슬롯 수정 후 재시도 가능
+  const myWon = myAttempt?.result?.colors?.every(c => c === 'green') || false
+  const submitted = myWon
 
   // 타이머
   useEffect(() => {
@@ -244,10 +246,14 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
     setSelectedTile(null)
   }, [rd, state.round])
 
-  // 둘 다 제출 → round-end 전환 (어떤 클라이언트든 시도)
+  // 누군가 모두 초록 만들면 → round-end 전환 (정답 맞을 때까지 룰)
   useEffect(() => {
     if (state.phase !== 'p-turn') return
-    if (state.attempts?.[1] && state.attempts?.[2]) {
+    const a1 = state.attempts?.[1]
+    const a2 = state.attempts?.[2]
+    const win1 = a1?.result?.colors?.every(c => c === 'green')
+    const win2 = a2?.result?.colors?.every(c => c === 'green')
+    if (win1 || win2) {
       room.updateState({ ...state, phase: 'round-end' })
     }
   }, [state, room])
@@ -335,6 +341,18 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
         <SelfSubmittedBox myPlayer={myPlayer} attempt={myAttempt} />
       ) : (
         <>
+          {/* 내 마지막 시도 (비-올초록) — 재시도 시 참고 */}
+          {myAttempt?.result && (
+            <div style={{ padding: 10, background: '#FFFBE0', borderRadius: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>내 마지막 시도</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{myAttempt.guess}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                {myAttempt.result.chars.map((c, i) => <JamoBadge key={i} jamo={c} color={myAttempt.result.colors[i]} />)}
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>슬롯을 수정해서 다시 등록하세요.</div>
+            </div>
+          )}
+
           {/* 정답 슬롯 */}
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
             {localSlots.map((slot, i) => (

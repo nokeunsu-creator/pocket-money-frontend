@@ -56,8 +56,8 @@ export default function LanguagePieceLocal({ onBack }) {
   const [roundData, setRoundData] = useState(null)
   // P1/P2 시도 상태
   const [attempt, setAttempt] = useState({
-    1: { slots: null, tilePool: null, submitted: false, result: null },
-    2: { slots: null, tilePool: null, submitted: false, result: null },
+    1: { slots: null, tilePool: null, submitted: false, result: null, history: [] },
+    2: { slots: null, tilePool: null, submitted: false, result: null, history: [] },
   })
   // 현재 플레이어 ('turn' 페이즈에서)
   const [currentPlayer, setCurrentPlayer] = useState(1)
@@ -73,8 +73,8 @@ export default function LanguagePieceLocal({ onBack }) {
     setRoundData(data)
     // 두 플레이어 동일한 초기 시도 상태
     setAttempt({
-      1: { slots: data.slots.map(s => ({ ...s })), tilePool: data.tilePool.map(t => ({ ...t, used: false })), submitted: false, result: null },
-      2: { slots: data.slots.map(s => ({ ...s })), tilePool: data.tilePool.map(t => ({ ...t, used: false })), submitted: false, result: null },
+      1: { slots: data.slots.map(s => ({ ...s })), tilePool: data.tilePool.map(t => ({ ...t, used: false })), submitted: false, result: null, history: [] },
+      2: { slots: data.slots.map(s => ({ ...s })), tilePool: data.tilePool.map(t => ({ ...t, used: false })), submitted: false, result: null, history: [] },
     })
     setCurrentPlayer(fp)
     setSelectedTile(null)
@@ -164,18 +164,36 @@ export default function LanguagePieceLocal({ onBack }) {
   }, [attempt, currentPlayer, roundData])
 
   // 결과 모달 닫기 → 다음 단계
+  // 룰: 정답(올 초록) 맞출 때까지 라운드가 끝나지 않음.
+  // - 정답이면 → round-end (해당 플레이어 승점)
+  // - 아니면 → 본 플레이어 시도 초기화하고 차례 전환 (재시도 무한 반복)
   const dismissResult = useCallback(() => {
     const cp = currentPlayer
-    const fp = firstPlayer
-    const other = cp === 1 ? 2 : 1
-    if (attempt[other].submitted) {
-      // 둘 다 끝남 → 라운드 결과
+    const myAttempt = attempt[cp]
+    const allGreen = myAttempt?.result?.colors?.every(c => c === 'green')
+    if (allGreen) {
       setPhase('round-end')
-    } else {
-      // 상대 차례로 핸드오프
-      setPhase('handoff')
+      return
     }
-  }, [currentPlayer, firstPlayer, attempt])
+    // 시도 초기화 (슬롯/타일 풀 다시 빈 상태로) + 시도 기록 누적
+    if (roundData) {
+      setAttempt(prev => ({
+        ...prev,
+        [cp]: {
+          slots: roundData.slots.map(s => ({ ...s })),
+          tilePool: roundData.tilePool.map(t => ({ ...t, used: false })),
+          submitted: false,
+          result: null,
+          guess: undefined,
+          history: [
+            ...(prev[cp].history || []),
+            { guess: prev[cp].guess, result: prev[cp].result },
+          ],
+        },
+      }))
+    }
+    setPhase('handoff')
+  }, [currentPlayer, attempt, roundData])
 
   const goToOtherPlayer = useCallback(() => {
     const cp = currentPlayer
@@ -186,16 +204,13 @@ export default function LanguagePieceLocal({ onBack }) {
   }, [currentPlayer])
 
   // 라운드 결과 → 다음 라운드 또는 게임 종료
+  // 새 룰: 라운드 승자(올초록 만든 사람)에게 +len 점
   const proceedNextRound = useCallback(() => {
     const newScores = { ...scores }
-    const r1 = attempt[1]?.result
-    const r2 = attempt[2]?.result
-    const win1 = r1 && r1.colors.every(c => c === 'green')
-    const win2 = r2 && r2.colors.every(c => c === 'green')
-    if (win1) newScores[1] += ROUND_LEN[round - 1]
-    if (win2) newScores[2] += ROUND_LEN[round - 1]
+    const cp = currentPlayer
+    const allGreen = attempt[cp]?.result?.colors?.every(c => c === 'green')
+    if (allGreen) newScores[cp] += ROUND_LEN[round - 1]
     setScores(newScores)
-    // 종료 체크
     if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || round >= 5) {
       setPhase('end')
       return
@@ -205,7 +220,7 @@ export default function LanguagePieceLocal({ onBack }) {
     setRound(nextRound)
     setFirstPlayer(nextFp)
     startRound(nextRound, nextFp)
-  }, [scores, attempt, round, firstPlayer, startRound])
+  }, [scores, attempt, currentPlayer, round, firstPlayer, startRound])
 
   const restart = useCallback(() => {
     setPhase('intro')
@@ -288,7 +303,8 @@ function IntroScreen({ onBack, onStart }) {
 
       <RuleCard icon="🧩" title="자모 타일로 단어 조립" body={'정답 단어에 쓰이는 자음·모음 타일이 주어집니다.\n한 글자 = 초성(자음) + 중성(모음) + 받침(자음·옵션).\n예: 강 = ㄱ + ㅏ + ㅇ / 아 = ㅇ + ㅏ (받침 없음)'} />
       <RuleCard icon="📏" title="라운드별 글자 수 증가" body="1라운드 3글자 → 5라운드 7글자. 시간은 라운드당 1분." />
-      <RuleCard icon="🎯" title="Wordle 스타일 피드백" body={'등록하면 자모마다 색이 떠요.\n🟢 위치 정확 / 🟡 자모는 맞지만 위치 다름 / 🔴 정답에 없음'} />
+      <RuleCard icon="🎯" title="Wordle 스타일 피드백" body={'등록하면 글자마다 색이 떠요.\n🟢 위치 정확 / 🟡 글자는 맞지만 위치 다름 / 🔴 정답에 없음'} />
+      <RuleCard icon="🔁" title="정답 맞출 때까지" body="한 번에 못 맞히면 차례를 상대에게 넘기고, 다시 돌아오면 또 시도. 누군가 모두 초록 만들 때까지 라운드가 계속됩니다." />
       <RuleCard icon="🏆" title="13점 먼저 = 승리" body="모든 칸 초록 = 라운드 승. 점수는 글자 수만큼." />
 
       <button onClick={onStart} style={btnPrimary(ACCENT)}>▶ 시작</button>
@@ -377,6 +393,21 @@ function TurnScreen({
           />
         ))}
       </div>
+
+      {/* 본인 이전 시도 (history) */}
+      {attempt.history && attempt.history.length > 0 && (
+        <div style={{ marginBottom: 10, padding: 8, background: '#FAFAFA', borderRadius: 10 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>내 이전 시도 ({attempt.history.length}회)</div>
+          {attempt.history.map((h, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, minWidth: 80 }}>{h.guess}</div>
+              <div style={{ display: 'flex', gap: 2 }}>
+                {h.result?.chars?.map((c, i) => <JamoBadge key={i} jamo={c} color={h.result.colors[i]} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 타일 풀 */}
       <div style={{ background: '#F8F4FF', padding: 10, borderRadius: 12, marginBottom: 12 }}>
@@ -472,12 +503,12 @@ function ResultModal({ player, attempt, onClose }) {
         <div style={{ display: 'inline-block', padding: '2px 12px', background: color, color: '#FFF', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>{player}P</div>
         <div style={{ fontSize: 48, marginBottom: 4 }}>{allGreen ? '🏆' : '📝'}</div>
         <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 8px' }}>
-          {allGreen ? '모두 초록! 라운드 승!' : '결과'}
+          {allGreen ? '모두 초록! 라운드 승!' : '아직 정답 아님 — 상대 차례'}
         </h3>
         <div style={{ fontSize: 14, color: '#555', marginBottom: 10 }}>
           등록한 단어: <b style={{ fontSize: 18 }}>{attempt.guess}</b>
         </div>
-        {/* 자모별 색상 */}
+        {/* 글자별 색상 */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginBottom: 12 }}>
           {chars.map((c, i) => (
             <JamoBadge key={i} jamo={c} color={colors[i]} />
@@ -486,6 +517,11 @@ function ResultModal({ player, attempt, onClose }) {
         <div style={{ fontSize: 12, color: '#666' }}>
           🟢 {summary.green || 0}  🟡 {summary.yellow || 0}  🔴 {summary.red || 0}
         </div>
+        {!allGreen && (
+          <div style={{ fontSize: 11, color: '#888', marginTop: 8 }}>
+            ※ 누군가 모두 초록 만들 때까지 차례를 주고받으며 계속됩니다.
+          </div>
+        )}
         <button onClick={onClose} style={btnPrimary(ACCENT)}>확인</button>
       </div>
     </div>
@@ -519,12 +555,18 @@ function HandoffScreen({ from, to, onNext }) {
 
 // ────────────────────────────────────────────────────────────
 function RoundEndScreen({ round, answer, attempt, scores, len, onNext }) {
+  // 새 룰: 라운드 승자는 단 한 명 (마지막에 올초록 만든 사람)
   const r1 = attempt[1].result
   const r2 = attempt[2].result
   const win1 = r1 && r1.colors.every(c => c === 'green')
   const win2 = r2 && r2.colors.every(c => c === 'green')
   const newP1 = scores[1] + (win1 ? len : 0)
   const newP2 = scores[2] + (win2 ? len : 0)
+  // 패자의 마지막 시도 (history)
+  const p1Last = !r1 && attempt[1].history?.length ? attempt[1].history[attempt[1].history.length - 1] : null
+  const p2Last = !r2 && attempt[2].history?.length ? attempt[2].history[attempt[2].history.length - 1] : null
+  const p1Attempts = (attempt[1].history?.length || 0) + (r1 ? 1 : 0)
+  const p2Attempts = (attempt[2].history?.length || 0) + (r2 ? 1 : 0)
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1rem' }}>
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
@@ -533,8 +575,22 @@ function RoundEndScreen({ round, answer, attempt, scores, len, onNext }) {
         <div style={{ fontSize: 30, fontWeight: 900, margin: '4px 0' }}>{answer}</div>
       </div>
 
-      <PlayerResultRow player={1} guess={attempt[1].guess} result={r1} win={win1} len={len} />
-      <PlayerResultRow player={2} guess={attempt[2].guess} result={r2} win={win2} len={len} />
+      <PlayerResultRow
+        player={1}
+        guess={r1 ? attempt[1].guess : p1Last?.guess}
+        result={r1 || p1Last?.result}
+        win={!!win1}
+        attempts={p1Attempts}
+        len={len}
+      />
+      <PlayerResultRow
+        player={2}
+        guess={r2 ? attempt[2].guess : p2Last?.guess}
+        result={r2 || p2Last?.result}
+        win={!!win2}
+        attempts={p2Attempts}
+        len={len}
+      />
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <ScoreCard player={1} score={newP1} active={win1} delta={win1 ? len : 0} />
@@ -548,16 +604,17 @@ function RoundEndScreen({ round, answer, attempt, scores, len, onNext }) {
   )
 }
 
-function PlayerResultRow({ player, guess, result, win, len }) {
+function PlayerResultRow({ player, guess, result, win, len, attempts }) {
   const color = player === 1 ? COLOR_P1 : COLOR_P2
   return (
     <div style={{ padding: 12, border: `2px solid ${win ? '#2E7D32' : color + '44'}`, borderRadius: 12, marginBottom: 8, background: win ? '#E8F5E9' : '#FFF' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color }}>{player}P</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>{player}P · {attempts || 0}번 시도</div>
         <div style={{ fontSize: 13 }}>
           {win ? <span style={{ color: '#2E7D32', fontWeight: 700 }}>✓ +{len}점</span> : <span style={{ color: '#999' }}>0점</span>}
         </div>
       </div>
+      <div style={{ fontSize: 15, color: '#888', marginBottom: 4 }}>{win ? '✓ 정답' : '마지막 시도'}</div>
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{guess || '미등록'}</div>
       {result && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
