@@ -8,7 +8,7 @@ const SIZE = 11
 const MINES_PER_PLAYER = 15
 const TREASURE_POINTS = [10, 15, 20]
 const MINE_PENALTY = -5
-const MINE_FORBID_SIZE = 3  // 원작: 가로/세로 2칸 반경 → 코너에서 3×3
+const MINE_FORBID_SIZE = 2  // 사용자 지정: 코너 안쪽 2×2 (4칸/출발지)
 
 const START = { 1: [0, 10], 2: [10, 0] }
 const TREASURES = [[0, 0], [5, 5], [10, 10]]
@@ -172,33 +172,25 @@ console.log('\n[Test 1] 지뢰 배치 제약')
   assert('f6(보물) 배치 금지', !isMinePlacementAllowed(5, 5))
   assert('k11(보물) 배치 금지', !isMinePlacementAllowed(10, 10))
 
-  // 원작: P1 출발 코너 (k1=[0,10]) 가로/세로 2칸 반경 → 3×3: rows 0..2, cols 8..10
+  // P1 출발 코너 (k1=[0,10]) 안쪽 2×2: rows 0..1, cols 9..10 → 4칸
   assert('k1(P1 출발) 배치 금지', !isMinePlacementAllowed(0, 10))
   assert('j1 배치 금지', !isMinePlacementAllowed(0, 9))
-  assert('i1 배치 금지 (3×3 안)', !isMinePlacementAllowed(0, 8))
   assert('k2 배치 금지', !isMinePlacementAllowed(1, 10))
   assert('j2 배치 금지', !isMinePlacementAllowed(1, 9))
-  assert('i2 배치 금지 (3×3 안)', !isMinePlacementAllowed(1, 8))
-  assert('k3 배치 금지 (3×3 안)', !isMinePlacementAllowed(2, 10))
-  assert('j3 배치 금지 (3×3 안)', !isMinePlacementAllowed(2, 9))
-  assert('i3 배치 금지 (3×3 안)', !isMinePlacementAllowed(2, 8))
   // 경계 바로 바깥
-  assert('h1 배치 가능 (k1 3×3 바로 바깥)', isMinePlacementAllowed(0, 7))
-  assert('k4 배치 가능 (k1 3×3 바로 바깥)', isMinePlacementAllowed(3, 10))
+  assert('i1 배치 가능 (k1 2×2 바깥)', isMinePlacementAllowed(0, 8))
+  assert('k3 배치 가능 (k1 2×2 바깥)', isMinePlacementAllowed(2, 10))
+  assert('i2 배치 가능 (k1 2×2 바깥)', isMinePlacementAllowed(1, 8))
 
-  // 원작: P2 출발 코너 (a11=[10,0]) 가로/세로 2칸 반경 → 3×3: rows 8..10, cols 0..2
+  // P2 출발 코너 (a11=[10,0]) 안쪽 2×2: rows 9..10, cols 0..1 → 4칸
   assert('a11(P2 출발) 배치 금지', !isMinePlacementAllowed(10, 0))
   assert('b11 배치 금지', !isMinePlacementAllowed(10, 1))
-  assert('c11 배치 금지 (3×3 안)', !isMinePlacementAllowed(10, 2))
   assert('a10 배치 금지', !isMinePlacementAllowed(9, 0))
   assert('b10 배치 금지', !isMinePlacementAllowed(9, 1))
-  assert('c10 배치 금지 (3×3 안)', !isMinePlacementAllowed(9, 2))
-  assert('a9 배치 금지 (3×3 안)', !isMinePlacementAllowed(8, 0))
-  assert('b9 배치 금지 (3×3 안)', !isMinePlacementAllowed(8, 1))
-  assert('c9 배치 금지 (3×3 안)', !isMinePlacementAllowed(8, 2))
   // 경계 바로 바깥
-  assert('d11 배치 가능 (a11 3×3 바로 바깥)', isMinePlacementAllowed(10, 3))
-  assert('a8 배치 가능 (a11 3×3 바로 바깥)', isMinePlacementAllowed(7, 0))
+  assert('c11 배치 가능 (a11 2×2 바깥)', isMinePlacementAllowed(10, 2))
+  assert('a9 배치 가능 (a11 2×2 바깥)', isMinePlacementAllowed(8, 0))
+  assert('b9 배치 가능 (a11 2×2 바깥)', isMinePlacementAllowed(8, 1))
 
   // 일반 중앙
   assert('e5 배치 가능', isMinePlacementAllowed(4, 4))
