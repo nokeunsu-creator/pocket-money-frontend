@@ -301,14 +301,24 @@ function PhaseSetup({ data, room, role, state, visibleMines }) {
     <div style={{ maxWidth: 520, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 8 }}>
         <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>지뢰 배치</h3>
-        <div style={{
-          display: 'inline-block', marginTop: 6, padding: '2px 12px',
-          background: timeOver ? '#FFE8EA' : secondsLeft < 60 ? '#FFF4D6' : '#F0F0F0',
-          color: timeOver ? '#E63946' : secondsLeft < 60 ? '#E67E22' : '#444',
-          fontWeight: 700, fontSize: 14, borderRadius: 999,
-        }}>
-          ⏱ {timeOver ? '시간 초과' : timeStr}
-        </div>
+        {bothDone ? (
+          <div style={{
+            display: 'inline-block', marginTop: 6, padding: '4px 14px',
+            background: '#E8F5E9', color: '#2E7D32',
+            fontWeight: 700, fontSize: 14, borderRadius: 999,
+          }}>
+            ✓ 모두 제출 완료 — 딜러가 다음 단계 진행
+          </div>
+        ) : (
+          <div style={{
+            display: 'inline-block', marginTop: 6, padding: '2px 12px',
+            background: timeOver ? '#FFE8EA' : secondsLeft < 60 ? '#FFF4D6' : '#F0F0F0',
+            color: timeOver ? '#E63946' : secondsLeft < 60 ? '#E67E22' : '#444',
+            fontWeight: 700, fontSize: 14, borderRadius: 999,
+          }}>
+            ⏱ {timeOver ? '시간 초과' : timeStr}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 6 }}>
           <ProgressChip player={1} count={p1Count} />
           <ProgressChip player={2} count={p2Count} />
