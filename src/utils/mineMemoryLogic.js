@@ -6,7 +6,7 @@ export const MINES_PER_PLAYER = 15
 export const TREASURE_POINTS = [10, 15, 20]
 export const MINE_PENALTY = -5
 export const MINE_FORBID_SIZE = 2  // 출발 코너 안쪽 2×2 (4칸) 지뢰 금지
-export const TELEPORT_SIZE = 4     // 지뢰 밟은 후 4×4 (16칸) 텔레포트
+// 원작 룰: 지뢰 밟으면 "출발지 주변 3칸(인접 8방향 중 in-bounds, 코너에선 3개)" 중 1칸으로 강제 이동
 
 // P1=k1(우상), P2=a11(좌하)
 export const START = { 1: [0, 10], 2: [10, 0] }
@@ -48,37 +48,52 @@ export const DIRS_8 = [
   [ 1, -1], [ 1, 0], [ 1, 1],
 ]
 
-export const ADJ_3X3 = (() => {
-  const a = []
-  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) a.push([dr, dc])
-  return a
-})()
+// 원작 룰: 점수 계산은 "주변 인접한 8칸" (착지 칸 제외)
+export const ADJ_8 = DIRS_8
 
 export function rollDie() { return 1 + Math.floor(Math.random() * 6) }
 
+// 지뢰가 설치된 칸의 개수 (양 플레이어 합집합) — 원작 룰상 공개 정보
+export function countMineCells(mines) {
+  const merged = new Set()
+  for (const k of mines[1]) merged.add(k)
+  for (const k of mines[2]) merged.add(k)
+  return merged.size
+}
+
+// 원작 룰: 지뢰 밟은 후 "출발지 주변 3칸 중 1칸으로 강제 이동"
+// 코너 시작이라 인접 8방향 중 in-bounds는 3칸뿐. 상대 말 칸 제외.
+export function getTeleportTargets(player, oppK) {
+  const [sr, sc] = START[player]
+  const cells = new Set()
+  for (const [dr, dc] of DIRS_8) {
+    const r = sr + dr, c = sc + dc
+    if (!inBounds(r, c)) continue
+    const k = key(r, c)
+    if (k === oppK) continue
+    cells.add(k)
+  }
+  return cells
+}
+
+export const MINE_SETUP_SECONDS = 600  // 원작: 10분 (지뢰 배치 제한)
+
 // 이동 가능 칸 (Set<number>)
 export function getMovableCells({ pieces, pendingTeleport }, player) {
-  const cells = new Set()
   const myK = pieces[player]
   const oppK = pieces[player === 1 ? 2 : 1]
-  const [mr, mc] = unkey(myK)
   if (pendingTeleport === player) {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (!isInOwnCornerQuadrant(player, r, c, TELEPORT_SIZE)) continue
-        const k = key(r, c)
-        if (k === oppK || k === myK) continue
-        cells.add(k)
-      }
-    }
-  } else {
-    for (const [dr, dc] of DIRS_8) {
-      const nr = mr + dr, nc = mc + dc
-      if (!inBounds(nr, nc)) continue
-      const k = key(nr, nc)
-      if (k === oppK) continue
-      cells.add(k)
-    }
+    // 원작: 출발지 인접 3칸 강제 이동
+    return getTeleportTargets(player, oppK)
+  }
+  const cells = new Set()
+  const [mr, mc] = unkey(myK)
+  for (const [dr, dc] of DIRS_8) {
+    const nr = mr + dr, nc = mc + dc
+    if (!inBounds(nr, nc)) continue
+    const k = key(nr, nc)
+    if (k === oppK) continue
+    cells.add(k)
   }
   return cells
 }
@@ -120,8 +135,9 @@ export function resolveMove(state, player, tk) {
     const already = next.scoredCells.has(tk)
     let cellScore = 0
     if (!already) {
+      // 원작 룰: 주변 인접한 8칸 (착지 칸 제외) 지뢰 합산
       let count = 0
-      for (const [dr, dc] of ADJ_3X3) {
+      for (const [dr, dc] of ADJ_8) {
         const nr = tr + dr, nc = tc + dc
         if (!inBounds(nr, nc)) continue
         const nk = key(nr, nc)

@@ -1,15 +1,16 @@
 // 망각의 지뢰 — 단일 기기 패스앤플레이 모드
 // 룰/순수 로직은 utils/mineMemoryLogic 에서 import
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useViewportWidth } from '../utils/useViewportWidth'
 import {
   SIZE, MINES_PER_PLAYER, TREASURE_POINTS, MINE_PENALTY,
-  TELEPORT_SIZE,
+  MINE_SETUP_SECONDS,
   START, TREASURES, COLOR_P1, COLOR_P2,
   key, unkey, toId, inBounds, isTreasureCell, isStartCell,
-  isInOwnCornerQuadrant, isMinePlacementAllowed,
-  DIRS_8, ADJ_3X3, rollDie,
+  isMinePlacementAllowed,
+  DIRS_8, ADJ_8, rollDie,
+  getTeleportTargets, countMineCells,
 } from '../utils/mineMemoryLogic'
 
 // ────────────────────────────────────────────────────────────
@@ -105,31 +106,21 @@ export default function MineMemoryLocal({ onBack }) {
   // ── 이동 가능 칸 계산 ────────────────────────────────
   const movableCells = useMemo(() => {
     if (phase !== 'play' || !selected || event) return null
-    const cells = new Set()
     const myK = pieces[currentPlayer]
     const oppK = pieces[currentPlayer === 1 ? 2 : 1]
-    const [mr, mc] = unkey(myK)
-
+    // 원작 룰: 지뢰 밟으면 출발지 인접 3칸 중 1칸으로 강제 이동
     if (pendingTeleport === currentPlayer) {
-      // 텔레포트: 본인 출발 코너에서 안쪽으로 4×4 사각 영역 어디든
-      for (let r = 0; r < SIZE; r++) {
-        for (let c = 0; c < SIZE; c++) {
-          if (!isInOwnCornerQuadrant(currentPlayer, r, c, TELEPORT_SIZE)) continue
-          const k = key(r, c)
-          if (k === oppK) continue
-          if (k === myK) continue
-          cells.add(k)
-        }
-      }
-    } else {
-      // 일반 이동: 인접 8칸
-      for (const [dr, dc] of DIRS_8) {
-        const nr = mr + dr, nc = mc + dc
-        if (!inBounds(nr, nc)) continue
-        const k = key(nr, nc)
-        if (k === oppK) continue
-        cells.add(k)
-      }
+      return getTeleportTargets(currentPlayer, oppK)
+    }
+    // 일반 이동: 인접 8칸
+    const cells = new Set()
+    const [mr, mc] = unkey(myK)
+    for (const [dr, dc] of DIRS_8) {
+      const nr = mr + dr, nc = mc + dc
+      if (!inBounds(nr, nc)) continue
+      const k = key(nr, nc)
+      if (k === oppK) continue
+      cells.add(k)
     }
     return cells
   }, [phase, selected, pieces, currentPlayer, pendingTeleport, event])
@@ -173,7 +164,7 @@ export default function MineMemoryLocal({ onBack }) {
       const already = newScoredCells.has(tk)
       if (!already) {
         let count = 0
-        for (const [dr, dc] of ADJ_3X3) {
+        for (const [dr, dc] of ADJ_8) {
           const nr = tr + dr, nc = tc + dc
           if (!inBounds(nr, nc)) continue
           const nk = key(nr, nc)
@@ -290,6 +281,7 @@ export default function MineMemoryLocal({ onBack }) {
     <PlayScreen
       cellSize={cellSize}
       pieces={pieces}
+      mines={mines}
       treasures={treasures}
       treasureCount={treasureCount}
       scores={scores}
@@ -326,8 +318,9 @@ function IntroScreen({ onBack, onStart }) {
 
       <RuleCard icon="🧠" title="지뢰는 본인만 기억합니다" body="각자 지뢰 15개를 보드에 숨기고, 위치는 머릿속에 기억해야 해요. 화면엔 지뢰가 보이지 않아요." />
       <RuleCard icon="♟️" title="한 칸씩 8방향 이동" body="자기 차례에 상하좌우·대각선 한 칸 이동. 상대 말이 있는 칸은 못 가요." />
-      <RuleCard icon="🎯" title="점수: 인접 9칸의 지뢰 수" body="이동한 칸 주변 3×3에 지뢰가 몇 개 있는지가 점수예요. 두 사람 지뢰 모두 합산하고, 같은 칸 두 번째부터는 0점." />
-      <RuleCard icon="💥" title="지뢰 밟으면 -5점" body="내 지뢰든 상대 지뢰든 -5점. 지뢰는 사라지고, 다음 턴엔 출발 코너 4×4 영역으로 텔레포트해야 해요." />
+      <RuleCard icon="🎯" title="점수: 주변 8칸 지뢰 수" body="이동한 칸의 8방향 인접칸(착지 칸 제외)에 지뢰가 몇 개 있는지가 점수예요. 양쪽 지뢰 모두 합산하고, 같은 칸 두 번째부터는 0점." />
+      <RuleCard icon="💥" title="지뢰 밟으면 -5점" body="내 지뢰든 상대 지뢰든 -5점. 지뢰는 사라지고, 다음 턴엔 출발지 인접 3칸 중 1칸으로 강제 이동해요." />
+      <RuleCard icon="⏱️" title="배치 시간 10분" body="지뢰 15개를 정해 제출하는 시간은 10분. 시간이 지나도 제출 가능합니다." />
       <RuleCard icon="💎" title="보물 a1·f6·k11" body="첫 보물 10점, 둘째 15점, 셋째 20점. 3개 다 획득되면 게임 종료." />
 
       <button onClick={onStart} style={primaryBtn('#7E57C2')}>
@@ -354,6 +347,17 @@ function RuleCard({ icon, title, body }) {
 function SetupScreen({ player, mines, toggleMine, onSubmit, onReset, onBack, cellSize }) {
   const color = player === 1 ? COLOR_P1 : COLOR_P2
   const startK = player === 1 ? key(0, 10) : key(10, 0)
+  // 10분 카운트다운 (원작 룰)
+  const [secondsLeft, setSecondsLeft] = useState(MINE_SETUP_SECONDS)
+  useEffect(() => {
+    if (secondsLeft <= 0) return
+    const iv = setInterval(() => setSecondsLeft(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(iv)
+  }, [secondsLeft])
+  const m = Math.floor(secondsLeft / 60)
+  const s = secondsLeft % 60
+  const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const timeOver = secondsLeft === 0
   return (
     <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', padding: '0.5rem' }}>
       <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: 14, color: 'var(--gray)', cursor: 'pointer', marginBottom: 6 }}>
@@ -372,6 +376,12 @@ function SetupScreen({ player, mines, toggleMine, onSubmit, onReset, onBack, cel
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#F8F4FF', borderRadius: 10, marginBottom: 8 }}>
         <div style={{ fontSize: 14 }}>
           배치: <b style={{ color, fontSize: 18 }}>{mines.size}</b> / {MINES_PER_PLAYER}
+        </div>
+        <div style={{
+          fontSize: 14, fontWeight: 700,
+          color: timeOver ? '#E63946' : secondsLeft < 60 ? '#E67E22' : '#444',
+        }}>
+          ⏱ {timeOver ? '시간 초과' : timeStr}
         </div>
         <button onClick={onReset} style={{ background: 'none', border: '1px solid #DDD', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#666', cursor: 'pointer' }}>
           ↺ 초기화
@@ -517,7 +527,7 @@ function PlayerDie({ player, value, active, onRoll, animating }) {
 // ────────────────────────────────────────────────────────────
 // 본 게임
 function PlayScreen({
-  cellSize, pieces, treasures, treasureCount, scores, scoredCells,
+  cellSize, pieces, mines, treasures, treasureCount, scores, scoredCells,
   currentPlayer, pendingTeleport, selected, setSelected, movableCells, lastMove,
   event, onMove, onDismissEvent, onBack,
 }) {
@@ -525,6 +535,7 @@ function PlayScreen({
   const oppK = pieces[currentPlayer === 1 ? 2 : 1]
   const myColor = currentPlayer === 1 ? COLOR_P1 : COLOR_P2
   const treasuresLeft = 3 - treasureCount
+  const mineCellsLeft = countMineCells(mines)
 
   const handleCellTap = (k) => {
     if (event) return
@@ -541,7 +552,7 @@ function PlayScreen({
     <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', padding: '0.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: 14, color: 'var(--gray)', cursor: 'pointer' }}>← 나가기</button>
-        <div style={{ fontSize: 12, color: '#888' }}>💎 남은 보물 {treasuresLeft}/3</div>
+        <div style={{ fontSize: 12, color: '#888' }}>💎 남은 보물 {treasuresLeft}/3 · 💣 지뢰칸 {mineCellsLeft}</div>
       </div>
 
       {/* 점수 헤더 */}
@@ -557,7 +568,7 @@ function PlayScreen({
         fontSize: 13, textAlign: 'center', fontWeight: 600, color: myColor,
       }}>
         {pendingTeleport === currentPlayer
-          ? `🚀 ${currentPlayer}P · 지뢰를 밟았어요. 출발 코너 4×4 안 어디로든 이동하세요`
+          ? `🚀 ${currentPlayer}P · 지뢰를 밟았어요. 출발지 인접 3칸 중 한 곳으로 이동하세요`
           : selected
           ? `${currentPlayer}P · 이동할 칸을 탭하세요 (다시 자기 말 탭하면 취소)`
           : `${currentPlayer}P 차례 · 본인 말을 탭하세요`}
@@ -673,12 +684,12 @@ function EventModal({ event, onDismiss }) {
     icon = '💥'
     title = '지뢰 폭발!'
     body = event.mineCount > 1
-      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발 코너 4×4로 텔레포트`
-      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발 코너 4×4로 텔레포트`
+      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
+      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
   } else {
     icon = '🎯'
     title = event.already ? '이미 점수 받은 칸 (0점)' : `+${event.points}점`
-    body = event.already ? `${event.cellId} · 이전에 누군가 다녀감` : `${event.cellId} · 주변 9칸 지뢰 ${event.points}개`
+    body = event.already ? `${event.cellId} · 이전에 누군가 다녀감` : `${event.cellId} · 주변 8칸 지뢰 ${event.points}개`
   }
   return (
     <div style={{

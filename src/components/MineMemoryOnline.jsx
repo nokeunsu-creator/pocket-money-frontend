@@ -7,10 +7,12 @@ import { useViewportWidth } from '../utils/useViewportWidth'
 import { useMineMemoryRoom } from '../utils/useMineMemoryRoom'
 import {
   SIZE, MINES_PER_PLAYER, TREASURE_POINTS, MINE_PENALTY,
-  TELEPORT_SIZE, COLOR_P1, COLOR_P2, COLOR_DEALER,
+  MINE_SETUP_SECONDS,
+  COLOR_P1, COLOR_P2, COLOR_DEALER,
   key, unkey, toId, inBounds, isTreasureCell, isStartCell,
-  isInOwnCornerQuadrant, isMinePlacementAllowed,
-  DIRS_8, rollDie, ADJ_3X3,
+  isMinePlacementAllowed,
+  DIRS_8, rollDie, ADJ_8,
+  getTeleportTargets, countMineCells,
   initialGameState, serializeForWire, deserializeFromWire,
 } from '../utils/mineMemoryLogic'
 
@@ -189,7 +191,7 @@ function PhaseWaitPlayers({ data, room, role }) {
   const bothReady = data.p1 && data.p2
   const startSetup = useCallback(() => {
     if (role !== 'dealer') return
-    room.patchRoom({ phase: 'setup' })
+    room.patchRoom({ phase: 'setup', setupStartedAt: Date.now() })
   }, [room, role])
 
   return (
@@ -245,6 +247,19 @@ function PhaseSetup({ data, room, role, state, visibleMines }) {
     }
   }, [data.eventSeq]) // initial sync only
 
+  // 10분 카운트다운 (원작 룰) — setupStartedAt 기준 모든 클라이언트 동기화
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(iv)
+  }, [])
+  const startedAt = data.setupStartedAt || now
+  const elapsed = Math.max(0, Math.floor((now - startedAt) / 1000))
+  const secondsLeft = Math.max(0, MINE_SETUP_SECONDS - elapsed)
+  const tm = Math.floor(secondsLeft / 60), ts = secondsLeft % 60
+  const timeStr = `${String(tm).padStart(2, '0')}:${String(ts).padStart(2, '0')}`
+  const timeOver = secondsLeft === 0
+
   const p1Count = state.mines[1].size
   const p2Count = state.mines[2].size
   const bothDone = p1Count === MINES_PER_PLAYER && p2Count === MINES_PER_PLAYER
@@ -286,6 +301,14 @@ function PhaseSetup({ data, room, role, state, visibleMines }) {
     <div style={{ maxWidth: 520, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 8 }}>
         <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>지뢰 배치</h3>
+        <div style={{
+          display: 'inline-block', marginTop: 6, padding: '2px 12px',
+          background: timeOver ? '#FFE8EA' : secondsLeft < 60 ? '#FFF4D6' : '#F0F0F0',
+          color: timeOver ? '#E63946' : secondsLeft < 60 ? '#E67E22' : '#444',
+          fontWeight: 700, fontSize: 14, borderRadius: 999,
+        }}>
+          ⏱ {timeOver ? '시간 초과' : timeStr}
+        </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 6 }}>
           <ProgressChip player={1} count={p1Count} />
           <ProgressChip player={2} count={p2Count} />
@@ -523,30 +546,26 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
 
   const event = data.event || null
   const treasuresLeft = 3 - state.treasureCount
+  const mineCellsLeft = countMineCells(state.mines)
 
   // 이동 가능 칸
   const movableCells = useMemo(() => {
     if (!myTurn || event) return null
     if (!selected) return null
-    const cells = new Set()
     const myK = state.pieces[myPlayer]
     const oppK = state.pieces[myPlayer === 1 ? 2 : 1]
-    const [mr, mc] = unkey(myK)
+    // 원작 룰: 지뢰 밟으면 출발지 인접 3칸 중 1칸
     if (state.pendingTeleport === myPlayer) {
-      for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
-        if (!isInOwnCornerQuadrant(myPlayer, r, c, TELEPORT_SIZE)) continue
-        const k = key(r, c)
-        if (k === oppK || k === myK) continue
-        cells.add(k)
-      }
-    } else {
-      for (const [dr, dc] of DIRS_8) {
-        const nr = mr + dr, nc = mc + dc
-        if (!inBounds(nr, nc)) continue
-        const k = key(nr, nc)
-        if (k === oppK) continue
-        cells.add(k)
-      }
+      return getTeleportTargets(myPlayer, oppK)
+    }
+    const cells = new Set()
+    const [mr, mc] = unkey(myK)
+    for (const [dr, dc] of DIRS_8) {
+      const nr = mr + dr, nc = mc + dc
+      if (!inBounds(nr, nc)) continue
+      const k = key(nr, nc)
+      if (k === oppK) continue
+      cells.add(k)
     }
     return cells
   }, [myTurn, selected, state, myPlayer, event])
@@ -590,7 +609,7 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
         <ScoreCard player={2} score={state.scores[2]} active={currentPlayer === 2} />
       </div>
       <div style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 6 }}>
-        💎 남은 보물 {treasuresLeft}/3
+        💎 남은 보물 {treasuresLeft}/3 · 💣 지뢰칸 {mineCellsLeft}
       </div>
 
       <div style={{
@@ -603,7 +622,7 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
           ? `현재 차례: ${currentPlayer}P · 딜러 시야 (양쪽 지뢰 모두 보임)`
           : myTurn
             ? (state.pendingTeleport === myPlayer
-              ? '🚀 지뢰를 밟았어요. 출발 코너 4×4 안 어디로든 이동'
+              ? '🚀 지뢰를 밟았어요. 출발지 인접 3칸 중 한 곳으로 이동'
               : selected ? '이동할 칸을 탭하세요' : '본인 말을 탭하세요')
             : `상대 차례 (${currentPlayer}P) — 기다리는 중...`}
       </div>
@@ -693,7 +712,7 @@ function doMove(state, player, tk) {
     let s = 0
     if (!already) {
       let count = 0
-      for (const [dr, dc] of ADJ_3X3) {
+      for (const [dr, dc] of ADJ_8) {
         const nr = tr + dr, nc = tc + dc
         if (!inBounds(nr, nc)) continue
         const nk = key(nr, nc)
@@ -732,12 +751,12 @@ function EventModal({ event, role, myPlayer, onConfirm }) {
   } else if (event.type === 'mine') {
     icon = '💥'; title = '지뢰 폭발!'
     body = event.mineCount > 1
-      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발 코너 4×4로 텔레포트`
-      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발 코너 4×4로 텔레포트`
+      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
+      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
   } else {
     icon = '🎯'
     title = event.already ? '이미 점수 받은 칸 (0점)' : `+${event.points}점`
-    body = event.already ? `${event.cellId}` : `${event.cellId} · 주변 9칸 지뢰 ${event.points}개`
+    body = event.already ? `${event.cellId}` : `${event.cellId} · 주변 8칸 지뢰 ${event.points}개`
   }
 
   return (
@@ -773,6 +792,7 @@ function PhaseEnd({ data, room, role, state }) {
     if (role !== 'dealer') return
     room.patchRoom({
       phase: 'setup',
+      setupStartedAt: Date.now(),
       state: serializeForWire(initialGameState()),
       dice: { 1: null, 2: null, who: 1 },
       event: null,

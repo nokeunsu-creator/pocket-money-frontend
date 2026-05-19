@@ -9,7 +9,6 @@ const MINES_PER_PLAYER = 15
 const TREASURE_POINTS = [10, 15, 20]
 const MINE_PENALTY = -5
 const MINE_FORBID_SIZE = 2
-const TELEPORT_SIZE = 4
 
 const START = { 1: [0, 10], 2: [10, 0] }
 const TREASURES = [[0, 0], [5, 5], [10, 10]]
@@ -41,31 +40,44 @@ const DIRS_8 = [
   [ 1, -1], [ 1, 0], [ 1, 1],
 ]
 
-const ADJ_3X3 = []
-for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) ADJ_3X3.push([dr, dc])
+// 원작 룰: 인접 점수는 8칸 (착지 칸 제외)
+const ADJ_8 = DIRS_8
+
+// 원작 룰: 텔레포트는 출발지 인접 3칸 (코너 시작이라 in-bounds는 3개)
+function getTeleportTargets(player, oppK) {
+  const [sr, sc] = START[player]
+  const cells = new Set()
+  for (const [dr, dc] of DIRS_8) {
+    const r = sr + dr, c = sc + dc
+    if (!inBounds(r, c)) continue
+    const k = key(r, c)
+    if (k === oppK) continue
+    cells.add(k)
+  }
+  return cells
+}
+
+function countMineCells(mines) {
+  const m = new Set()
+  for (const k of mines[1]) m.add(k)
+  for (const k of mines[2]) m.add(k)
+  return m.size
+}
 
 function getMovableCells(state, player) {
-  const cells = new Set()
   const myK = state.pieces[player]
   const oppK = state.pieces[player === 1 ? 2 : 1]
-  const [mr, mc] = unkey(myK)
   if (state.pendingTeleport === player) {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (!isInOwnCornerQuadrant(player, r, c, TELEPORT_SIZE)) continue
-        const k = key(r, c)
-        if (k === oppK || k === myK) continue
-        cells.add(k)
-      }
-    }
-  } else {
-    for (const [dr, dc] of DIRS_8) {
-      const nr = mr + dr, nc = mc + dc
-      if (!inBounds(nr, nc)) continue
-      const k = key(nr, nc)
-      if (k === oppK) continue
-      cells.add(k)
-    }
+    return getTeleportTargets(player, oppK)
+  }
+  const cells = new Set()
+  const [mr, mc] = unkey(myK)
+  for (const [dr, dc] of DIRS_8) {
+    const nr = mr + dr, nc = mc + dc
+    if (!inBounds(nr, nc)) continue
+    const k = key(nr, nc)
+    if (k === oppK) continue
+    cells.add(k)
   }
   return cells
 }
@@ -107,7 +119,7 @@ function resolveMove(state, player, tk) {
     let cellScore = 0
     if (!already) {
       let count = 0
-      for (const [dr, dc] of ADJ_3X3) {
+      for (const [dr, dc] of ADJ_8) {
         const nr = tr + dr, nc = tc + dc
         if (!inBounds(nr, nc)) continue
         const nk = key(nr, nc)
@@ -236,10 +248,17 @@ console.log('\n[Test 3] 점수 계산')
 
   // 한 칸에 양쪽 지뢰 2개 = 합산 카운트
   const s2 = makeInitialState([key(5, 5)], [key(5, 5)]) // f6에 양쪽 지뢰 (사실 보물칸이라 실제 게임선 안 됨, 인접 로직만 검증)
-  // 인접 3×3 점수 검증을 위해 e6[5,4] 착지로 → 인접에 f6 하나만, 양쪽 합 2
+  // 인접 점수 검증을 위해 e6[5,4] 착지로 → 인접에 f6 하나만, 양쪽 합 2
   s2.pieces[1] = key(4, 4)
   const r3 = resolveMove(s2, 1, key(5, 4))
   assert('한 칸 양쪽 지뢰 2개 합산 카운트', r3.event.points >= 2, `points=${r3.event.points}`)
+
+  // 지뢰 점유 셀 개수 (양 플레이어 합집합)
+  const sCount = makeInitialState(
+    [key(3, 3), key(4, 4), key(5, 5)],   // P1 3개
+    [key(4, 4), key(6, 6)],              // P2 2개, 그 중 4,4는 중복
+  )
+  assert('지뢰 점유 셀 개수 = 합집합 크기 (4)', countMineCells(sCount.mines) === 4)
 }
 
 // ────────────────────────────────────────────────────────────
@@ -262,21 +281,23 @@ console.log('\n[Test 4] 지뢰 밟기')
   assert('양쪽 지뢰 2개 모두 제거', !r2.mines[1].has(key(5, 4)) && !r2.mines[2].has(key(5, 4)))
   assert('-5점 (개수 무관 고정)', r2.scores[1] === -5)
 
-  // 텔레포트 영역 (P1=[0,10], 4×4 → rows 0..3, cols 7..10)
-  // 텔레포트 가능 칸을 직접 계산
-  r.pieces[2] = key(10, 0) // P2 a11에 그대로
+  // 원작 룰: 텔레포트는 출발지 인접 3칸 (P1 k1[0,10]의 인접 in-bounds: j1[0,9], k2[1,10], j2[1,9])
+  r.pieces[2] = key(10, 0) // P2 a11에 그대로 (P1 텔레포트에 영향 없음)
   const tele = getMovableCells(r, 1)
-  // P1 자기 4×4 영역 16칸 중 본인/상대 위치 제외 → 본인은 e6[5,4]에 있는데 영역 밖이라 영향 없음, 상대 a11도 영역 밖 → 16칸 모두 가능 (단 자기 칸 e6 제외 — 영역 밖이라 어차피 0)
-  assert('텔레포트 영역 16칸 (4×4)', tele.size === 16, `actual=${tele.size}`)
-  // P1 코너 (0,10) ~ (3,7) 안에 들어야 함
-  for (const k of tele) {
-    const [r_, c_] = unkey(k)
-    if (!isInOwnCornerQuadrant(1, r_, c_, 4)) {
-      assert(`텔레포트 칸 [${r_},${c_}] P1 4×4 안에 있어야 함`, false)
-      break
-    }
-  }
-  assert('텔레포트 후보가 모두 P1 코너 4×4 영역 안', true)
+  assert('텔레포트 영역 3칸 (출발지 인접 in-bounds)', tele.size === 3, `actual=${tele.size}`)
+  assert('텔레포트 후보 j1', tele.has(key(0, 9)))
+  assert('텔레포트 후보 k2', tele.has(key(1, 10)))
+  assert('텔레포트 후보 j2', tele.has(key(1, 9)))
+
+  // 상대 말이 출발지 인접에 있으면 그 칸 제외
+  const s3 = makeInitialState([], [key(5, 4)])
+  s3.pieces[1] = key(4, 4)
+  s3.pieces[2] = key(0, 9) // P2가 P1 출발 인접 j1에 있음
+  const r3 = resolveMove(s3, 1, key(5, 4))
+  // 텔레포트 가능 칸 직접 확인: 상대가 j1 점유 → 2칸만 남음
+  r3.pieces[2] = key(0, 9)
+  const tele2 = getMovableCells(r3, 1)
+  assert('상대가 점유한 텔레포트 칸 제외 (j1 빠지고 2칸)', tele2.size === 2 && !tele2.has(key(0, 9)))
 }
 
 // ────────────────────────────────────────────────────────────
