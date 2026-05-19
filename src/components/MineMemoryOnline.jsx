@@ -602,10 +602,15 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
     if (!event) return
     const isActor = event.player === myPlayer
     if (!isActor) return
-    const next = { ...state }
     // 게임 종료 체크
     if (state.treasureCount >= 3) {
       await room.patchRoom({ phase: 'end', event: null })
+      return
+    }
+    // 지뢰 밟아서 텔레포트 대기 중이면 같은 플레이어가 한 번 더 이동
+    if (state.pendingTeleport === myPlayer) {
+      await room.patchRoom({ event: null })
+      setSelected(true) // 텔레포트 칸 자동 하이라이트
       return
     }
     const nextPlayer = myPlayer === 1 ? 2 : 1
@@ -649,12 +654,14 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
         const seeMine1 = visibleMines[1].has(k)
         const seeMine2 = visibleMines[2].has(k)
 
+        const isTeleportMode = state.pendingTeleport === myPlayer
         let bg = '#FFF'
         if (hasFreeTreasure) bg = '#FFF4D6'
         if (usedTreasure) bg = '#F4ECDC'
         if (isScored && !isP1 && !isP2 && !hasFreeTreasure) bg = '#F5F5F5'
+        if (isMovable && isTeleportMode) bg = '#FFF3E0'
         let border = '1px solid #DDD'
-        if (isMovable) border = '2px solid #4CAF50'
+        if (isMovable) border = isTeleportMode ? '2px solid #FF9800' : '2px solid #4CAF50'
         const isMine = myPlayer && state.pieces[myPlayer] === k
         if (isMine && selected) border = `2px solid ${ROLE_COLOR[role]}`
 
@@ -678,7 +685,9 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
               }} />
             )}
             {isMovable && !isP1 && !isP2 && !hasFreeTreasure && !usedTreasure && (
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', opacity: 0.7 }} />
+              isTeleportMode
+                ? <span style={{ fontSize: cellSize * 0.5 }}>🚀</span>
+                : <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', opacity: 0.7 }} />
             )}
           </div>
         )
@@ -761,8 +770,8 @@ function EventModal({ event, role, myPlayer, onConfirm }) {
   } else if (event.type === 'mine') {
     icon = '💥'; title = '지뢰 폭발!'
     body = event.mineCount > 1
-      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
-      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
+      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n확인 후 출발지 인접 3칸 중 한 곳으로 강제 이동`
+      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n확인 후 출발지 인접 3칸 중 한 곳으로 강제 이동`
   } else {
     icon = '🎯'
     title = event.already ? '이미 점수 받은 칸 (0점)' : `+${event.points}점`

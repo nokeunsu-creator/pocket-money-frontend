@@ -196,8 +196,13 @@ export default function MineMemoryLocal({ onBack }) {
       setPhase('end')
       return
     }
+    // 지뢰 밟아서 텔레포트 대기 중이면 같은 플레이어가 이번 턴에 한 번 더 이동(강제)
+    if (pendingTeleport === currentPlayer) {
+      setSelected(true) // 텔레포트 가능 칸을 즉시 하이라이트
+      return
+    }
     setCurrentPlayer(p => (p === 1 ? 2 : 1))
-  }, [treasureCount])
+  }, [treasureCount, pendingTeleport, currentPlayer])
 
   const restart = useCallback(() => {
     setPhase('intro')
@@ -594,9 +599,11 @@ function PlayScreen({
           if (isScored && !isP1 && !isP2 && !hasFreeTreasure) bg = '#F5F5F5'
           if (isLast && !isP1 && !isP2) bg = '#FFFBE0'
 
+          const isTeleportMode = pendingTeleport === currentPlayer
           let border = '1px solid #DDD'
-          if (isMovable) border = '2px solid #4CAF50'
+          if (isMovable) border = isTeleportMode ? '2px solid #FF9800' : '2px solid #4CAF50'
           if (isMine && selected) border = '2px solid ' + myColor
+          if (isMovable && isTeleportMode) bg = '#FFF3E0'
 
           return (
             <div
@@ -616,7 +623,11 @@ function PlayScreen({
               {!isP1 && !isP2 && hasFreeTreasure && <span style={{ filter: 'drop-shadow(0 0 4px #F4A41B88)' }}>💎</span>}
               {!isP1 && !isP2 && usedTreasure && <span style={{ opacity: 0.35, fontSize: cellSize * 0.5 }}>💎</span>}
               {isMovable && !isP1 && !isP2 && !hasFreeTreasure && !usedTreasure && (
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', opacity: 0.7 }} />
+                isTeleportMode ? (
+                  <span style={{ fontSize: cellSize * 0.5 }}>🚀</span>
+                ) : (
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', opacity: 0.7 }} />
+                )
               )}
               {isScored && !isP1 && !isP2 && !hasFreeTreasure && !usedTreasure && !isMovable && (
                 <div style={{ position: 'absolute', bottom: 1, right: 2, fontSize: cellSize * 0.25, color: '#BBB' }}>·</div>
@@ -684,8 +695,8 @@ function EventModal({ event, onDismiss }) {
     icon = '💥'
     title = '지뢰 폭발!'
     body = event.mineCount > 1
-      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
-      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n다음 턴: 출발지 인접 3칸 강제 이동`
+      ? `${event.cellId}에 지뢰 ${event.mineCount}개 (모두 제거) · ${event.penalty}점\n확인 후 출발지 인접 3칸 중 한 곳으로 강제 이동`
+      : `${event.cellId}에서 지뢰 폭발 · ${event.penalty}점\n확인 후 출발지 인접 3칸 중 한 곳으로 강제 이동`
   } else {
     icon = '🎯'
     title = event.already ? '이미 점수 받은 칸 (0점)' : `+${event.points}점`
