@@ -453,7 +453,7 @@ function Tile({ tile, selected, onClick }) {
 function ResultModal({ player, attempt, onClose }) {
   if (!attempt?.result) return null
   const color = player === 1 ? COLOR_P1 : COLOR_P2
-  const { jamos, colors } = attempt.result
+  const { chars, colors } = attempt.result
   const allGreen = colors.every(c => c === 'green')
   const summary = colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})
   return (
@@ -469,8 +469,8 @@ function ResultModal({ player, attempt, onClose }) {
         </div>
         {/* 자모별 색상 */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginBottom: 12 }}>
-          {jamos.map((j, i) => (
-            <JamoBadge key={i} jamo={j} color={colors[i]} />
+          {chars.map((c, i) => (
+            <JamoBadge key={i} jamo={c} color={colors[i]} />
           ))}
         </div>
         <div style={{ fontSize: 12, color: '#666' }}>
@@ -551,7 +551,7 @@ function PlayerResultRow({ player, guess, result, win, len }) {
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{guess || '미등록'}</div>
       {result && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-          {result.jamos.map((j, i) => <JamoBadge key={i} jamo={j} color={result.colors[i]} />)}
+          {result.chars.map((c, i) => <JamoBadge key={i} jamo={c} color={result.colors[i]} />)}
         </div>
       )}
     </div>

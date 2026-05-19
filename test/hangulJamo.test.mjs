@@ -70,67 +70,51 @@ console.log('\n[Test 4] 자모 종류')
   assert('ㅢ = vowel', jamoKind('ㅢ') === 'vowel')
 }
 
-console.log('\n[Test 5] Wordle 평가 — 완전 정답')
+console.log('\n[Test 5] Wordle 평가 — 음절 단위 완전 정답')
 {
   const r = evaluateGuess('강아지', '강아지')
-  assert('모든 자모 초록', r.colors.every(c => c === 'green'))
-  assert('자모 7개', r.jamos.length === 7)
+  assert('모든 음절 초록', r.colors.every(c => c === 'green'))
+  assert('chars 3개 (3글자)', r.chars.length === 3)
+  assert('chars[0]="강"', r.chars[0] === '강')
 }
 
 console.log('\n[Test 6] Wordle 평가 — 위치 다름 (yellow)')
 {
-  // 정답: 사람 = [ㅅ,ㅏ,ㄹ,ㅏ,ㅁ]
-  // 추측: 람사 = [ㄹ,ㅏ,ㅁ,ㅅ,ㅏ]
+  // 정답: 사람 (2글자). 추측: 람사
+  // 위치 0: 람 vs 사 → red → remain에 사 있음 → yellow
+  // 위치 1: 사 vs 람 → red → remain에 람 있음 → yellow
   const r = evaluateGuess('람사', '사람')
-  // 위치 매칭 비교:
-  // 0: ㄹ vs ㅅ → red (will check yellow)
-  // 1: ㅏ vs ㅏ → green
-  // 2: ㅁ vs ㄹ → ?
-  // 3: ㅅ vs ㅏ → ?
-  // 4: ㅏ vs ㅁ → ?
-  // 정답에 있는 자모: ㅅ, ㅏ, ㄹ, ㅏ, ㅁ
-  // 우선 green: 위치 1 ㅏ. remain set에서 ㅏ 제외 (정답엔 ㅏ가 2개 있고 하나 빠지면 1개 남음)
-  // remain: {ㅅ:1, ㄹ:1, ㅁ:1, ㅏ:1}
-  // 위치 0 ㄹ: remain에 있으니 yellow
-  // 위치 2 ㅁ: remain에 있으니 yellow
-  // 위치 3 ㅅ: remain에 있으니 yellow
-  // 위치 4 ㅏ: remain에 1개 있으니 yellow
-  assert('위치 1 green (가운데 ㅏ)', r.colors[1] === 'green')
-  assert('나머지 모두 yellow', [r.colors[0], r.colors[2], r.colors[3], r.colors[4]].every(c => c === 'yellow'))
+  assert('둘 다 yellow (글자는 있지만 위치 다름)', r.colors[0] === 'yellow' && r.colors[1] === 'yellow')
 }
 
 console.log('\n[Test 7] Wordle 평가 — 부분 정답')
 {
-  // 정답: 강아지 = [ㄱ,ㅏ,ㅇ,ㅇ,ㅏ,ㅈ,ㅣ]
-  // 추측: 가나다 = [ㄱ,ㅏ,ㄴ,ㅏ,ㄷ,ㅏ]
-  const r = evaluateGuess('가나다', '강아지')
-  // 위치 0 ㄱ vs ㄱ → green
-  // 위치 1 ㅏ vs ㅏ → green
-  // 위치 2 ㄴ vs ㅇ → red, ㄴ remain 없음
-  // 위치 3 ㅏ vs ㅇ → ?  → remain에 ㅏ 1개 (정답엔 ㅏ 2개, 첫 ㅏ가 green 처리) → yellow
-  // 위치 4 ㄷ vs ㅏ → red
-  // 위치 5 ㅏ vs ㅈ → remain에 ㅏ 더 있나? 위치 3에서 yellow 처리되며 차감 → remain ㅏ 0개 → red
-  // 추측 길이 6, 정답 길이 7 → 결과는 길이 7, 인덱스 6은 추측에 없으므로 red 기본
-  assert('위치 0 green', r.colors[0] === 'green')
-  assert('위치 1 green', r.colors[1] === 'green')
-  assert('위치 2 red (ㄴ 없음)', r.colors[2] === 'red')
-  assert('위치 3 yellow (ㅏ 잔여)', r.colors[3] === 'yellow')
-  assert('위치 4 red (ㄷ 없음)', r.colors[4] === 'red')
-  assert('위치 5 red (ㅏ 소진)', r.colors[5] === 'red')
+  // 정답: 강아지 (3글자). 추측: 강나지
+  // 위치 0: 강 = 강 → green
+  // 위치 1: 나 vs 아 → red (정답에 "나" 없음)
+  // 위치 2: 지 = 지 → green
+  const r = evaluateGuess('강나지', '강아지')
+  assert('위치 0 green (강)', r.colors[0] === 'green')
+  assert('위치 1 red (나는 정답에 없음)', r.colors[1] === 'red')
+  assert('위치 2 green (지)', r.colors[2] === 'green')
+
+  // 정답: 사람들. 추측: 들사람 (다른 위치에 모두 존재)
+  const r2 = evaluateGuess('들사람', '사람들')
+  assert('모두 yellow (글자는 있고 위치 다름)', r2.colors.every(c => c === 'yellow'))
 }
 
-console.log('\n[Test 8] Wordle 평가 — 중복 자모 처리 (no over-counting)')
+console.log('\n[Test 8] Wordle 평가 — 중복 글자 처리')
 {
-  // 정답: 사사 (가상) = [ㅅ,ㅏ,ㅅ,ㅏ]
-  // 추측: 살사 = [ㅅ,ㅏ,ㄹ,ㅅ,ㅏ]
-  // 정답에 ㅅ 2개, ㅏ 2개
-  // 위치 0 ㅅ green, 위치 1 ㅏ green
-  // 위치 2 ㄹ red
-  // 위치 3 ㅅ vs ㅅ → green (위치 2가 정답)...
-  // 잠깐 정답 길이 4, 추측 길이 5. 인덱스 매칭이 정확히 안 됨.
-  // 단순화: 길이 다르면 정확한 위치 비교가 어려움. 추가 케이스 검증.
   const r = evaluateGuess('사사', '사사')
-  assert('"사사" 자체 등록 → 모두 green', r.colors.every(c => c === 'green'))
+  assert('"사사" 자체 → 2 green', r.colors.length === 2 && r.colors.every(c => c === 'green'))
+
+  // 정답에 "강" 한 개, 추측에 "강" 두 개 (둘 다 yellow는 안 됨)
+  const r2 = evaluateGuess('강강이', '강이지')
+  // 위치 0: 강 = 강 → green
+  // 위치 1: 강 vs 이 → red. remain {이:1, 지:1} (강은 위치 0에서 green 처리됨, 차감)
+  // 위치 2: 이 vs 지 → red. remain에 "이" 있음 → yellow
+  assert('두 번째 강은 yellow 아님 (remain에 강 없음)', r2.colors[1] === 'red')
+  assert('이는 yellow', r2.colors[2] === 'yellow')
 }
 
 console.log('\n[Test 9] shuffle 결정성/길이')

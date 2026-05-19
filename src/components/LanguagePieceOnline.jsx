@@ -396,7 +396,7 @@ function OpponentBox({ oppPlayer, submitted, summary }) {
 
 function SelfSubmittedBox({ myPlayer, attempt }) {
   const color = myPlayer === 1 ? COLOR_P1 : COLOR_P2
-  const { jamos, colors } = attempt.result
+  const { chars, colors } = attempt.result
   const summary = colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})
   const allGreen = colors.every(c => c === 'green')
   return (
@@ -405,7 +405,7 @@ function SelfSubmittedBox({ myPlayer, attempt }) {
       <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 4 }}>{myPlayer}P 제출 완료</div>
       <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{attempt.guess}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginBottom: 8 }}>
-        {jamos.map((j, i) => <JamoBadge key={i} jamo={j} color={colors[i]} />)}
+        {chars.map((c, i) => <JamoBadge key={i} jamo={c} color={colors[i]} />)}
       </div>
       <div style={{ fontSize: 12, color: '#666' }}>
         🟢 {summary.green || 0}  🟡 {summary.yellow || 0}  🔴 {summary.red || 0}
@@ -530,7 +530,7 @@ function PlayerResultRow({ player, attempt, win, len }) {
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{attempt?.guess || '미제출'}</div>
       {attempt?.result && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-          {attempt.result.jamos.map((j, i) => <JamoBadge key={i} jamo={j} color={attempt.result.colors[i]} />)}
+          {attempt.result.chars.map((c, i) => <JamoBadge key={i} jamo={c} color={attempt.result.colors[i]} />)}
         </div>
       )}
     </div>

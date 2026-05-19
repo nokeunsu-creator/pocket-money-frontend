@@ -78,20 +78,16 @@ export function shuffle(arr, rng = Math.random) {
   return a
 }
 
-// Wordle 스타일 비교: 슬롯 단위(각 음절의 초/중/종 위치별)
-// 비교는 "자모 단위 위치별" — 즉 wordToJamoList의 i번째 자모를 비교
-// 입력: guessWord, answerWord (둘 다 동일 글자 수, slotsToWord로 조립된 결과)
-// 반환: 자모별 색상 array (각 자모 위치별 'green'|'yellow'|'red')
-// 추가 반환: jamo 단위 시퀀스 + 색상
+// Wordle 스타일 비교 — 원작 룰대로 음절(글자) 단위 위치별 비교
+// 입력: guessWord, answerWord (동일 글자 수)
+// 반환: { chars, colors } — 글자별 색상 ('green' = 글자/위치 일치, 'yellow' = 글자만 일치, 'red' = 정답에 없음)
+// 예: "강아지" vs "강아지" → 3 green / "사람" vs "람사" → 위치 모두 다르나 글자는 있음 → 2 yellow
 export function evaluateGuess(guessWord, answerWord) {
-  const g = wordToJamoList(guessWord)
-  const a = wordToJamoList(answerWord)
-  // 길이는 같다고 가정 (양쪽 동일 글자 수 + 받침 패턴 동일이어야 자모 수 일치 — 아닐 수도 있음)
-  // 받침 패턴이 다를 수 있어 직접 자모 시퀀스 매칭이 정확하진 않음
-  // 단순화: 자모 시퀀스 길이가 같지 않으면 짧은 쪽에 맞춰 비교 + 나머지는 red
+  const g = [...(guessWord || '')]
+  const a = [...(answerWord || '')]
   const n = Math.max(g.length, a.length)
   const result = new Array(n).fill('red')
-  const remain = new Map() // answer 자모 카운트 (위치 매칭되지 않은 것들)
+  const remain = new Map() // answer 글자 카운트 (green 매칭 안 된 것들)
 
   for (let i = 0; i < n; i++) {
     if (i < g.length && i < a.length && g[i] === a[i]) {
@@ -109,5 +105,5 @@ export function evaluateGuess(guessWord, answerWord) {
       remain.set(k, remain.get(k) - 1)
     }
   }
-  return { jamos: g.slice(0, n), colors: result }
+  return { chars: g.slice(0, n), colors: result }
 }
