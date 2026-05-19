@@ -11,7 +11,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import {
-  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind,
+  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
 
@@ -286,7 +286,7 @@ function IntroScreen({ onBack, onStart }) {
         <p style={{ fontSize: 13, color: '#888', marginTop: 4 }}>한글 자모 타일로 단어 맞히기 · 2인 패스앤플레이</p>
       </div>
 
-      <RuleCard icon="🧩" title="자모 타일로 단어 조립" body="라운드마다 정답 단어에 쓰이는 자음·모음 타일이 주어집니다. 글자칸에 자음은 초성·종성 자리, 모음은 중성 자리에 배치하세요." />
+      <RuleCard icon="🧩" title="자모 타일로 단어 조립" body={'정답 단어에 쓰이는 자음·모음 타일이 주어집니다.\n한 글자 = 초성(자음) + 중성(모음) + 받침(자음·옵션).\n예: 강 = ㄱ + ㅏ + ㅇ / 아 = ㅇ + ㅏ (받침 없음)'} />
       <RuleCard icon="📏" title="라운드별 글자 수 증가" body="1라운드 3글자 → 5라운드 7글자. 시간은 라운드당 1분." />
       <RuleCard icon="🎯" title="Wordle 스타일 피드백" body={'등록하면 자모마다 색이 떠요.\n🟢 위치 정확 / 🟡 자모는 맞지만 위치 다름 / 🔴 정답에 없음'} />
       <RuleCard icon="🏆" title="13점 먼저 = 승리" body="모든 칸 초록 = 라운드 승. 점수는 글자 수만큼." />
@@ -402,28 +402,38 @@ function TurnScreen({
       </button>
 
       <div style={{ fontSize: 11, color: '#888', marginTop: 8, lineHeight: 1.6 }}>
-        ※ 자음 타일은 초성(위) / 종성(아래) 자리, 모음 타일은 중성(가운데) 자리에만 들어갑니다.<br/>
-        ※ 종성(받침)이 없으면 그 자리는 비워두세요.
+        ※ 한 글자 = 초성(자음) + 중성(모음) + 받침(자음·옵션). 예: <b>강</b> = ㄱ + ㅏ + ㅇ<br/>
+        ※ 받침 없는 글자는 받침 칸을 비워두세요. 예: <b>아</b> = ㅇ + ㅏ
       </div>
     </div>
   )
 }
 
 function SyllableSlot({ slot, charIdx, jamoOf, onSlotTap }) {
-  const cellSize = 38
-  const slotStyle = (filled) => ({
-    width: cellSize, height: cellSize, border: `2px dashed ${filled ? '#BBB' : '#DDD'}`,
-    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 20, fontWeight: 700, cursor: 'pointer', userSelect: 'none',
-    background: filled ? '#FFF' : '#FAFAFA',
-    transition: 'all 0.1s',
+  const cho = jamoOf('cho')
+  const jung = jamoOf('jung')
+  const jong = jamoOf('jong')
+  const preview = composeChar(cho, jung, jong) || (cho && jung ? null : (cho || jung))
+  const slotStyle = (filled, accent) => ({
+    width: 36, height: 32, boxSizing: 'border-box',
+    border: `2px ${filled ? 'solid' : 'dashed'} ${filled ? accent : '#DDD'}`,
+    borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 18, fontWeight: 800, cursor: 'pointer', userSelect: 'none',
+    background: filled ? '#FFF' : '#FAFAFA', color: filled ? '#222' : '#BBB',
   })
+  const labelStyle = { fontSize: 9, color: '#888', textAlign: 'center', width: 36 }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
-      <div style={{ fontSize: 9, color: '#999' }}>{charIdx + 1}</div>
-      <div onClick={() => onSlotTap('cho')} style={slotStyle(jamoOf('cho'))}>{jamoOf('cho') || '·'}</div>
-      <div onClick={() => onSlotTap('jung')} style={slotStyle(jamoOf('jung'))}>{jamoOf('jung') || '·'}</div>
-      <div onClick={() => onSlotTap('jong')} style={slotStyle(jamoOf('jong'))}>{jamoOf('jong') || ''}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 6, border: '1px solid #EEE', borderRadius: 10, background: '#FAFAFA' }}>
+      <div style={{ fontSize: 10, color: '#999', marginBottom: 2 }}>{charIdx + 1}번 글자</div>
+      <div style={{ fontSize: 26, fontWeight: 900, color: preview ? '#222' : '#CCC', minHeight: 32, marginBottom: 4 }}>
+        {preview || '?'}
+      </div>
+      <div style={labelStyle}>초성</div>
+      <div onClick={() => onSlotTap('cho')} style={slotStyle(cho, '#0D47A1')}>{cho || ''}</div>
+      <div style={{ ...labelStyle, marginTop: 3 }}>중성</div>
+      <div onClick={() => onSlotTap('jung')} style={slotStyle(jung, '#E65100')}>{jung || ''}</div>
+      <div style={{ ...labelStyle, marginTop: 3 }}>받침</div>
+      <div onClick={() => onSlotTap('jong')} style={slotStyle(jong, '#0D47A1')}>{jong || ''}</div>
     </div>
   )
 }

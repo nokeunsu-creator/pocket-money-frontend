@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import {
-  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind,
+  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
 
@@ -416,18 +416,30 @@ function SelfSubmittedBox({ myPlayer, attempt }) {
 }
 
 function SyllableSlot({ slot, charIdx, jamoOf, onSlotTap }) {
-  const slotStyle = (filled) => ({
-    width: 38, height: 38, border: `2px dashed ${filled ? '#BBB' : '#DDD'}`,
-    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 20, fontWeight: 700, cursor: 'pointer', userSelect: 'none',
-    background: filled ? '#FFF' : '#FAFAFA',
+  const cho = jamoOf('cho')
+  const jung = jamoOf('jung')
+  const jong = jamoOf('jong')
+  const preview = composeChar(cho, jung, jong) || (cho && jung ? null : (cho || jung))
+  const slotStyle = (filled, accent) => ({
+    width: 36, height: 32, boxSizing: 'border-box',
+    border: `2px ${filled ? 'solid' : 'dashed'} ${filled ? accent : '#DDD'}`,
+    borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 18, fontWeight: 800, cursor: 'pointer', userSelect: 'none',
+    background: filled ? '#FFF' : '#FAFAFA', color: filled ? '#222' : '#BBB',
   })
+  const labelStyle = { fontSize: 9, color: '#888', textAlign: 'center', width: 36 }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
-      <div style={{ fontSize: 9, color: '#999' }}>{charIdx + 1}</div>
-      <div onClick={() => onSlotTap('cho')} style={slotStyle(jamoOf('cho'))}>{jamoOf('cho') || '·'}</div>
-      <div onClick={() => onSlotTap('jung')} style={slotStyle(jamoOf('jung'))}>{jamoOf('jung') || '·'}</div>
-      <div onClick={() => onSlotTap('jong')} style={slotStyle(jamoOf('jong'))}>{jamoOf('jong') || ''}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 6, border: '1px solid #EEE', borderRadius: 10, background: '#FAFAFA' }}>
+      <div style={{ fontSize: 10, color: '#999', marginBottom: 2 }}>{charIdx + 1}번 글자</div>
+      <div style={{ fontSize: 26, fontWeight: 900, color: preview ? '#222' : '#CCC', minHeight: 32, marginBottom: 4 }}>
+        {preview || '?'}
+      </div>
+      <div style={labelStyle}>초성</div>
+      <div onClick={() => onSlotTap('cho')} style={slotStyle(cho, '#0D47A1')}>{cho || ''}</div>
+      <div style={{ ...labelStyle, marginTop: 3 }}>중성</div>
+      <div onClick={() => onSlotTap('jung')} style={slotStyle(jung, '#E65100')}>{jung || ''}</div>
+      <div style={{ ...labelStyle, marginTop: 3 }}>받침</div>
+      <div onClick={() => onSlotTap('jong')} style={slotStyle(jong, '#0D47A1')}>{jong || ''}</div>
     </div>
   )
 }
