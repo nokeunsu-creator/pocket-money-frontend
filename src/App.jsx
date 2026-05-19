@@ -70,6 +70,16 @@ import WordBattle from './components/WordBattle'
 import EnglishChampionship from './components/EnglishChampionship'
 import FamilyTree from './components/FamilyTree'
 import GrowthTracker from './components/GrowthTracker'
+import RedLightGreenLight from './components/RedLightGreenLight'
+import Dalgona from './components/Dalgona'
+import GlassBridge from './components/GlassBridge'
+import Marbles from './components/Marbles'
+import Ddakji from './components/Ddakji'
+import Gonggi from './components/Gonggi'
+import SixInRow from './components/SixInRow'
+import IndianPoker from './components/IndianPoker'
+import ECard from './components/ECard'
+import PrimeMonopoly from './components/PrimeMonopoly'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -541,6 +551,36 @@ export default function App() {
       )}
       {currentPage === 'game-safety' && (
         <GradeQuiz quizId="safety" title="안전/생활상식" icon="🛡️" color="#E67E22" grades={safetyQuiz} onBack={goBack} />
+      )}
+      {currentPage === 'game-rlgl' && (
+        <RedLightGreenLight onBack={goBack} />
+      )}
+      {currentPage === 'game-dalgona' && (
+        <Dalgona onBack={goBack} />
+      )}
+      {currentPage === 'game-glassbridge' && (
+        <GlassBridge onBack={goBack} />
+      )}
+      {currentPage === 'game-marbles' && (
+        <Marbles onBack={goBack} />
+      )}
+      {currentPage === 'game-ddakji' && (
+        <Ddakji onBack={goBack} />
+      )}
+      {currentPage === 'game-gonggi' && (
+        <Gonggi onBack={goBack} />
+      )}
+      {currentPage === 'game-sixrow' && (
+        <SixInRow onBack={goBack} />
+      )}
+      {currentPage === 'game-indianpoker' && (
+        <IndianPoker onBack={goBack} />
+      )}
+      {currentPage === 'game-ecard' && (
+        <ECard onBack={goBack} />
+      )}
+      {currentPage === 'game-primegame' && (
+        <PrimeMonopoly onBack={goBack} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}

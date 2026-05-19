@@ -53,6 +53,20 @@ export default function GameHub({ onBack, onSelectGame }) {
       ],
     },
     {
+      label: '🦑 서바이벌 게임', games: [
+        { key: 'rlgl', icon: '🌸', title: '무궁화 꽃이 피었습니다', desc: '영희가 돌아볼 때 멈춰!', color: '#E63946' },
+        { key: 'dalgona', icon: '🍯', title: '달고나 뽑기', desc: '모양 따라 살살 떼기', color: '#FF9F1C' },
+        { key: 'glassbridge', icon: '🟦', title: '징검다리', desc: '강화유리 vs 일반유리', color: '#118AB2' },
+        { key: 'marbles', icon: '🔴', title: '구슬치기 (짝홀)', desc: '주머니 구슬 짝/홀 맞추기', color: '#06A77D' },
+        { key: 'ddakji', icon: '🟫', title: '딱지치기', desc: '타이밍으로 뒤집기', color: '#8B4513' },
+        { key: 'gonggi', icon: '🟢', title: '공기놀이', desc: '4단계 타이밍 게임', color: '#2D6A4F' },
+        { key: 'sixrow', icon: '⚫', title: '6목 (육목)', desc: '한 턴에 2수 · AI 대전', color: '#34495E' },
+        { key: 'indianpoker', icon: '🎴', title: '인디언 포커', desc: '내 카드만 안 보임 · 심리전', color: '#7E3F8F' },
+        { key: 'ecard', icon: '👑', title: 'E카드', desc: '황제·시민·노예 가위바위보', color: '#B91D47' },
+        { key: 'primegame', icon: '🔢', title: '소수 독점', desc: '5명 중 유일한 소수면 점수!', color: '#1F77B4' },
+      ],
+    },
+    {
       label: '🏅 기타', games: [
         { key: 'achievements', icon: '🏅', title: '업적', desc: '도전 과제 달성하기', color: '#F1C40F' },
         { key: 'leaderboard', icon: '🏆', title: '퀴즈 리더보드', desc: '월별 순위·형제 대결', color: '#E67E22' },
