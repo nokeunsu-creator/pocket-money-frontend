@@ -18,14 +18,19 @@ const ACCENT = '#7E57C2'
 
 function buildRoundData(word) {
   const chars = decomposeWord(word)
-  const slots = chars.map(() => ({ cho: null, jung: null, jong: null }))
   const tileJamos = []
   for (const ch of chars) {
     tileJamos.push(ch.cho, ch.jung)
     if (ch.jong) tileJamos.push(ch.jong)
   }
   const tilePool = tileJamos.map((j, idx) => ({ id: idx, jamo: j, kind: jamoKind(j) }))
-  return { slots, tilePool: shuffle(tilePool), answer: word, hasJong: chars.map(c => !!c.jong) }
+  // 주의: Firebase Realtime DB는 null 값을 자동 삭제하므로 slots 배열은 보내지 않음.
+  // 각 클라이언트가 len 기반으로 로컬 state로 직접 생성.
+  return { tilePool: shuffle(tilePool), answer: word, hasJong: chars.map(c => !!c.jong), len: chars.length }
+}
+
+function makeEmptySlots(len) {
+  return Array.from({ length: len }, () => ({ cho: null, jung: null, jong: null }))
 }
 
 function initialState() {
@@ -215,9 +220,10 @@ function RoundIntro({ room, state, myPlayer }) {
 // 본 게임 — 양쪽 동시 진행, 본인은 위치별 색 / 상대는 갯수만
 function TurnScreen({ room, state, myPlayer, oppPlayer }) {
   const rd = state.roundData
+  const slotCount = rd?.len ?? rd?.hasJong?.length ?? 0
   // 로컬 시도 (각 클라이언트가 본인 상태를 따로 유지)
-  const [localSlots, setLocalSlots] = useState(() => rd ? rd.slots.map(s => ({ ...s })) : [])
-  const [localTilePool, setLocalTilePool] = useState(() => rd ? rd.tilePool.map(t => ({ ...t, used: false })) : [])
+  const [localSlots, setLocalSlots] = useState(() => makeEmptySlots(slotCount))
+  const [localTilePool, setLocalTilePool] = useState(() => rd?.tilePool ? rd.tilePool.map(t => ({ ...t, used: false })) : [])
   const [selectedTile, setSelectedTile] = useState(null)
   const [now, setNow] = useState(() => Date.now())
   const myAttempt = state.attempts?.[myPlayer]
@@ -241,8 +247,9 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
   // 라운드 변경 감지 — 로컬 상태 리셋
   useEffect(() => {
     if (!rd) return
-    setLocalSlots(rd.slots.map(s => ({ ...s })))
-    setLocalTilePool(rd.tilePool.map(t => ({ ...t, used: false })))
+    const len = rd.len ?? rd.hasJong?.length ?? 0
+    setLocalSlots(makeEmptySlots(len))
+    setLocalTilePool(rd.tilePool ? rd.tilePool.map(t => ({ ...t, used: false })) : [])
     setSelectedTile(null)
   }, [rd, state.round])
 
@@ -321,7 +328,7 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
     <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 13, color: '#666' }}>R{state.round} · {rd.slots.length}글자</div>
+        <div style={{ fontSize: 13, color: '#666' }}>R{state.round} · {slotCount}글자</div>
         <div style={{
           fontSize: 14, fontWeight: 800,
           color: timeOver ? '#E63946' : secondsLeft < 15 ? '#E67E22' : '#444',
