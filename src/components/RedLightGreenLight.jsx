@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { playClick, playWin, playLose, playError } from '../utils/sounds'
 
 const GOAL = 100
 const TIME_LIMIT = 45
@@ -47,6 +48,7 @@ export default function RedLightGreenLight({ onBack }) {
       setTimeLeft(t => {
         if (t <= 1) {
           clearTimers()
+          playLose()
           setPhase('lose')
           return 0
         }
@@ -62,6 +64,7 @@ export default function RedLightGreenLight({ onBack }) {
     if (lightRef.current === 'red') {
       // 탈락
       clearTimers()
+      playLose()
       setPhase('lose')
       return
     }
@@ -74,7 +77,10 @@ export default function RedLightGreenLight({ onBack }) {
           setBestTime(elapsed)
           try { localStorage.setItem(BEST_KEY, String(elapsed)) } catch (_) {}
         }
+        playWin()
         setPhase('win')
+      } else {
+        playClick()
       }
       return next
     })

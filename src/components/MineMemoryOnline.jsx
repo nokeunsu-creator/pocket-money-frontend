@@ -5,6 +5,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useViewportWidth } from '../utils/useViewportWidth'
 import { useMineMemoryRoom } from '../utils/useMineMemoryRoom'
+import { playClick, playPlace, playScore, playTreasure, playMine, playWin, playLose, playError } from '../utils/sounds'
 import {
   SIZE, MINES_PER_PLAYER, TREASURE_POINTS, MINE_PENALTY,
   MINE_SETUP_SECONDS,
@@ -604,6 +605,10 @@ function PhasePlay({ data, room, role, state, visibleMines }) {
     if (!isActor) return
     // 게임 종료 체크
     if (state.treasureCount >= 3) {
+      const myScore = state.scores?.[myPlayer] || 0
+      const oppScore = state.scores?.[myPlayer === 1 ? 2 : 1] || 0
+      if (myScore > oppScore) playWin()
+      else if (myScore < oppScore) playLose()
       await room.patchRoom({ phase: 'end', event: null })
       return
     }
@@ -718,14 +723,17 @@ function doMove(state, player, tk) {
     newTreasures[tk] = { player, order: order + 1 }
     newTreasureCount = order + 1
     evt = { type: 'treasure', player, points: pts, order: order + 1, cellId: toId(tr, tc) }
+    playTreasure()
   } else if (isTrCell) {
     evt = { type: 'treasure-empty', player, cellId: toId(tr, tc) }
+    playError()
   } else if (newMines[1].has(tk) || newMines[2].has(tk)) {
     const cnt = (newMines[1].has(tk) ? 1 : 0) + (newMines[2].has(tk) ? 1 : 0)
     newScores[player] += MINE_PENALTY
     newMines[1].delete(tk); newMines[2].delete(tk)
     newPendingTeleport = player
     evt = { type: 'mine', player, mineCount: cnt, penalty: MINE_PENALTY, cellId: toId(tr, tc) }
+    playMine()
   } else {
     const already = newScoredCells.has(tk)
     let s = 0
@@ -743,6 +751,7 @@ function doMove(state, player, tk) {
     }
     newScores[player] += s
     evt = { type: 'score', player, points: s, already, cellId: toId(tr, tc) }
+    if (s > 0) playScore(); else playPlace()
   }
 
   const nextState = {

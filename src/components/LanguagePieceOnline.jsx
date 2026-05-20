@@ -7,6 +7,7 @@ import {
   decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
+import { playClick, playPlace, playSuccess, playFail, playWin, playLose, playError } from '../utils/sounds'
 
 const ROUND_LEN = [3, 4, 5]
 const TARGET_SCORE = 13 // 사실상 도달 불가 — 라운드 수 한계로 게임 종료
@@ -311,9 +312,10 @@ function TurnScreen({ room, state, myPlayer, oppPlayer }) {
       jong: s.jong != null ? localTilePool.find(t => t.id === s.jong)?.jamo : null,
     }))
     const guess = slotsToWord(slotsJamo)
-    if (!guess) { alert('글자를 모두 완성하세요 (자음/모음)'); return }
+    if (!guess) { playError(); alert('글자를 모두 완성하세요 (자음/모음)'); return }
     const result = evaluateGuess(guess, rd.answer)
     const allGreen = result.colors.every(c => c === 'green')
+    if (allGreen) playSuccess(); else playFail()
     const newHistory = [...myHistory, { guess, result }]
     const newAttempts = {
       ...state.attempts,
@@ -535,6 +537,9 @@ function RoundEndScreen({ room, state, myPlayer, isHost }) {
     if (win1) newScores[1] += len
     if (win2) newScores[2] += len
     if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || state.round >= ROUND_LEN.length) {
+      const winner = newScores[1] > newScores[2] ? 1 : newScores[2] > newScores[1] ? 2 : 0
+      if (winner) playWin()
+      else playLose()
       room.updateState({ ...state, scores: newScores, phase: 'end' })
       return
     }

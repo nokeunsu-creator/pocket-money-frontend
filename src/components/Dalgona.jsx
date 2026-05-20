@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { playWin, playLose } from '../utils/sounds'
 
 const SHAPES = [
   { key: 'circle', name: '동그라미', icon: '⭕', difficulty: 1 },
@@ -167,6 +168,7 @@ export default function Dalgona({ onBack }) {
     const t = setInterval(() => {
       setTimeLeft(x => {
         if (x <= 1) {
+          playLose()
           setPhase('lose')
           return 0
         }
@@ -238,7 +240,7 @@ export default function Dalgona({ onBack }) {
       const pct = Math.round((count / visited.length) * 100)
       setProgress(prev => {
         if (pct >= 95 && prev < 95) {
-          setTimeout(() => setPhase('win'), 50)
+          setTimeout(() => { playWin(); setPhase('win') }, 50)
         }
         return Math.max(prev, pct)
       })
@@ -250,7 +252,7 @@ export default function Dalgona({ onBack }) {
         setCracks(prev => {
           const next = prev + 1
           if (next >= MAX_CRACKS) {
-            setTimeout(() => setPhase('lose'), 50)
+            setTimeout(() => { playLose(); setPhase('lose') }, 50)
           }
           return next
         })

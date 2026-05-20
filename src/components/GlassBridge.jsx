@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { playClick, playWin, playLose, playError } from '../utils/sounds'
 
 const STEPS = 16
 const STEP_TIME = 10 // 초
@@ -63,6 +64,7 @@ export default function GlassBridge({ onBack }) {
     if (phase !== 'playing') return
     const correct = bridge[step]
     if (side === correct) {
+      playClick()
       setReveal(r => ({ ...r, [step]: 'safe-' + side }))
       const nextStep = step + 1
       if (nextStep >= STEPS) {
@@ -71,11 +73,12 @@ export default function GlassBridge({ onBack }) {
           setBest(STEPS)
           try { localStorage.setItem(BEST_KEY, String(STEPS)) } catch (_) {}
         }
-        setTimeout(() => setPhase('win'), 400)
+        setTimeout(() => { playWin(); setPhase('win') }, 400)
       } else {
         setTimeout(() => setStep(nextStep), 300)
       }
     } else {
+      playError()
       setReveal(r => ({ ...r, [step]: 'fail-' + side }))
       setLives(prev => {
         const next = prev - 1
@@ -84,7 +87,7 @@ export default function GlassBridge({ onBack }) {
             setBest(step)
             try { localStorage.setItem(BEST_KEY, String(step)) } catch (_) {}
           }
-          setTimeout(() => setPhase('lose'), 600)
+          setTimeout(() => { playLose(); setPhase('lose') }, 600)
         }
         return next
       })

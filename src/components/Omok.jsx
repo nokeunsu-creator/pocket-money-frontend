@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
+import { playPlace, playWin, playLose } from '../utils/sounds'
 
 const SIZE = 15
 
@@ -219,6 +220,8 @@ export default function Omok({ onBack }) {
         const newHistory = [...history, { r, c, player: aiColor }]
         const newWinner = checkWin(newBoard, r, c, aiColor) ? aiColor : null
         const newTurn = newWinner ? aiColor : (aiColor === 'black' ? 'white' : 'black')
+        if (newWinner) playLose()
+        else playPlace()
         setBoard(newBoard)
         setLastMove([r, c])
         setHistory(newHistory)
@@ -255,6 +258,8 @@ export default function Omok({ onBack }) {
     const newHistory = [...history, { r, c, player: turn }]
     const newWinner = checkWin(newBoard, r, c, turn) ? turn : null
     const newTurn = newWinner ? turn : (turn === 'black' ? 'white' : 'black')
+    if (newWinner) playWin()
+    else playPlace()
 
     if (mode === 'online') {
       room.updateState({
