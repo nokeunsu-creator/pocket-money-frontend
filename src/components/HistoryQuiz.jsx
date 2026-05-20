@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { HISTORY_TOPICS } from '../data/historyQuiz'
+import { playSuccess, playFail } from '../utils/sounds'
 
 const STORAGE_KEY = 'history-quiz-progress'
 const TOTAL_QUESTIONS = 20
@@ -111,9 +112,11 @@ export default function HistoryQuiz({ onBack }) {
       correctRef.current += 1
       setTotalScore(scoreRef.current)
       setCorrectCount(correctRef.current)
+      playSuccess()
     } else {
       wrongRef.current = [...wrongRef.current, { ...q, selected: choiceIdx }]
       setWrongAnswers(wrongRef.current)
+      playFail()
     }
 
     setFeedback({ selected: choiceIdx, correct: q.answer, isCorrect, earned, explanation: q.explanation })

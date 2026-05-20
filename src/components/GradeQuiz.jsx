@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
 import { submitQuizScore } from '../api/api'
+import { playSuccess, playFail, playWin } from '../utils/sounds'
 
 const STORAGE_PREFIX = 'grade-quiz-'
 const PLAYER_KEY = 'grade-quiz-player'
@@ -71,8 +72,8 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
     if (selected !== null) return
     setSelected(idx)
     const correct = idx === questions[qIndex].answer
-    if (correct) setScore(s => s + 1)
-    else setWrong(w => [...w, { ...questions[qIndex], selectedIdx: idx }])
+    if (correct) { setScore(s => s + 1); playSuccess() }
+    else { setWrong(w => [...w, { ...questions[qIndex], selectedIdx: idx }]); playFail() }
   }
 
   const handleNextQ = () => {
@@ -96,6 +97,7 @@ export default function GradeQuiz({ quizId, title, icon, color, grades, onBack, 
           yearMonth: thisYearMonth(),
         }).catch(() => { /* 기록 실패해도 UX 방해 안 함 */ })
       }
+      playWin()
       setPhase('result')
     } else {
       setQIndex(qIndex + 1)

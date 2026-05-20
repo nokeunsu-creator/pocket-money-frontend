@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import nonsenseQuiz from '../data/nonsenseQuiz'
+import { playSuccess, playFail } from '../utils/sounds'
 
 // 다른 문제들의 답을 풀(pool)로 오답 보기 3개 섞어 4지선다 생성
 function buildChoices(current, pool) {
@@ -111,6 +112,7 @@ export default function NonsenseQuiz({ onBack }) {
     if (selectedIdx !== null || !choiceData) return
     setSelectedIdx(idx)
     const correct = idx === choiceData.correctIdx
+    if (correct) playSuccess(); else playFail()
     if (mode === 'challenge') {
       if (correct) {
         const newStreak = streak + 1

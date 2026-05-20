@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
+import { playSuccess, playFail } from '../utils/sounds'
 
 function generateQuestion(level) {
   const ops = ['+', '-', '×', '÷']
@@ -301,11 +302,13 @@ export default function MathSpeedQuiz({ onBack }) {
       setCombo(newCombo)
       setMaxCombo(m => Math.max(m, newCombo))
       setFeedback('correct')
+      playSuccess()
     } else {
       comboRef.current = 0
       newCombo = 0
       setCombo(0)
       setFeedback('wrong')
+      playFail()
     }
     setInput('')
 

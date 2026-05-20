@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
+import { playSuccess, playFail } from '../utils/sounds'
 
 function generateQuestion(range) {
   const a = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0]
@@ -97,8 +98,10 @@ export default function MultiplyChallenge({ onBack }) {
     if (isCorrect) {
       setScore(newScore)
       setFeedback('correct')
+      playSuccess()
     } else {
       setFeedback('wrong')
+      playFail()
     }
     setInput('')
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { SCIENCE_TOPICS } from '../data/scienceQuiz'
+import { playSuccess, playFail } from '../utils/sounds'
 
 // ====== localStorage helpers ======
 const STORAGE_KEY = 'science-quiz-progress'
@@ -158,6 +159,7 @@ export default function ScienceQuiz({ onBack }) {
     const isCorrect = choiceIdx === q.answer
 
     if (isCorrect) {
+      playSuccess()
       const timeBonus = Math.floor(timeLeftRef.current) * 3
       const points = 50 + timeBonus
       const newScore = scoreRef.current + points
@@ -175,6 +177,7 @@ export default function ScienceQuiz({ onBack }) {
         advanceQuestion()
       }, 2000)
     } else {
+      playFail()
       setWrongAnswers(prev => [...prev, {
         question: q.q,
         correctAnswer: q.choices[q.answer],
