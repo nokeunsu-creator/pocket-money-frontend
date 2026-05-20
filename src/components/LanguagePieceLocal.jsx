@@ -14,6 +14,7 @@ import {
   decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
+import { playClick, playPlace, playSuccess, playFail, playWin, playLose, playError } from '../utils/sounds'
 
 const ROUND_LEN = [3, 4, 5] // 라운드 1~3 (6글자 이상 단어 제외)
 const TARGET_SCORE = 13 // 사실상 도달 불가 — 라운드 수 한계로 게임 종료
@@ -112,6 +113,7 @@ export default function LanguagePieceLocal({ onBack }) {
         pool.find(t => t.id === currentTileId).used = false
         slot[kind] = null
         setSelectedTile(null)
+        playClick()
         return { ...prev, [cp]: { ...a, slots, tilePool: pool } }
       }
       // 빈 슬롯 + 선택 타일 → 배치 (kind 맞아야)
@@ -119,11 +121,12 @@ export default function LanguagePieceLocal({ onBack }) {
       const tile = pool.find(t => t.id === selectedTile)
       if (!tile || tile.used) return prev
       // kind 매칭: 모음 → 'jung'만 / 자음 → 'cho' or 'jong'만
-      if (tile.kind === 'vowel' && kind !== 'jung') return prev
-      if (tile.kind === 'consonant' && kind === 'jung') return prev
+      if (tile.kind === 'vowel' && kind !== 'jung') { playError(); return prev }
+      if (tile.kind === 'consonant' && kind === 'jung') { playError(); return prev }
       tile.used = true
       slot[kind] = tile.id
       setSelectedTile(null)
+      playPlace()
       return { ...prev, [cp]: { ...a, slots, tilePool: pool } }
     })
   }, [currentPlayer, roundData, selectedTile])
@@ -152,10 +155,14 @@ export default function LanguagePieceLocal({ onBack }) {
     }))
     const guess = trySlotsToWord(slotsWithJamo)
     if (!guess) {
+      playError()
       alert('완성된 글자가 아닙니다. 모든 글자의 자음·모음을 채워주세요.')
       return
     }
     const result = evaluateGuess(guess, roundData.answer)
+    const allGreen = result.colors.every(c => c === 'green')
+    if (allGreen) playSuccess()
+    else playFail()
     setAttempt(prev => ({
       ...prev,
       [cp]: { ...prev[cp], submitted: true, result, guess },
@@ -212,6 +219,9 @@ export default function LanguagePieceLocal({ onBack }) {
     if (allGreen) newScores[cp] += ROUND_LEN[round - 1]
     setScores(newScores)
     if (newScores[1] >= TARGET_SCORE || newScores[2] >= TARGET_SCORE || round >= ROUND_LEN.length) {
+      const winner = newScores[1] > newScores[2] ? 1 : newScores[2] > newScores[1] ? 2 : 0
+      if (winner) playWin()
+      else playLose()
       setPhase('end')
       return
     }

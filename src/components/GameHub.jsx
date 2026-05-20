@@ -1,4 +1,17 @@
+import { useState } from 'react'
+import { isSoundEnabled, toggleSound, playClick } from '../utils/sounds'
+
 export default function GameHub({ onBack, onSelectGame }) {
+  const [soundOn, setSoundOn] = useState(isSoundEnabled())
+  const handleSoundToggle = () => {
+    const v = toggleSound()
+    setSoundOn(v)
+    if (v) playClick() // 켰으면 한 번 들려주기
+  }
+  const handleGameSelect = (key) => {
+    playClick()
+    onSelectGame(key)
+  }
   const categories = [
     {
       label: '🧩 보드게임', games: [
@@ -76,10 +89,17 @@ export default function GameHub({ onBack, onSelectGame }) {
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
-      <button onClick={onBack}
-        style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
-        ← 돌아가기
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer' }}>
+          ← 돌아가기
+        </button>
+        <button onClick={handleSoundToggle}
+          aria-label={soundOn ? '소리 끄기' : '소리 켜기'}
+          style={{ background: soundOn ? '#E8F5E9' : '#F0F0F0', border: 'none', borderRadius: 999, padding: '6px 12px', fontSize: 18, cursor: 'pointer' }}>
+          {soundOn ? '🔊' : '🔇'}
+        </button>
+      </div>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🎮</div>
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>게임</h2>
@@ -92,7 +112,7 @@ export default function GameHub({ onBack, onSelectGame }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cat.games.map(g => (
               <button key={g.key}
-                onClick={() => onSelectGame(g.key)}
+                onClick={() => handleGameSelect(g.key)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',

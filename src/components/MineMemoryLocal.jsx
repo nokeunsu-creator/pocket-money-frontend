@@ -12,6 +12,7 @@ import {
   DIRS_8, ADJ_8, rollDie,
   getTeleportTargets, countMineCells,
 } from '../utils/mineMemoryLogic'
+import { playClick, playPlace, playScore, playTreasure, playMine, playWin, playError } from '../utils/sounds'
 
 // ────────────────────────────────────────────────────────────
 // 메인 컴포넌트
@@ -149,9 +150,11 @@ export default function MineMemoryLocal({ onBack }) {
       newTreasures[tk] = { player, order: order + 1 }
       newTreasureCount = order + 1
       evt = { type: 'treasure', player, points: pts, order: order + 1, cellId: toId(tr, tc) }
+      playTreasure()
     } else if (isTreasureCell_) {
       // 이미 획득된 보물칸 — 점수 없음 (보물칸은 보물만)
       evt = { type: 'treasure-empty', player, cellId: toId(tr, tc) }
+      playError()
     } else if (newMines[1].has(tk) || newMines[2].has(tk)) {
       const minesHere = (newMines[1].has(tk) ? 1 : 0) + (newMines[2].has(tk) ? 1 : 0)
       newScores[player] += MINE_PENALTY
@@ -159,6 +162,7 @@ export default function MineMemoryLocal({ onBack }) {
       newMines[2].delete(tk)
       newPendingTeleport = player
       evt = { type: 'mine', player, mineCount: minesHere, penalty: MINE_PENALTY, cellId: toId(tr, tc) }
+      playMine()
     } else {
       let cellScore = 0
       const already = newScoredCells.has(tk)
@@ -176,6 +180,8 @@ export default function MineMemoryLocal({ onBack }) {
       }
       newScores[player] += cellScore
       evt = { type: 'score', player, points: cellScore, already, cellId: toId(tr, tc) }
+      if (cellScore > 0) playScore()
+      else playPlace()
     }
 
     setPieces(prev => ({ ...prev, [player]: tk }))
@@ -193,6 +199,7 @@ export default function MineMemoryLocal({ onBack }) {
   const dismissEvent = useCallback(() => {
     setEvent(null)
     if (treasureCount >= 3) {
+      playWin()
       setPhase('end')
       return
     }
