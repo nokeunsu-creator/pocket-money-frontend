@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { playSuccess, playFail } from '../utils/sounds'
 
 /**
  * 24점 퍼즐: 4개 숫자를 사칙연산으로 조합해 24 만들기.
@@ -89,9 +90,11 @@ export default function TwentyFour({ onBack }) {
   const check = () => {
     const res = evaluate(input, nums)
     if (res.ok) {
+      playSuccess()
       setFeedback({ ok: true, msg: `🎉 정답! ${input} = 24` })
       setSolved(s => s + 1)
     } else {
+      playFail()
       const reasons = {
         empty: '수식을 입력해주세요',
         invalid: '숫자와 +, −, ×, ÷, (, ) 만 쓸 수 있어요',

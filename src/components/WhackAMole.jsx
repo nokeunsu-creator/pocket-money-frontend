@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
 import { submitQuizScore } from '../api/api'
 import { unlock } from '../utils/achievements'
+import { playSuccess, playWin } from '../utils/sounds'
 
 const GAME_SECONDS = 30
 const GRID = 9 // 3x3
@@ -107,12 +108,14 @@ export default function WhackAMole({ onBack }) {
     // 업적
     if (finalScore >= 20) unlock('whack_mole_20')
     if (finalScore >= 40) unlock('whack_mole_40')
+    playWin()
     setPhase('result')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, phase])
 
   const whack = (idx) => {
     if (phase !== 'playing' || idx !== activeIdx) return
+    playSuccess()
     setScore(s => s + 1)
     setHits(h => ({ ...h, [idx]: Date.now() }))
     setActiveIdx(-1)

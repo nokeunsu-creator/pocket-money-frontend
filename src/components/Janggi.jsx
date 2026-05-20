@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
+import { playPlace, playWin, playLose } from '../utils/sounds'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const ROWS = 10
@@ -671,6 +672,8 @@ export default function Janggi({ onBack }) {
         if (!findKing(newBoard, CHO)) newWinner = HAN
         if (checkBikjang(newBoard)) newWinner = 'draw'
 
+        if (newWinner === HAN) playLose()
+        else playPlace()
         setMoveHistory(prev => [...prev, { board: board.map(row => row.map(cell => cell ? { ...cell } : null)), turn, lastMove, inCheck }])
         setBoard(newBoard)
         setTurn(newTurn)
@@ -731,6 +734,9 @@ export default function Janggi({ onBack }) {
             inCheck: check || '',
           })
         } else {
+          if (newWinner === CHO) playWin()
+          else if (newWinner === HAN) playLose()
+          else playPlace()
           setMoveHistory(prev => [...prev, { board: board.map(row => row.map(cell => cell ? { ...cell } : null)), turn, lastMove, inCheck }])
           setBoard(newBoard)
           setTurn(nextTurn)

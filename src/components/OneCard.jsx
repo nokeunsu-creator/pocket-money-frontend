@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { playPlace, playWin, playLose } from '../utils/sounds'
 
 const SUITS = ['♠', '♥', '♦', '♣']
 const SUIT_COLORS = { '♠': '#333', '♥': '#E74C3C', '♦': '#E74C3C', '♣': '#333' }
@@ -205,6 +206,7 @@ export default function OneCard({ onBack }) {
     setActiveSuit(null)
 
     if (newHand.length === 0) {
+      playWin()
       setGameOver('win')
       setMessage('승리!')
       return
@@ -277,6 +279,7 @@ export default function OneCard({ onBack }) {
         setDiscard(newDiscard)
 
         if (newHand.length === 0) {
+          playLose()
           setGameOver('lose')
           setMessage('컴퓨터 승리...')
           return

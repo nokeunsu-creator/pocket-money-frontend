@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { playPlace, playSuccess, playFail, playWin } from '../utils/sounds'
 
 const EMOJI_SETS = {
   4: ['🐶', '🐱', '🐸', '🐵', '🦊', '🐰', '🐻', '🐼'],
@@ -122,12 +123,18 @@ export default function MemoryCard({ onBack }) {
         setMatched(newMatched)
         setFlipped([])
         if (newMatched.length === cards.length) {
+          playWin()
           setWon(true)
           clearInterval(timerRef.current)
+        } else {
+          playSuccess()
         }
       } else {
+        playFail()
         setTimeout(() => setFlipped([]), 600)
       }
+    } else {
+      playPlace()
     }
   }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
+import { playWin, playLose } from '../utils/sounds'
 
 const SUITS = ['♠', '♥', '♦', '♣']
 const SUIT_COLORS = { '♠': '#333', '♥': '#E74C3C', '♦': '#E74C3C', '♣': '#333' }
@@ -234,6 +235,7 @@ export default function Hula({ onBack }) {
 
     // 훌라 체크
     if (canDeclareHula(newHand)) {
+      playWin()
       setGameOver('win')
       setMessage('🎉 훌라! 승리!')
       return
@@ -282,6 +284,7 @@ export default function Hula({ onBack }) {
 
       // 훌라 체크
       if (canDeclareHula(newCpuHand)) {
+        playLose()
         setGameOver('lose')
         setMessage('컴퓨터 훌라! 패배...')
         return

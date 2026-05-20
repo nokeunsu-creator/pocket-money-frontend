@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
+import { playPlace, playWin, playLose } from '../utils/sounds'
 
 const PIECES = {
   K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
@@ -602,6 +603,8 @@ export default function Chess({ onBack }) {
         newGameOver = check ? 'checkmate-black' : 'stalemate'
       }
 
+      if (newGameOver === 'checkmate-black') playLose()
+      else playPlace()
       setBoard(nb)
       setCastling(newCastling)
       setEnPassant(newEP)
@@ -777,6 +780,8 @@ export default function Chess({ onBack }) {
       if (!hasAnyLegalMove(nb, nextTurn, newEP, newCastling)) {
         newGameOver = check ? `checkmate-${turn}` : 'stalemate'
       }
+      if (newGameOver?.startsWith('checkmate-')) playWin()
+      else playPlace()
 
       if (mode === 'online') {
         pushOnlineState(nb, nextTurn, newCastling, newEP, newLastMove, newGameOver, check, newCaptured, null)
