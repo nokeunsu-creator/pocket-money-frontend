@@ -27,6 +27,10 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'hex', icon: '⬡', title: '헥스', desc: '11×11 육각판 길 연결 · AI', color: '#455A64' },
         { key: 'blokus', icon: '🟦', title: '블로커스 듀오', desc: '14×14 폴리오미노 · AI', color: '#1976D2' },
         { key: 'quarto', icon: '🔲', title: '퀀토', desc: '4×4 · 상대가 내 말 선택 · AI', color: '#6D4C41' },
+        { key: 'connect4', icon: '🔴', title: '커넥트 포 (사목)', desc: '7×6 · 4개 연결 · AI', color: '#1565C0' },
+        { key: 'checkers', icon: '⛳', title: '체커', desc: '8×8 대각선 점프 · 킹 · AI', color: '#8D6E63' },
+        { key: 'yutnori', icon: '🪵', title: '윷놀이', desc: '한국 전통 · 4말 · AI', color: '#FB8C00' },
+        { key: 'gonu', icon: '🟫', title: '줄고누', desc: '한국 전통 3×3 · AI', color: '#8B6F2A' },
       ],
     },
     {

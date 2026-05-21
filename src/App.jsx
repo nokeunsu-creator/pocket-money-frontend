@@ -85,6 +85,10 @@ import NineMensMorris from './components/NineMensMorris'
 import Hex from './components/Hex'
 import BlokusDuo from './components/BlokusDuo'
 import Quarto from './components/Quarto'
+import ConnectFour from './components/ConnectFour'
+import Checkers from './components/Checkers'
+import Yutnori from './components/Yutnori'
+import Gonu from './components/Gonu'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -601,6 +605,18 @@ export default function App() {
       )}
       {currentPage === 'game-quarto' && (
         <Quarto onBack={goBack} />
+      )}
+      {currentPage === 'game-connect4' && (
+        <ConnectFour onBack={goBack} />
+      )}
+      {currentPage === 'game-checkers' && (
+        <Checkers onBack={goBack} />
+      )}
+      {currentPage === 'game-yutnori' && (
+        <Yutnori onBack={goBack} />
+      )}
+      {currentPage === 'game-gonu' && (
+        <Gonu onBack={goBack} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
