@@ -80,6 +80,7 @@ import SixInRow from './components/SixInRow'
 import IndianPoker from './components/IndianPoker'
 import ECard from './components/ECard'
 import PrimeMonopoly from './components/PrimeMonopoly'
+import Dojo from './components/Dojo'
 import Othello from './components/Othello'
 import NineMensMorris from './components/NineMensMorris'
 import Hex from './components/Hex'
@@ -351,7 +352,7 @@ export default function App() {
         <FamilyHub
           onBack={goBack}
           onSelect={(key) => {
-            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth' }
+            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo' }
             const nextPage = pageMap[key]
             if (nextPage) {
               setCurrentPage(nextPage)
@@ -590,6 +591,9 @@ export default function App() {
       )}
       {currentPage === 'game-primegame' && (
         <PrimeMonopoly onBack={goBack} />
+      )}
+      {currentPage === 'dojo' && (
+        <Dojo onBack={goBack} />
       )}
       {currentPage === 'game-othello' && (
         <Othello onBack={goBack} />

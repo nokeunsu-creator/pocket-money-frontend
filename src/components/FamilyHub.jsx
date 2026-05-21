@@ -61,6 +61,7 @@ export default function FamilyHub({ onBack, onSelect }) {
         {btn('study', '공부 기록', '📋', 'linear-gradient(135deg, #3498DB, #2980B9)', true)}
         {btn('memo', '메모', '📝', 'linear-gradient(135deg, #F39C12, #E67E22)')}
         {btn('todo', '할 일', '✅', 'linear-gradient(135deg, #06D6A0, #05B384)')}
+        {btn('dojo', '🥊 도장', '🥊', 'linear-gradient(135deg, #E63946, #B91D47)', true)}
       </div>
 
       <div style={{ maxWidth: 480, margin: '24px auto 0' }}>
