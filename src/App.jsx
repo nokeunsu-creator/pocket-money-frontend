@@ -90,6 +90,7 @@ import ConnectFour from './components/ConnectFour'
 import Checkers from './components/Checkers'
 import Yutnori from './components/Yutnori'
 import Gonu from './components/Gonu'
+import Magic from './components/Magic'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -352,7 +353,7 @@ export default function App() {
         <FamilyHub
           onBack={goBack}
           onSelect={(key) => {
-            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo' }
+            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo', magic: 'magic' }
             const nextPage = pageMap[key]
             if (nextPage) {
               setCurrentPage(nextPage)
@@ -594,6 +595,9 @@ export default function App() {
       )}
       {currentPage === 'dojo' && (
         <Dojo onBack={goBack} />
+      )}
+      {currentPage === 'magic' && (
+        <Magic onBack={goBack} userId={currentUser || 'default'} />
       )}
       {currentPage === 'game-othello' && (
         <Othello onBack={goBack} />
