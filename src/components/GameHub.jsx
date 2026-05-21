@@ -22,6 +22,11 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'baduk-katago', icon: '⚡', title: 'KataGo AI 바둑', desc: '실제 학습된 KataGo · 19×19 · 약 1~2단', color: '#6A1B9A' },
         { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
         { key: 'janggi', icon: '將', title: '장기', desc: 'AI 10단계 · 2인 · 온라인', color: '#8B0000' },
+        { key: 'othello', icon: '⚫', title: '오델로', desc: '8×8 돌 뒤집기 · AI', color: '#1B5E20' },
+        { key: 'morris', icon: '🔵', title: '9목 모리스', desc: '24교차점 · 밀 만들어 잡기 · AI', color: '#5D4037' },
+        { key: 'hex', icon: '⬡', title: '헥스', desc: '11×11 육각판 길 연결 · AI', color: '#455A64' },
+        { key: 'blokus', icon: '🟦', title: '블로커스 듀오', desc: '14×14 폴리오미노 · AI', color: '#1976D2' },
+        { key: 'quarto', icon: '🔲', title: '퀀토', desc: '4×4 · 상대가 내 말 선택 · AI', color: '#6D4C41' },
       ],
     },
     {

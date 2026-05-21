@@ -80,6 +80,11 @@ import SixInRow from './components/SixInRow'
 import IndianPoker from './components/IndianPoker'
 import ECard from './components/ECard'
 import PrimeMonopoly from './components/PrimeMonopoly'
+import Othello from './components/Othello'
+import NineMensMorris from './components/NineMensMorris'
+import Hex from './components/Hex'
+import BlokusDuo from './components/BlokusDuo'
+import Quarto from './components/Quarto'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -581,6 +586,21 @@ export default function App() {
       )}
       {currentPage === 'game-primegame' && (
         <PrimeMonopoly onBack={goBack} />
+      )}
+      {currentPage === 'game-othello' && (
+        <Othello onBack={goBack} />
+      )}
+      {currentPage === 'game-morris' && (
+        <NineMensMorris onBack={goBack} />
+      )}
+      {currentPage === 'game-hex' && (
+        <Hex onBack={goBack} />
+      )}
+      {currentPage === 'game-blokus' && (
+        <BlokusDuo onBack={goBack} />
+      )}
+      {currentPage === 'game-quarto' && (
+        <Quarto onBack={goBack} />
       )}
 
       {/* 하단 네비게이션 (용돈기입장) */}
