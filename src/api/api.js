@@ -253,3 +253,39 @@ export function updateTripApi(id, trip) {
 export function deleteTripApi(id) {
   return request(`/api/trips/${id}`, { method: 'DELETE' })
 }
+
+// === 도장 API (킥복싱·주짓수) ===
+
+// 출석
+export function getDojoAttendance(user) {
+  return request(`/api/dojo/attendance?user=${encodeURIComponent(user)}`)
+}
+export function addDojoAttendance(user, date) {
+  return request('/api/dojo/attendance', { method: 'POST', body: JSON.stringify({ user, date }) })
+}
+export function removeDojoAttendance(user, date) {
+  return request(`/api/dojo/attendance?user=${encodeURIComponent(user)}&date=${date}`, { method: 'DELETE' })
+}
+
+// 기술 체크
+export function getDojoSkills(user) {
+  return request(`/api/dojo/skills?user=${encodeURIComponent(user)}`)
+}
+export function addDojoSkill(user, skillId) {
+  return request('/api/dojo/skills', { method: 'POST', body: JSON.stringify({ user, skillId }) })
+}
+export function removeDojoSkill(user, skillId) {
+  return request(`/api/dojo/skills?user=${encodeURIComponent(user)}&skillId=${encodeURIComponent(skillId)}`, { method: 'DELETE' })
+}
+
+// 일지
+export function getDojoJournal(user) {
+  const q = user ? `?user=${encodeURIComponent(user)}` : ''
+  return request(`/api/dojo/journal${q}`)
+}
+export function addDojoJournal(user, date, text) {
+  return request('/api/dojo/journal', { method: 'POST', body: JSON.stringify({ user, date, text }) })
+}
+export function deleteDojoJournal(id) {
+  return request(`/api/dojo/journal/${id}`, { method: 'DELETE' })
+}

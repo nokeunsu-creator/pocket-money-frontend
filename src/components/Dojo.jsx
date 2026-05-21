@@ -1,5 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
+import {
+  getDojoAttendance, addDojoAttendance, removeDojoAttendance,
+  getDojoSkills, addDojoSkill, removeDojoSkill,
+  getDojoJournal, addDojoJournal, deleteDojoJournal,
+} from '../api/api'
 
 // 킥복싱+주짓수 도장 3개월 트래커
 // 5/26 ~ 8/25 (92일)
@@ -312,52 +317,96 @@ function daysBetween(a, b) {
   return Math.floor(ms / (1000 * 60 * 60 * 24))
 }
 
-// 자녀별 출석 데이터 (localStorage)
-function loadAttendance(name) {
-  try {
-    const raw = localStorage.getItem(`dojo-attendance-${name}`)
-    return raw ? JSON.parse(raw) : {}
-  } catch { return {} }
-}
-function saveAttendance(name, map) {
-  try { localStorage.setItem(`dojo-attendance-${name}`, JSON.stringify(map)) } catch (_) {}
-}
+// 기존 localStorage 데이터를 서버로 1회 자동 마이그레이션
+const MIGRATION_FLAG = 'dojo-server-migrated-v1'
 
-function loadSkills(name) {
+async function migrateLocalToServer() {
+  if (localStorage.getItem(MIGRATION_FLAG)) return
   try {
-    const raw = localStorage.getItem(`dojo-skills-${name}`)
-    return raw ? JSON.parse(raw) : {}
-  } catch { return {} }
-}
-function saveSkills(name, map) {
-  try { localStorage.setItem(`dojo-skills-${name}`, JSON.stringify(map)) } catch (_) {}
-}
-
-function loadJournal() {
-  try {
-    const raw = localStorage.getItem('dojo-journal')
-    return raw ? JSON.parse(raw) : []
-  } catch { return [] }
-}
-function saveJournal(arr) {
-  try { localStorage.setItem('dojo-journal', JSON.stringify(arr)) } catch (_) {}
+    // 출석
+    for (const name of [CHILD1, CHILD2]) {
+      const raw = localStorage.getItem(`dojo-attendance-${name}`)
+      if (raw) {
+        const map = JSON.parse(raw)
+        for (const date of Object.keys(map)) {
+          if (map[date]) {
+            try { await addDojoAttendance(name, date) } catch (_) {}
+          }
+        }
+      }
+      const skillRaw = localStorage.getItem(`dojo-skills-${name}`)
+      if (skillRaw) {
+        const skMap = JSON.parse(skillRaw)
+        for (const skillId of Object.keys(skMap)) {
+          if (skMap[skillId]) {
+            try { await addDojoSkill(name, skillId) } catch (_) {}
+          }
+        }
+      }
+    }
+    // 일지
+    const jRaw = localStorage.getItem('dojo-journal')
+    if (jRaw) {
+      const arr = JSON.parse(jRaw)
+      for (const e of arr.slice().reverse()) { // 오래된 것부터
+        try { await addDojoJournal(e.name, e.date, e.text) } catch (_) {}
+      }
+    }
+    localStorage.setItem(MIGRATION_FLAG, '1')
+  } catch (e) {
+    console.warn('dojo migration failed', e)
+  }
 }
 
 export default function Dojo({ onBack }) {
-  const [tab, setTab] = useState('attendance') // attendance | skills | journal
+  const [tab, setTab] = useState('attendance') // attendance | skills | journal | dex
   const [whoIdx, setWhoIdx] = useState(0) // 0: CHILD1, 1: CHILD2
   const who = whoIdx === 0 ? CHILD1 : CHILD2
 
-  // 데이터
-  const [attendance, setAttendance] = useState(() => ({
-    [CHILD1]: loadAttendance(CHILD1),
-    [CHILD2]: loadAttendance(CHILD2),
-  }))
-  const [skills, setSkills] = useState(() => ({
-    [CHILD1]: loadSkills(CHILD1),
-    [CHILD2]: loadSkills(CHILD2),
-  }))
-  const [journal, setJournal] = useState(loadJournal)
+  // 서버 기반 데이터
+  // attendance[name] = { 'YYYY-MM-DD': true }
+  // skills[name] = { 'skillId': true }
+  // journal = [{id, date, name, text}]
+  const [attendance, setAttendance] = useState({ [CHILD1]: {}, [CHILD2]: {} })
+  const [skills, setSkills] = useState({ [CHILD1]: {}, [CHILD2]: {} })
+  const [journal, setJournal] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // 서버에서 전체 데이터 로드
+  const reload = useCallback(async () => {
+    try {
+      const [a1, a2, s1, s2, j] = await Promise.all([
+        getDojoAttendance(CHILD1).catch(() => []),
+        getDojoAttendance(CHILD2).catch(() => []),
+        getDojoSkills(CHILD1).catch(() => []),
+        getDojoSkills(CHILD2).catch(() => []),
+        getDojoJournal().catch(() => []),
+      ])
+      const toMap = (arr, key) => arr.reduce((m, x) => { m[x[key]] = true; return m }, {})
+      setAttendance({
+        [CHILD1]: toMap(a1, 'date'),
+        [CHILD2]: toMap(a2, 'date'),
+      })
+      setSkills({
+        [CHILD1]: toMap(s1, 'skillId'),
+        [CHILD2]: toMap(s2, 'skillId'),
+      })
+      // 서버 응답의 userName → name으로 매핑 (프론트 표시 호환)
+      setJournal((j || []).map(e => ({ ...e, name: e.userName })))
+    } catch (e) {
+      console.warn('dojo load failed', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 첫 마운트: 마이그레이션 → 로드
+  useEffect(() => {
+    (async () => {
+      await migrateLocalToServer()
+      await reload()
+    })()
+  }, [reload])
 
   const today = fmtDate(new Date())
 
@@ -369,25 +418,57 @@ export default function Dojo({ onBack }) {
   const notStarted = today < START_DATE
   const ended = today > END_DATE
 
-  // 출석 토글
-  const toggleAttendance = (date) => {
+  // 출석 토글 (낙관적 UI + 서버 동기화)
+  const toggleAttendance = async (date) => {
     const cur = attendance[who] || {}
+    const wasOn = !!cur[date]
     const next = { ...cur }
-    if (next[date]) delete next[date]
-    else next[date] = true
-    const nextAll = { ...attendance, [who]: next }
-    setAttendance(nextAll)
-    saveAttendance(who, next)
+    if (wasOn) delete next[date]; else next[date] = true
+    setAttendance(prev => ({ ...prev, [who]: next }))
+    try {
+      if (wasOn) await removeDojoAttendance(who, date)
+      else await addDojoAttendance(who, date)
+    } catch (e) {
+      // 실패 시 롤백
+      setAttendance(prev => ({ ...prev, [who]: cur }))
+      alert('서버 저장 실패. 다시 시도해주세요.')
+    }
   }
 
   // 스킬 토글
-  const toggleSkill = (id) => {
+  const toggleSkill = async (id) => {
     const cur = skills[who] || {}
-    const next = { ...cur, [id]: !cur[id] }
-    if (!next[id]) delete next[id]
-    const nextAll = { ...skills, [who]: next }
-    setSkills(nextAll)
-    saveSkills(who, next)
+    const wasOn = !!cur[id]
+    const next = { ...cur }
+    if (wasOn) delete next[id]; else next[id] = true
+    setSkills(prev => ({ ...prev, [who]: next }))
+    try {
+      if (wasOn) await removeDojoSkill(who, id)
+      else await addDojoSkill(who, id)
+    } catch (e) {
+      setSkills(prev => ({ ...prev, [who]: cur }))
+      alert('서버 저장 실패. 다시 시도해주세요.')
+    }
+  }
+
+  // 일지 추가/삭제
+  const addJournalEntry = async (text) => {
+    try {
+      const saved = await addDojoJournal(who, today, text)
+      setJournal(j => [{ ...saved, name: saved.userName }, ...j])
+    } catch (e) {
+      alert('서버 저장 실패. 다시 시도해주세요.')
+    }
+  }
+  const deleteJournalEntry = async (id) => {
+    const prev = journal
+    setJournal(j => j.filter(e => e.id !== id))
+    try {
+      await deleteDojoJournal(id)
+    } catch (e) {
+      setJournal(prev)
+      alert('서버 삭제 실패. 다시 시도해주세요.')
+    }
   }
 
   // 통계
@@ -504,15 +585,8 @@ export default function Dojo({ onBack }) {
           <JournalTab
             who={who}
             journal={journal}
-            onAdd={(text) => {
-              const entry = { id: Date.now(), date: today, name: who, text }
-              const next = [entry, ...journal]
-              setJournal(next); saveJournal(next)
-            }}
-            onDelete={(id) => {
-              const next = journal.filter(e => e.id !== id)
-              setJournal(next); saveJournal(next)
-            }}
+            onAdd={addJournalEntry}
+            onDelete={deleteJournalEntry}
           />
         )}
 
