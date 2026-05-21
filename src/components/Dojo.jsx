@@ -44,6 +44,8 @@ const DEX = {
   // 킥복싱
   'stance': {
     cat: 'kickboxing', label: '기본 스탠스 (Stance)', emoji: '🧍', en: 'Fighting Stance',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Pankratiast_in_fighting_stance.jpg/330px-Pankratiast_in_fighting_stance.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '모든 공격·방어의 시작. 무게 중심과 안정성이 핵심.',
     steps: [
       '두 발 어깨너비, 한 발 앞·한 발 뒤로 (오른손잡이는 왼발 앞)',
@@ -57,6 +59,8 @@ const DEX = {
   },
   'jab': {
     cat: 'kickboxing', label: '잽 (Jab)', emoji: '👊', en: 'Jab',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Allongecolor.jpg/320px-Allongecolor.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '앞손으로 직선으로 지르는 가장 기본 펀치. 거리·견제·셋업의 시작.',
     steps: [
       '기본 스탠스에서 앞손(왼손) 어깨 회전과 함께 직선으로',
@@ -70,6 +74,8 @@ const DEX = {
   },
   'cross': {
     cat: 'kickboxing', label: '스트레이트 / 원투 (Cross)', emoji: '💥', en: 'Cross',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/JJS_Karate_Kids_on_Training.jpg/320px-JJS_Karate_Kids_on_Training.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '뒷손 직선. 잽 다음 따라가는 강타. 허리·골반 회전이 힘의 80%.',
     steps: [
       '뒷발 뒤꿈치를 안쪽으로 회전 (피벗)',
@@ -83,6 +89,8 @@ const DEX = {
   },
   'hook': {
     cat: 'kickboxing', label: '훅 (Hook)', emoji: '🔄', en: 'Hook',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Field_Manual_No._3-25.150_Combatives_Hook.jpg/320px-Field_Manual_No._3-25.150_Combatives_Hook.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '옆에서 옆으로 휘두르는 펀치. 가드 옆을 노림.',
     steps: [
       '팔꿈치를 어깨 높이까지 들기',
@@ -96,6 +104,8 @@ const DEX = {
   },
   'uppercut': {
     cat: 'kickboxing', label: '어퍼컷 (Uppercut)', emoji: '⬆️', en: 'Uppercut',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Uppercut4.jpg/320px-Uppercut4.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '아래에서 위로 올려치는 펀치. 턱 아래 노림.',
     steps: [
       '살짝 무릎 굽혀 몸을 낮춤',
@@ -109,6 +119,8 @@ const DEX = {
   },
   'middle-kick': {
     cat: 'kickboxing', label: '미들킥 (Middle Kick)', emoji: '🦵', en: 'Roundhouse Kick',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Lethwei-Hight-kick.jpg/320px-Lethwei-Hight-kick.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '정강이로 옆구리·갈비를 때리는 회전 발차기. 킥복싱의 꽃.',
     steps: [
       '뒷발 → 미는 발로 사용. 앞발 피벗(축발 회전)',
@@ -122,6 +134,8 @@ const DEX = {
   },
   'low-kick': {
     cat: 'kickboxing', label: '로우킥 (Low Kick)', emoji: '🦶', en: 'Low Kick',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Low_kick.jpg/320px-Low_kick.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '상대 허벅지를 정강이로 차는 발차기. 묵직한 데미지.',
     steps: [
       '미들킥과 같은 메커니즘 — 더 낮게',
@@ -135,6 +149,8 @@ const DEX = {
   },
   'front-kick': {
     cat: 'kickboxing', label: '앞차기 (Front Kick / Teep)', emoji: '🦵', en: 'Front Kick',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/EVD-taekwondo-061.jpg/320px-EVD-taekwondo-061.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '발바닥/발끝으로 정면으로 미는 발차기. 거리 유지·견제용.',
     steps: [
       '무릎을 가슴 쪽으로 끌어올림',
@@ -148,6 +164,8 @@ const DEX = {
   },
   'knee': {
     cat: 'kickboxing', label: '니킥 (Knee Strike)', emoji: '🦵', en: 'Knee',
+    image: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0f/Knee_strike.jpg/320px-Knee_strike.jpg',
+    imageCredit: 'Wikimedia (Fair use)',
     short: '무릎을 위로 올려 치는 근접 공격. 클린치 상태에서 강력.',
     steps: [
       '상대 머리·목을 양손으로 잡기 (클린치)',
@@ -161,6 +179,8 @@ const DEX = {
   },
   'ducking': {
     cat: 'kickboxing', label: '더킹·위빙 (Ducking/Weaving)', emoji: '🤸', en: 'Slip/Duck/Weave',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Slip1.jpg/320px-Slip1.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '머리를 숙이거나 옆으로 빼서 펀치 피하기. 방어의 핵심.',
     steps: [
       '슬립(Slip): 머리를 좌·우로 살짝 기울여 직선 펀치 피하기',
@@ -188,6 +208,8 @@ const DEX = {
   // 주짓수
   'closed-guard': {
     cat: 'jiujitsu', label: '클로즈드 가드 (Closed Guard)', emoji: '🤼', en: 'Closed Guard',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Rangers_in_Action_01-African_Land_Forces_Summit-US_Army_Africa-13_MAY_2010_%28cropped%29.jpg/320px-Rangers_in_Action_01-African_Land_Forces_Summit-US_Army_Africa-13_MAY_2010_%28cropped%29.jpg',
+    imageCredit: 'Wikimedia Commons (US Army)',
     short: '내가 등을 대고 누워서 두 다리로 상대 허리를 감싸 잠그는 자세. 주짓수의 시작.',
     steps: [
       '바닥에 등을 대고 누움',
@@ -201,6 +223,8 @@ const DEX = {
   },
   'mount': {
     cat: 'jiujitsu', label: '마운트 (Mount)', emoji: '⬆️', en: 'Full Mount',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Fm3-25-150combativesfig3-2frontmount.png/330px-Fm3-25-150combativesfig3-2frontmount.png',
+    imageCredit: 'Wikimedia Commons (US Army FM 3-25.150)',
     short: '상대 배 위에 올라타 무릎으로 누르는 가장 우세한 포지션.',
     steps: [
       '상대 위에 올라타 무릎을 양옆 바닥에 단단히',
@@ -214,6 +238,8 @@ const DEX = {
   },
   'side-control': {
     cat: 'jiujitsu', label: '사이드 컨트롤 (Side Control)', emoji: '↔️', en: 'Side Control',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Royce_Gracie_Demonstration_09.jpg/320px-Royce_Gracie_Demonstration_09.jpg',
+    imageCredit: 'Wikimedia Commons (Royce Gracie)',
     short: '상대 옆구리에 90도로 누르며 제압.',
     steps: [
       '상대 옆구리에 90도 직각으로 위치',
@@ -227,6 +253,8 @@ const DEX = {
   },
   'back-control': {
     cat: 'jiujitsu', label: '백 컨트롤 (Back Control)', emoji: '🔙', en: 'Back Mount',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Back_mount.jpg/320px-Back_mount.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '상대 등 뒤에서 다리로 허리를 감싼 최고의 포지션. 초크 연결 좋음.',
     steps: [
       '상대 등 뒤에 위치',
@@ -240,6 +268,8 @@ const DEX = {
   },
   'guard-pass': {
     cat: 'jiujitsu', label: '가드 패스 (Guard Pass)', emoji: '🚶', en: 'Guard Pass',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Brazilian_Jiu-Jitsu_strengthens_camaraderie%2C_build_trust_at_Camp_Lemonnier_140727-F-SJ695-033.jpg/320px-Brazilian_Jiu-Jitsu_strengthens_camaraderie%2C_build_trust_at_Camp_Lemonnier_140727-F-SJ695-033.jpg',
+    imageCredit: 'Wikimedia Commons (US Air Force)',
     short: '상대 가드(다리 사이)를 빠져나와 사이드 컨트롤로 올라가는 기술.',
     steps: [
       '상대 다리 잠금 해제 (벌리거나 풀기)',
@@ -253,6 +283,8 @@ const DEX = {
   },
   'sweep': {
     cat: 'jiujitsu', label: '스윕 (Sweep)', emoji: '🔄', en: 'Sweep',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Judo_foot_sweep_-_cropped.jpg/320px-Judo_foot_sweep_-_cropped.jpg',
+    imageCredit: 'Wikimedia Commons',
     short: '아래 자세(가드)에서 상대를 뒤집어서 내가 위로 올라가는 기술.',
     steps: [
       '가드 자세에서 상대 무게 중심 파악',
@@ -266,6 +298,8 @@ const DEX = {
   },
   'escape': {
     cat: 'jiujitsu', label: '이스케이프 (Escape)', emoji: '🏃', en: 'Escape',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Royce_Gracie_Demonstration_09.jpg/320px-Royce_Gracie_Demonstration_09.jpg',
+    imageCredit: 'Wikimedia Commons (Royce Gracie)',
     short: '불리한 자세에서 빠져나오는 기술. 가장 먼저 배워야 할 생존 기술.',
     steps: [
       '깊은 호흡 — 당황하지 않기',
@@ -279,6 +313,8 @@ const DEX = {
   },
   'choke': {
     cat: 'jiujitsu', label: '초크 (Choke)', emoji: '🤜', en: 'Choke',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Army_Combatives_RNC_%28120127-A-XN107-086%29.jpg/320px-Army_Combatives_RNC_%28120127-A-XN107-086%29.jpg',
+    imageCredit: 'Wikimedia Commons (US Army)',
     short: '목 옆 동맥을 압박해 항복 받아내는 기술. 정면 기도가 아니라 옆!',
     steps: [
       '백 컨트롤 또는 마운트에서 시작',
@@ -966,13 +1002,23 @@ function DexCard({ id, onClick }) {
   return (
     <button onClick={onClick}
       style={{
-        padding: 12, borderRadius: 12, border: 'none', cursor: 'pointer',
+        padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer',
         background: '#FFF', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
         display: 'flex', flexDirection: 'column', gap: 6,
         textAlign: 'left', borderLeft: `4px solid ${isKB ? '#E63946' : '#1F77B4'}`,
       }}>
-      <div style={{ fontSize: 32, lineHeight: 1 }}>{e.emoji}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{e.label}</div>
+      {e.image ? (
+        <div style={{ width: '100%', height: 80, borderRadius: 8, overflow: 'hidden', background: '#F5F5F5' }}>
+          <img src={e.image} alt={e.label} loading="lazy" referrerPolicy="no-referrer"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      ) : (
+        <div style={{
+          width: '100%', height: 80, borderRadius: 8, background: '#F5F5F5',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
+        }}>{e.emoji}</div>
+      )}
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#2C3E50', lineHeight: 1.3 }}>{e.label}</div>
       <div style={{ fontSize: 10, color: '#888' }}>{e.en}</div>
     </button>
   )
@@ -982,9 +1028,14 @@ function DexDetail({ id, onBack }) {
   const e = DEX[id]
   if (!e) return null
   const isKB = e.cat === 'kickboxing'
-  // 유튜브 검색 링크 (한글 이름 + 기초)
-  const ytQuery = encodeURIComponent(`${e.label.split(' ')[0]} ${isKB ? '킥복싱' : '주짓수'} 기초`)
+  const keyword = e.label.split(' ')[0]
+  const ytQuery = encodeURIComponent(`${keyword} ${isKB ? '킥복싱' : '주짓수'} 기초`)
   const ytUrl = `https://www.youtube.com/results?search_query=${ytQuery}`
+  // 이미지 검색 fallback (위키미디어 / Pixabay)
+  const wmQuery = encodeURIComponent(`${e.en}`)
+  const wmUrl = `https://commons.wikimedia.org/w/index.php?search=${wmQuery}&title=Special:MediaSearch&go=Go&type=image`
+  const pxQuery = encodeURIComponent(`${e.en} ${isKB ? 'kickboxing' : 'jiu jitsu'}`)
+  const pxUrl = `https://pixabay.com/images/search/${pxQuery}/`
 
   return (
     <div>
@@ -1006,6 +1057,27 @@ function DexDetail({ id, onBack }) {
         <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{e.en}</div>
         <div style={{ fontSize: 13, opacity: 0.95, marginTop: 10, lineHeight: 1.5 }}>{e.short}</div>
       </div>
+
+      {/* 사진 */}
+      {e.image ? (
+        <div style={{ marginBottom: 14, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', background: '#FFF' }}>
+          <img src={e.image} alt={e.label} loading="lazy"
+            referrerPolicy="no-referrer"
+            style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'contain', background: '#F5F5F5' }} />
+          <div style={{ fontSize: 10, color: '#888', padding: '6px 10px', textAlign: 'right' }}>
+            📷 {e.imageCredit || 'Wikimedia Commons'}
+          </div>
+        </div>
+      ) : (
+        <a href={wmUrl} target="_blank" rel="noopener noreferrer"
+          style={{
+            display: 'block', textAlign: 'center', padding: '14px 0', marginBottom: 14,
+            background: '#F5F5F5', borderRadius: 14, color: '#555',
+            fontSize: 13, textDecoration: 'none', border: '1.5px dashed #DDD',
+          }}>
+          📷 사진 자료 없음 — 위키미디어에서 검색하기
+        </a>
+      )}
 
       {/* 단계 */}
       <div style={{ background: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
@@ -1041,19 +1113,37 @@ function DexDetail({ id, onBack }) {
         </div>
       )}
 
-      {/* 유튜브 검색 */}
+      {/* 외부 검색 링크 */}
       <a href={ytUrl} target="_blank" rel="noopener noreferrer"
         style={{
           display: 'block', width: '100%', boxSizing: 'border-box',
           padding: '14px 0', borderRadius: 12,
           background: 'linear-gradient(135deg, #FF0000, #C40000)',
           color: '#FFF', fontSize: 15, fontWeight: 800, textAlign: 'center',
-          textDecoration: 'none', marginTop: 6,
+          textDecoration: 'none', marginTop: 6, marginBottom: 8,
         }}>
         ▶️ 유튜브에서 동영상 보기
       </a>
-      <p style={{ fontSize: 10, color: '#AAA', textAlign: 'center', marginTop: 8 }}>
-        새 탭에서 유튜브 검색 결과가 열려요
+      <div style={{ display: 'flex', gap: 6 }}>
+        <a href={wmUrl} target="_blank" rel="noopener noreferrer"
+          style={{
+            flex: 1, boxSizing: 'border-box', padding: '10px 0', borderRadius: 10,
+            background: '#F0F0F0', color: '#2C3E50', fontSize: 12, fontWeight: 700,
+            textAlign: 'center', textDecoration: 'none',
+          }}>
+          📷 위키미디어
+        </a>
+        <a href={pxUrl} target="_blank" rel="noopener noreferrer"
+          style={{
+            flex: 1, boxSizing: 'border-box', padding: '10px 0', borderRadius: 10,
+            background: '#F0F0F0', color: '#2C3E50', fontSize: 12, fontWeight: 700,
+            textAlign: 'center', textDecoration: 'none',
+          }}>
+          🖼️ Pixabay
+        </a>
+      </div>
+      <p style={{ fontSize: 10, color: '#AAA', textAlign: 'center', marginTop: 10 }}>
+        새 탭에서 검색 결과가 열려요 (가족 외 공개 시 출처 표기 필요)
       </p>
     </div>
   )
