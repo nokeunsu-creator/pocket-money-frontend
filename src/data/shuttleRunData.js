@@ -90,6 +90,7 @@ export const REST_SEC_OPTIONS = [
   { value: 3, label: '3초' },
   { value: 5, label: '5초' },
 ]
+export const GOAL_OPTIONS = [20, 30, 50, 70, 100]
 
 // === PAPS 등급표 (초등 15m) ===
 // 형식: { min: 최소회수 } 또는 { max: 최대회수 } — 범위가 한쪽이면 그 한쪽만 명시.

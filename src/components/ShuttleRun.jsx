@@ -7,6 +7,7 @@ import {
   LEVELS,
   LAP_SEC_OPTIONS,
   REST_SEC_OPTIONS,
+  GOAL_OPTIONS,
   GRADE_TABLE,
   GRADE_OPTIONS,
   lookupGrade,
@@ -59,6 +60,26 @@ const beepLevelUp = () => { beep(1320, 0.18, 0.35); setTimeout(() => beep(1760, 
 const beepCount = () => beep(660, 0.08, 0.2)
 const beepGo = () => beep(990, 0.3, 0.35)
 const beepFinish = () => { beep(440, 0.25, 0.3); setTimeout(() => beep(330, 0.4, 0.3), 250) }
+const beepGoal = () => {
+  // 목표 달성 팡파레: C-E-G 상승 아르페지오
+  beep(523, 0.15, 0.35)
+  setTimeout(() => beep(659, 0.15, 0.35), 140)
+  setTimeout(() => beep(784, 0.3, 0.4), 280)
+}
+
+// === 한국어 음성 안내 (Web Speech API) ===
+function speak(text) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+  try {
+    window.speechSynthesis.cancel() // 대기열 정리해서 누적 방지
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'ko-KR'
+    u.rate = 1.15
+    u.pitch = 1.05
+    u.volume = 1
+    window.speechSynthesis.speak(u)
+  } catch { /* 미지원 환경 */ }
+}
 
 // === 화면 깨움 (모바일에서 화면 꺼짐 방지) ===
 function useWakeLock(active) {
@@ -175,6 +196,15 @@ function ListView({ records, onBack, onMeasure, onTable, onDelete }) {
           </div>
         )}
 
+        {/* 발전 차트 */}
+        {records.length >= 2 && (
+          <div style={{ marginBottom: 16 }}>
+            {[CHILD1, CHILD2].map(name => (
+              <ProgressChart key={name} records={records} user={name} />
+            ))}
+          </div>
+        )}
+
         {/* 버튼 */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           <button onClick={onMeasure}
@@ -182,7 +212,7 @@ function ListView({ records, onBack, onMeasure, onTable, onDelete }) {
               flex: 2, padding: '16px 0', borderRadius: 14,
               background: `linear-gradient(135deg, ${ACCENT_SOFT}, ${ACCENT})`,
               border: 'none', color: '#FFF', fontSize: 16, fontWeight: 800,
-              cursor: 'pointer', boxShadow: '0 4px 12px rgba(201,42,42,0.25)',
+              cursor: 'pointer', boxShadow: '0 4px 12px rgba(31,111,184,0.25)',
             }}>
             ▶ 측정 시작
           </button>
@@ -306,6 +336,11 @@ function MeasureView({ onBack }) {
   const [mode, setMode] = useState('paps') // 'paps' (표준 점진) | 'fixed' (고정 페이스)
   const [lapSec, setLapSec] = useState(9)
   const [restSec, setRestSec] = useState(0)
+  const [voiceOn, setVoiceOn] = useState(true)
+  const [goal, setGoal] = useState(50)        // 0이면 목표 없음
+  const [goalReached, setGoalReached] = useState(false)
+  const goalReachedRef = useRef(false)
+  const [showGoalToast, setShowGoalToast] = useState(false)
 
   const [countdown, setCountdown] = useState(5)
   const [currentLap, setCurrentLap] = useState(0)
@@ -334,13 +369,15 @@ function MeasureView({ onBack }) {
     if (countdown < 0) return
     if (countdown === 0) {
       beepGo()
+      if (voiceOn) speak('출발!')
       const t = setTimeout(() => beginRunning(), 800)
       return () => clearTimeout(t)
     }
     beepCount()
+    if (voiceOn && countdown <= 3) speak(`${countdown}`)
     const t = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
-  }, [phase, countdown])
+  }, [phase, countdown, voiceOn])
 
   const beginCountdown = () => {
     // 첫 사용자 제스처에서 AudioContext 워밍업
@@ -353,6 +390,10 @@ function MeasureView({ onBack }) {
     levelRef.current = 1
     eventIdxRef.current = -1
     stoppedRef.current = false
+    goalReachedRef.current = false
+    setGoalReached(false)
+    setShowGoalToast(false)
+    if (voiceOn) speak(`${user}, 준비`)
     setPhase('countdown')
   }
 
@@ -379,8 +420,10 @@ function MeasureView({ onBack }) {
       if (stoppedRef.current) return
       if (ev.type === 'go') {
         beepGo()
+        if (voiceOn) speak('출발')
       } else if (ev.isLevelStart && ev.level > 1) {
         beepLevelUp()
+        if (voiceOn) setTimeout(() => speak(`레벨 ${ev.level}`), 350)
       } else {
         beepLap()
       }
@@ -388,6 +431,20 @@ function MeasureView({ onBack }) {
       if (ev.type === 'lap') {
         lapRef.current = ev.lap
         setCurrentLap(ev.lap)
+        // 목표 도달 (이 측정에서 한 번만)
+        if (goal > 0 && ev.lap === goal && !goalReachedRef.current) {
+          goalReachedRef.current = true
+          setGoalReached(true)
+          setShowGoalToast(true)
+          beepGoal()
+          if (voiceOn) setTimeout(() => speak('목표 달성!'), 250)
+          try { navigator.vibrate?.([100, 60, 100, 60, 200]) } catch {}
+          setTimeout(() => setShowGoalToast(false), 2500)
+        }
+        // 매 10회마다 음성 카운트 (목표 도달과 겹치면 목표 음성 우선)
+        else if (voiceOn && ev.lap > 0 && ev.lap % 10 === 0) {
+          setTimeout(() => speak(`${ev.lap}회`), 150)
+        }
       }
       levelRef.current = ev.level
       setCurrentLevel(ev.level)
@@ -410,6 +467,7 @@ function MeasureView({ onBack }) {
     setFinalLevel(lvl)
     setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000))
     setPhase('finished')
+    if (voiceOn) setTimeout(() => speak(`수고했어요. ${laps}회`), 500)
   }
 
   // 언마운트 시 타이머 정리
@@ -445,6 +503,8 @@ function MeasureView({ onBack }) {
       mode,
       lapSec: mode === 'fixed' ? lapSec : null,
       restSec: mode === 'fixed' ? restSec : null,
+      goal: goal > 0 ? goal : null,
+      goalReached,
     })
     setSavedMsg('저장됐어요!')
     setTimeout(() => { onBack() }, 700)
@@ -525,10 +585,42 @@ function MeasureView({ onBack }) {
             </>
           )}
 
+          <Section label="🎯 목표 회수 (도달 시 축하)">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+              <button onClick={() => setGoal(0)}
+                style={{ ...pillStyle(goal === 0), padding: '10px 0', fontSize: 12 }}>
+                없음
+              </button>
+              {GOAL_OPTIONS.map(g => (
+                <button key={g} onClick={() => setGoal(g)}
+                  style={{ ...pillStyle(goal === g), padding: '10px 0', fontSize: 13 }}>
+                  {g}회
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section label="🔊 음성 안내">
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setVoiceOn(true)} style={pillStyle(voiceOn === true)}>
+                켜기
+                <div style={{ fontSize: 10, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                  10회마다 · 레벨 · 목표 안내
+                </div>
+              </button>
+              <button onClick={() => setVoiceOn(false)} style={pillStyle(voiceOn === false)}>
+                끄기
+                <div style={{ fontSize: 10, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                  비프음만
+                </div>
+              </button>
+            </div>
+          </Section>
+
           <div style={{
-            background: '#FFF8F0', borderRadius: 12, padding: '12px 14px',
-            fontSize: 12, color: '#888', lineHeight: 1.6, marginBottom: 16,
-            border: '1px solid #FFE6CC',
+            background: '#EBF5FB', borderRadius: 12, padding: '12px 14px',
+            fontSize: 12, color: '#666', lineHeight: 1.6, marginBottom: 16,
+            border: '1px solid #BFE0F5',
           }}>
             📍 <b>측정 방법</b><br/>
             · 15m 떨어진 두 선 사이를 신호음에 맞춰 달려요<br/>
@@ -545,6 +637,8 @@ function MeasureView({ onBack }) {
             )}
             · 신호음 안에 도착 못 하면 <b>멈춤</b> 버튼을 눌러요<br/>
             · 화면 깜빡 + 진동으로도 신호를 보여줘요
+            {goal > 0 && <><br/>· 🎯 <b>{goal}회</b> 달성하면 화면이 축하해줘요</>}
+            {voiceOn && <><br/>· 🔊 10회마다·레벨 변경·목표 도달 시 음성 안내</>}
           </div>
 
           <button onClick={beginCountdown}
@@ -594,7 +688,32 @@ function MeasureView({ onBack }) {
         background: flash ? ACCENT : PAGE_BG,
         transition: 'background 0.1s',
         display: 'flex', flexDirection: 'column', padding: '1rem',
+        position: 'relative',
       }}>
+        {showGoalToast && (
+          <div style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(31,111,184,0.94)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            zIndex: 50, color: '#FFF', pointerEvents: 'none',
+          }}>
+            <div style={{ fontSize: 96, marginBottom: 12, animation: 'fadeIn 0.4s' }}>🎉</div>
+            <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 8 }}>목표 달성!</div>
+            <div style={{ fontSize: 20, opacity: 0.95 }}>{goal}회 도전 성공 🏆</div>
+            <div style={{ fontSize: 14, opacity: 0.8, marginTop: 16 }}>계속 달릴 수 있어요</div>
+          </div>
+        )}
+        {goalReached && !showGoalToast && (
+          <div style={{
+            position: 'absolute', top: 8, right: 12,
+            background: '#27AE60', color: '#FFF',
+            padding: '4px 10px', borderRadius: 10,
+            fontSize: 12, fontWeight: 800, zIndex: 10,
+          }}>
+            🎯 목표 달성
+          </div>
+        )}
         {(() => {
           const levelInfo = LEVELS.find(l => l.level === currentLevel)
           const lapSecCurrent = mode === 'fixed' ? lapSec : levelInfo?.sec
@@ -684,6 +803,20 @@ function MeasureView({ onBack }) {
           <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>
             Level {finalLevel} · {fmtDur(duration)}
           </div>
+
+          {goal > 0 && (
+            <div style={{
+              marginTop: 12, padding: '8px 12px', borderRadius: 10,
+              background: goalReached ? '#E8F8F0' : '#FFF8E1',
+              color: goalReached ? '#1E8449' : '#B7791F',
+              fontSize: 13, fontWeight: 700,
+              display: 'inline-block',
+            }}>
+              {goalReached
+                ? `🎯 목표 ${goal}회 달성! (+${finalLaps - goal})`
+                : `🎯 목표 ${goal}회까지 ${goal - finalLaps}회 남음`}
+            </div>
+          )}
 
           {grade ? (
             <div style={{
@@ -833,6 +966,111 @@ function rangeLabel(row) {
   if (row.min != null) return `${row.min}회 이상`
   if (row.max != null) return `${row.max}회 이하`
   return '-'
+}
+
+// ========== 발전 차트 ==========
+function ProgressChart({ records, user }) {
+  const data = useMemo(() => {
+    return records
+      .filter(r => r.user === user)
+      .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || ''))
+      .slice(-12) // 최근 12개
+  }, [records, user])
+
+  if (data.length < 2) {
+    if (data.length === 0) return null
+    return (
+      <div style={{
+        background: '#FFF', borderRadius: 14, padding: '12px 14px',
+        border: `1px solid ${CARD_BORDER}`, marginBottom: 10,
+        fontSize: 12, color: '#999',
+      }}>
+        <b style={{ color: '#666' }}>{user}</b> — 측정 2번 이상부터 추이 그래프가 보여요
+      </div>
+    )
+  }
+
+  const W = 320, H = 130, PAD_L = 32, PAD_R = 12, PAD_T = 20, PAD_B = 26
+  const maxLaps = Math.max(...data.map(d => d.laps), 10)
+  const minLaps = Math.min(...data.map(d => d.laps), 0)
+  const range = Math.max(1, maxLaps - minLaps)
+  const innerW = W - PAD_L - PAD_R
+  const innerH = H - PAD_T - PAD_B
+
+  const points = data.map((d, i) => {
+    const x = PAD_L + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW)
+    const y = PAD_T + innerH - ((d.laps - minLaps) / range) * innerH
+    return { x, y, ...d }
+  })
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${PAD_T + innerH} L ${points[0].x.toFixed(1)} ${PAD_T + innerH} Z`
+
+  const last = data[data.length - 1]
+  const prev = data[data.length - 2]
+  const delta = last.laps - prev.laps
+  const maxRecord = data.reduce((m, d) => (d.laps > m.laps ? d : m), data[0])
+
+  return (
+    <div style={{
+      background: '#FFF', borderRadius: 14, padding: '12px 14px',
+      border: `1px solid ${CARD_BORDER}`, marginBottom: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#2C3E50' }}>{user} 발전 그래프</span>
+        <span style={{ fontSize: 11, color: '#888' }}>최근 {data.length}회</span>
+        {delta !== 0 && (
+          <span style={{
+            marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+            color: delta > 0 ? '#27AE60' : '#C0392B',
+          }}>
+            {delta > 0 ? '↑' : '↓'} {Math.abs(delta)}회
+          </span>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+        {/* Y축 가이드 라인 (max, min) */}
+        <line x1={PAD_L} y1={PAD_T} x2={W - PAD_R} y2={PAD_T} stroke="#EEE" strokeWidth="1" strokeDasharray="3 3" />
+        <line x1={PAD_L} y1={PAD_T + innerH} x2={W - PAD_R} y2={PAD_T + innerH} stroke="#EEE" strokeWidth="1" />
+        <text x={PAD_L - 4} y={PAD_T + 4} textAnchor="end" fontSize="10" fill="#999">{maxLaps}</text>
+        <text x={PAD_L - 4} y={PAD_T + innerH + 4} textAnchor="end" fontSize="10" fill="#999">{minLaps}</text>
+
+        {/* 영역 */}
+        <path d={areaPath} fill={ACCENT_SOFT} fillOpacity="0.15" />
+        {/* 라인 */}
+        <path d={linePath} fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* 점들 */}
+        {points.map((p, i) => {
+          const isMax = p.id === maxRecord.id
+          const isLast = i === points.length - 1
+          return (
+            <g key={p.id || i}>
+              <circle cx={p.x} cy={p.y} r={isMax ? 6 : (isLast ? 5 : 3.5)}
+                fill={isMax ? '#F1C40F' : (isLast ? ACCENT : '#FFF')}
+                stroke={isMax ? '#F39C12' : ACCENT} strokeWidth="2" />
+              {isMax && (
+                <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="#F39C12">⭐</text>
+              )}
+            </g>
+          )
+        })}
+
+        {/* X축 첫·마지막 날짜 */}
+        <text x={PAD_L} y={H - 8} textAnchor="start" fontSize="9" fill="#999">{shortDate(data[0].date)}</text>
+        <text x={W - PAD_R} y={H - 8} textAnchor="end" fontSize="9" fill="#999">{shortDate(last.date)}</text>
+      </svg>
+      <div style={{ fontSize: 11, color: '#888', marginTop: 4, textAlign: 'center' }}>
+        ⭐ 최고 <b style={{ color: '#F39C12' }}>{maxRecord.laps}회</b> ({shortDate(maxRecord.date)})
+        {' · '}최근 <b style={{ color: ACCENT }}>{last.laps}회</b>
+      </div>
+    </div>
+  )
+}
+
+function shortDate(s) {
+  if (!s) return ''
+  const [, m, d] = s.split('-')
+  return `${Number(m)}/${Number(d)}`
 }
 
 // ========== 공통 ==========
