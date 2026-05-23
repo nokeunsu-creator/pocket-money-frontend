@@ -50,6 +50,9 @@ import StudyTimer from './components/StudyTimer'
 import QuickMemo from './components/QuickMemo'
 import StudyMain from './components/StudyMain'
 import FamilyHub from './components/FamilyHub'
+import DiaryHub from './components/DiaryHub'
+import InlineSkate from './components/InlineSkate'
+import ShuttleRun from './components/ShuttleRun'
 import BudgetMain from './components/BudgetMain'
 import ScienceQuiz from './components/ScienceQuiz'
 import HistoryQuiz from './components/HistoryQuiz'
@@ -353,7 +356,7 @@ export default function App() {
         <FamilyHub
           onBack={goBack}
           onSelect={(key) => {
-            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo', magic: 'magic' }
+            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo', magic: 'magic', diary: 'diary', inline: 'inline', shuttle: 'shuttle' }
             const nextPage = pageMap[key]
             if (nextPage) {
               setCurrentPage(nextPage)
@@ -364,6 +367,15 @@ export default function App() {
       )}
       {currentPage === 'family' && (
         <FamilyTree onBack={goBack} />
+      )}
+      {currentPage === 'diary' && (
+        <DiaryHub onBack={goBack} />
+      )}
+      {currentPage === 'inline' && (
+        <InlineSkate onBack={goBack} />
+      )}
+      {currentPage === 'shuttle' && (
+        <ShuttleRun onBack={goBack} />
       )}
       {currentPage === 'growth' && (
         <GrowthTracker onBack={goBack} />
