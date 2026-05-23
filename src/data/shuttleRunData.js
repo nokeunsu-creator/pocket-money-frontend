@@ -42,8 +42,9 @@ export function levelForLap(lap) {
 
 /**
  * 전체 비프 타임라인을 미리 계산. 각 원소:
- *   { lap, level, timeMs, isLevelStart }
+ *   { type: 'lap', lap, level, timeMs, isLevelStart }
  * lap=1이 첫 비프 (출발 후 첫 도착 신호).
+ * type === 'lap' 이면 회수 증가. type === 'go' 면 쉬는 시간 끝나고 출발 신호(회수 증가 X).
  */
 export function buildBeepTimeline(maxLevels = LEVELS.length) {
   const beeps = []
@@ -55,11 +56,40 @@ export function buildBeepTimeline(maxLevels = LEVELS.length) {
     for (let j = 0; j < lapsInLevel; j++) {
       lap += 1
       cumMs += sec * 1000
-      beeps.push({ lap, level, timeMs: cumMs, isLevelStart: j === 0 })
+      beeps.push({ type: 'lap', lap, level, timeMs: cumMs, isLevelStart: j === 0 })
     }
   }
   return beeps
 }
+
+/**
+ * 고정 페이스 타임라인 생성. 매 회 동일한 시간으로 달리고, 선택적으로 쉬는 시간 포함.
+ * @param lapSec  회당(편도 15m) 초
+ * @param restSec 쉬는 시간 초 (0이면 PAPS 표준 — 쉬지 않고 계속)
+ * @param maxLaps 최대 회수
+ */
+export function buildFixedTimeline(lapSec, restSec = 0, maxLaps = 300) {
+  const beeps = []
+  let cumMs = 0
+  for (let i = 1; i <= maxLaps; i++) {
+    cumMs += lapSec * 1000
+    beeps.push({ type: 'lap', lap: i, level: 1, timeMs: cumMs, isLevelStart: false })
+    if (restSec > 0 && i < maxLaps) {
+      cumMs += restSec * 1000
+      beeps.push({ type: 'go', lap: i, level: 1, timeMs: cumMs, isLevelStart: false })
+    }
+  }
+  return beeps
+}
+
+// 사용자가 선택 가능한 옵션 (PAPS 표준 = 점진 진행, 쉬는 시간 0초)
+export const LAP_SEC_OPTIONS = [5, 6, 7, 8, 9, 10]
+export const REST_SEC_OPTIONS = [
+  { value: 0, label: '없음', standard: true },
+  { value: 2, label: '2초' },
+  { value: 3, label: '3초' },
+  { value: 5, label: '5초' },
+]
 
 // === PAPS 등급표 (초등 15m) ===
 // 형식: { min: 최소회수 } 또는 { max: 최대회수 } — 범위가 한쪽이면 그 한쪽만 명시.

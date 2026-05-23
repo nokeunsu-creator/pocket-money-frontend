@@ -3,7 +3,10 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
 import {
   buildBeepTimeline,
+  buildFixedTimeline,
   LEVELS,
+  LAP_SEC_OPTIONS,
+  REST_SEC_OPTIONS,
   GRADE_TABLE,
   GRADE_OPTIONS,
   lookupGrade,
@@ -261,7 +264,9 @@ function RecordRow({ record, onDelete }) {
         </div>
         <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
           {record.date} · {gradeLabel} {record.gender === 'female' ? '여' : '남'} · {fmtDur(record.durationSec)}
-          {record.finalLevel && ` · L${record.finalLevel}`}
+          {record.mode === 'fixed'
+            ? ` · 고정 ${record.lapSec}초${record.restSec > 0 ? `+쉼${record.restSec}` : ''}`
+            : (record.finalLevel ? ` · L${record.finalLevel}` : '')}
         </div>
       </div>
       <button onClick={onDelete}
@@ -295,10 +300,16 @@ function MeasureView({ onBack }) {
     if (d) { setGradeKey(d.gradeKey); setGender(d.gender) }
   }, [user])
 
+  // 측정 모드 설정
+  const [mode, setMode] = useState('paps') // 'paps' (표준 점진) | 'fixed' (고정 페이스)
+  const [lapSec, setLapSec] = useState(9)
+  const [restSec, setRestSec] = useState(0)
+
   const [countdown, setCountdown] = useState(5)
   const [currentLap, setCurrentLap] = useState(0)
   const [currentLevel, setCurrentLevel] = useState(1)
   const [secondsToNext, setSecondsToNext] = useState(0)
+  const [nextEventType, setNextEventType] = useState('lap')
   const [flash, setFlash] = useState(false)
   const [finalLaps, setFinalLaps] = useState(0)
   const [finalLevel, setFinalLevel] = useState(1)
@@ -309,6 +320,7 @@ function MeasureView({ onBack }) {
   const startTimeRef = useRef(0)
   const lapRef = useRef(0)
   const levelRef = useRef(1)
+  const eventIdxRef = useRef(-1) // 마지막으로 발화한 이벤트 인덱스
   const timerRef = useRef(null)
   const stoppedRef = useRef(false)
 
@@ -334,14 +346,18 @@ function MeasureView({ onBack }) {
     setCountdown(5)
     setCurrentLap(0)
     setCurrentLevel(1)
+    setNextEventType('lap')
     lapRef.current = 0
     levelRef.current = 1
+    eventIdxRef.current = -1
     stoppedRef.current = false
     setPhase('countdown')
   }
 
   const beginRunning = () => {
-    timelineRef.current = buildBeepTimeline()
+    timelineRef.current = mode === 'fixed'
+      ? buildFixedTimeline(lapSec, restSec)
+      : buildBeepTimeline()
     startTimeRef.current = Date.now()
     setPhase('running')
     scheduleNextBeep(0)
@@ -359,11 +375,19 @@ function MeasureView({ onBack }) {
     const delay = Math.max(0, ev.timeMs - elapsed)
     timerRef.current = setTimeout(() => {
       if (stoppedRef.current) return
-      if (ev.isLevelStart && ev.level > 1) beepLevelUp()
-      else beepLap()
-      lapRef.current = ev.lap
+      if (ev.type === 'go') {
+        beepGo()
+      } else if (ev.isLevelStart && ev.level > 1) {
+        beepLevelUp()
+      } else {
+        beepLap()
+      }
+      eventIdxRef.current = idx
+      if (ev.type === 'lap') {
+        lapRef.current = ev.lap
+        setCurrentLap(ev.lap)
+      }
       levelRef.current = ev.level
-      setCurrentLap(ev.lap)
       setCurrentLevel(ev.level)
       setFlash(true)
       setTimeout(() => setFlash(false), 160)
@@ -397,11 +421,12 @@ function MeasureView({ onBack }) {
     if (phase !== 'running') return
     const tick = () => {
       const timeline = timelineRef.current
-      const nextIdx = lapRef.current // 직전 회수 = lap, 다음 비프는 timeline[lap]
+      const nextIdx = eventIdxRef.current + 1
       const nextBeep = timeline[nextIdx]
       if (!nextBeep) { setSecondsToNext(0); return }
       const elapsed = Date.now() - startTimeRef.current
       setSecondsToNext(Math.max(0, (nextBeep.timeMs - elapsed) / 1000))
+      setNextEventType(nextBeep.type || 'lap')
     }
     tick()
     const id = setInterval(tick, 100)
@@ -415,6 +440,9 @@ function MeasureView({ onBack }) {
       laps: finalLaps,
       finalLevel,
       durationSec: duration,
+      mode,
+      lapSec: mode === 'fixed' ? lapSec : null,
+      restSec: mode === 'fixed' ? restSec : null,
     })
     setSavedMsg('저장됐어요!')
     setTimeout(() => { onBack() }, 700)
@@ -459,15 +487,77 @@ function MeasureView({ onBack }) {
             </div>
           </Section>
 
+          <Section label="측정 모드">
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setMode('paps')}
+                style={{ ...pillStyle(mode === 'paps'), flex: 1, position: 'relative' }}>
+                PAPS 표준
+                <span style={{
+                  position: 'absolute', top: -8, right: -6,
+                  background: '#27AE60', color: '#FFF',
+                  fontSize: 10, fontWeight: 800, padding: '2px 6px',
+                  borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }}>표준</span>
+                <div style={{ fontSize: 10, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                  점점 빨라짐 · 쉬는 시간 없음
+                </div>
+              </button>
+              <button onClick={() => setMode('fixed')}
+                style={{ ...pillStyle(mode === 'fixed'), flex: 1 }}>
+                고정 페이스
+                <div style={{ fontSize: 10, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                  연습용 · 직접 설정
+                </div>
+              </button>
+            </div>
+          </Section>
+
+          {mode === 'fixed' && (
+            <>
+              <Section label={`회당 시간 (편도 15m) · ${lapSec}초`}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+                  {LAP_SEC_OPTIONS.map(s => (
+                    <button key={s} onClick={() => setLapSec(s)}
+                      style={{ ...pillStyle(lapSec === s), padding: '10px 0', fontSize: 13 }}>
+                      {s}초
+                    </button>
+                  ))}
+                </div>
+              </Section>
+
+              <Section label="쉬는 시간">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                  {REST_SEC_OPTIONS.map(opt => (
+                    <button key={opt.value} onClick={() => setRestSec(opt.value)}
+                      style={{ ...pillStyle(restSec === opt.value), padding: '10px 0', fontSize: 13, position: 'relative' }}>
+                      {opt.label}
+                      {opt.standard && (
+                        <div style={{ fontSize: 9, opacity: 0.85, fontWeight: 600, marginTop: 1 }}>표준</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </Section>
+            </>
+          )}
+
           <div style={{
             background: '#FFF8F0', borderRadius: 12, padding: '12px 14px',
             fontSize: 12, color: '#888', lineHeight: 1.6, marginBottom: 16,
             border: '1px solid #FFE6CC',
           }}>
             📍 <b>측정 방법</b><br/>
-            · 15m 떨어진 두 선 사이를 <b>쉬는 시간 없이</b> 계속 달려요<br/>
+            · 15m 떨어진 두 선 사이를 신호음에 맞춰 달려요<br/>
             · 신호음마다 반대편 선에 도착해야 해요 (1회 = 편도 15m)<br/>
-            · 첫 단계는 9초/회, 단계가 오르면 점점 빨라져요<br/>
+            {mode === 'paps' ? (
+              <>
+                · <b>PAPS 표준</b>: 첫 단계 9초/회 → 단계가 오르면서 점점 빨라짐, 쉬는 시간 없음<br/>
+              </>
+            ) : (
+              <>
+                · <b>고정 페이스</b>: {lapSec}초/회로 일정하게{restSec > 0 ? `, 회마다 ${restSec}초 쉬어요` : ', 쉬는 시간 없이 계속'}<br/>
+              </>
+            )}
             · 신호음 안에 도착 못 하면 빨간 <b>멈춤</b> 버튼을 눌러요<br/>
             · 화면 깜빡 + 진동으로도 신호를 보여줘요
           </div>
@@ -522,18 +612,23 @@ function MeasureView({ onBack }) {
       }}>
         {(() => {
           const levelInfo = LEVELS.find(l => l.level === currentLevel)
-          const lapSec = levelInfo?.sec
-          const urgent = secondsToNext > 0 && secondsToNext < 1.5
+          const lapSecCurrent = mode === 'fixed' ? lapSec : levelInfo?.sec
+          const resting = nextEventType === 'go'
+          const urgent = !resting && secondsToNext > 0 && secondsToNext < 1.5
+          const displaySec = Math.max(0, Math.ceil(secondsToNext))
+          const restColor = '#3498DB'
           return (
             <>
               <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', textAlign: 'center', marginTop: 8 }}>
-                {user} · Level {currentLevel}{lapSec && ` · ${lapSec.toFixed(1)}초/회`}
+                {user} · {mode === 'fixed' ? `고정 ${lapSec}초` : `Level ${currentLevel}`}
+                {lapSecCurrent && ` · ${lapSecCurrent.toFixed(1)}초/회`}
+                {mode === 'fixed' && restSec > 0 && ` · 쉼 ${restSec}초`}
               </div>
 
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                 <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', fontWeight: 700, marginBottom: 4 }}>회수 (15m 편도)</div>
                 <div style={{
-                  fontSize: 160, fontWeight: 900, lineHeight: 1,
+                  fontSize: 140, fontWeight: 900, lineHeight: 1,
                   color: flash ? '#FFF' : ACCENT,
                   textShadow: flash ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
                 }}>
@@ -541,24 +636,31 @@ function MeasureView({ onBack }) {
                 </div>
 
                 <div style={{
-                  marginTop: 24, padding: '14px 24px', borderRadius: 16,
-                  background: flash ? '#FFF' : (urgent ? '#FFF3F3' : '#FFF'),
-                  border: `2px solid ${urgent ? ACCENT : '#E8E0E0'}`,
-                  textAlign: 'center', minWidth: 200,
+                  marginTop: 20, padding: '16px 28px', borderRadius: 20,
+                  background: flash ? '#FFF' : (urgent ? '#FFF3F3' : (resting ? '#EBF5FB' : '#FFF')),
+                  border: `3px solid ${urgent ? ACCENT : (resting ? restColor : '#E8E0E0')}`,
+                  textAlign: 'center', minWidth: 220,
+                  transition: 'border-color 0.15s, background 0.15s',
                 }}>
-                  <div style={{ fontSize: 12, color: urgent ? ACCENT : '#888', fontWeight: 700, marginBottom: 2 }}>
-                    다음 신호까지
+                  <div style={{
+                    fontSize: 13, fontWeight: 800, marginBottom: 4,
+                    color: urgent ? ACCENT : (resting ? restColor : '#888'),
+                    letterSpacing: 0.5,
+                  }}>
+                    {resting ? '😮‍💨 쉬어요 · 출발까지' : '다음 신호까지'}
                   </div>
                   <div style={{
-                    fontSize: 56, fontWeight: 900, lineHeight: 1,
-                    color: urgent ? ACCENT : '#2C3E50',
+                    fontSize: 96, fontWeight: 900, lineHeight: 1,
+                    color: urgent ? ACCENT : (resting ? restColor : '#2C3E50'),
                   }}>
-                    {secondsToNext.toFixed(1)}<span style={{ fontSize: 20, color: '#888', marginLeft: 4 }}>초</span>
+                    {displaySec}<span style={{ fontSize: 28, color: '#888', marginLeft: 6 }}>초</span>
                   </div>
                 </div>
 
                 <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', marginTop: 16, fontWeight: 600 }}>
-                  {currentLap === 0 ? '곧 첫 신호음이 울려요' : '신호 전에 반대편 도착!'}
+                  {currentLap === 0 ? '곧 첫 신호음이 울려요'
+                    : resting ? '잠깐 숨을 골라요'
+                    : '신호 전에 반대편 도착!'}
                 </div>
               </div>
             </>
