@@ -454,29 +454,18 @@ function MeasureView({ onBack }) {
   if (phase === 'setup') {
     return (
       <div className="fade-in" style={{ minHeight: '100vh', background: PAGE_BG, padding: '1rem' }}>
-        <Header title="🏃 측정 준비" subtitle="누가 / 학년 / 성별 선택" onBack={onBack} />
+        <Header title="🏃 측정 준비" subtitle="누가 측정할지 고르고 시작" onBack={onBack} />
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-          <Section label="누가 측정해요?">
+          <Section label={`누가 측정해요? (${GRADE_OPTIONS.find(o => o.key === gradeKey)?.label || ''} 기준)`}>
             <div style={{ display: 'flex', gap: 10 }}>
               {[CHILD1, CHILD2].map(name => (
                 <button key={name} onClick={() => setUser(name)}
                   style={pillStyle(user === name)}>
-                  {name}
-                </button>
-              ))}
-            </div>
-          </Section>
-
-          <Section label="학년">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {GRADE_OPTIONS.map(opt => (
-                <button key={opt.key} onClick={() => setGradeKey(opt.key)}
-                  style={pillStyle(gradeKey === opt.key)}>
-                  {opt.label}
-                  {GRADE_TABLE[opt.key]?.estimated && (
-                    <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.7 }}>참고</span>
-                  )}
+                  <div>{name}</div>
+                  <div style={{ fontSize: 10, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                    {GRADE_OPTIONS.find(o => o.key === USER_DEFAULTS[name]?.gradeKey)?.label}
+                  </div>
                 </button>
               ))}
             </div>
