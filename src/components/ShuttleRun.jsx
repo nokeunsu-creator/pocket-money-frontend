@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { CHILD1, CHILD2 } from '../config/names'
 import {
   buildBeepTimeline,
+  LEVELS,
   GRADE_TABLE,
   GRADE_OPTIONS,
   lookupGrade,
@@ -297,6 +298,7 @@ function MeasureView({ onBack }) {
   const [countdown, setCountdown] = useState(5)
   const [currentLap, setCurrentLap] = useState(0)
   const [currentLevel, setCurrentLevel] = useState(1)
+  const [secondsToNext, setSecondsToNext] = useState(0)
   const [flash, setFlash] = useState(false)
   const [finalLaps, setFinalLaps] = useState(0)
   const [finalLevel, setFinalLevel] = useState(1)
@@ -390,6 +392,22 @@ function MeasureView({ onBack }) {
     if (timerRef.current) clearTimeout(timerRef.current)
   }, [])
 
+  // 러닝 중 다음 신호음까지 남은 시간 갱신
+  useEffect(() => {
+    if (phase !== 'running') return
+    const tick = () => {
+      const timeline = timelineRef.current
+      const nextIdx = lapRef.current // 직전 회수 = lap, 다음 비프는 timeline[lap]
+      const nextBeep = timeline[nextIdx]
+      if (!nextBeep) { setSecondsToNext(0); return }
+      const elapsed = Date.now() - startTimeRef.current
+      setSecondsToNext(Math.max(0, (nextBeep.timeMs - elapsed) / 1000))
+    }
+    tick()
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [phase])
+
   const handleSave = () => {
     addRecord({
       user, gradeKey, gender,
@@ -447,8 +465,9 @@ function MeasureView({ onBack }) {
             border: '1px solid #FFE6CC',
           }}>
             📍 <b>측정 방법</b><br/>
-            · 15m 떨어진 두 선을 신호음에 맞춰 왕복해요<br/>
-            · 신호음이 울리기 전에 반대쪽 선에 도착해야 해요<br/>
+            · 15m 떨어진 두 선 사이를 <b>쉬는 시간 없이</b> 계속 달려요<br/>
+            · 신호음마다 반대편 선에 도착해야 해요 (1회 = 편도 15m)<br/>
+            · 첫 단계는 9초/회, 단계가 오르면 점점 빨라져요<br/>
             · 신호음 안에 도착 못 하면 빨간 <b>멈춤</b> 버튼을 눌러요<br/>
             · 화면 깜빡 + 진동으로도 신호를 보여줘요
           </div>
@@ -501,23 +520,50 @@ function MeasureView({ onBack }) {
         transition: 'background 0.1s',
         display: 'flex', flexDirection: 'column', padding: '1rem',
       }}>
-        <div style={{ fontSize: 14, color: '#888', textAlign: 'center', marginTop: 8 }}>
-          {user} · Level {currentLevel}
-        </div>
+        {(() => {
+          const levelInfo = LEVELS.find(l => l.level === currentLevel)
+          const lapSec = levelInfo?.sec
+          const urgent = secondsToNext > 0 && secondsToNext < 1.5
+          return (
+            <>
+              <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', textAlign: 'center', marginTop: 8 }}>
+                {user} · Level {currentLevel}{lapSec && ` · ${lapSec.toFixed(1)}초/회`}
+              </div>
 
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <div style={{ fontSize: 14, color: '#888', fontWeight: 700, marginBottom: 4 }}>회수</div>
-          <div style={{
-            fontSize: 180, fontWeight: 900, lineHeight: 1,
-            color: flash ? '#FFF' : ACCENT,
-            textShadow: flash ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
-          }}>
-            {currentLap}
-          </div>
-          <div style={{ fontSize: 18, color: flash ? '#FFF' : '#888', marginTop: 8, fontWeight: 600 }}>
-            {currentLap === 0 ? '출발선에서 대기' : '계속 달려요!'}
-          </div>
-        </div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', fontWeight: 700, marginBottom: 4 }}>회수 (15m 편도)</div>
+                <div style={{
+                  fontSize: 160, fontWeight: 900, lineHeight: 1,
+                  color: flash ? '#FFF' : ACCENT,
+                  textShadow: flash ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
+                }}>
+                  {currentLap}
+                </div>
+
+                <div style={{
+                  marginTop: 24, padding: '14px 24px', borderRadius: 16,
+                  background: flash ? '#FFF' : (urgent ? '#FFF3F3' : '#FFF'),
+                  border: `2px solid ${urgent ? ACCENT : '#E8E0E0'}`,
+                  textAlign: 'center', minWidth: 200,
+                }}>
+                  <div style={{ fontSize: 12, color: urgent ? ACCENT : '#888', fontWeight: 700, marginBottom: 2 }}>
+                    다음 신호까지
+                  </div>
+                  <div style={{
+                    fontSize: 56, fontWeight: 900, lineHeight: 1,
+                    color: urgent ? ACCENT : '#2C3E50',
+                  }}>
+                    {secondsToNext.toFixed(1)}<span style={{ fontSize: 20, color: '#888', marginLeft: 4 }}>초</span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', marginTop: 16, fontWeight: 600 }}>
+                  {currentLap === 0 ? '곧 첫 신호음이 울려요' : '신호 전에 반대편 도착!'}
+                </div>
+              </div>
+            </>
+          )
+        })()}
 
         <button onClick={finishMeasurement}
           style={{
