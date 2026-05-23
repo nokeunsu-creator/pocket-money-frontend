@@ -16,10 +16,12 @@ import {
   todayStr,
 } from '../data/shuttleRunData'
 
-const PAGE_BG = '#FEFCF6'
-const ACCENT = '#C92A2A'
-const ACCENT_SOFT = '#FF6B6B'
-const CARD_BORDER = '#F2DCDC'
+const PAGE_BG = '#F4F9FD'
+const ACCENT = '#1F6FB8'
+const ACCENT_SOFT = '#3498DB'
+const CARD_BORDER = '#D4E6F1'
+const URGENT = '#E67E22'      // 1.5초 이하 경고 (다급함)
+const REST_COLOR = '#16A085'  // 쉬는 시간 (참고용, PAPS 표준 모드에선 안 씀)
 
 const USER_DEFAULTS = {
   [CHILD1]: { gradeKey: 'E5', gender: 'male' },
@@ -263,7 +265,7 @@ function RecordRow({ record, onDelete }) {
           {record.user} · {record.laps}회
         </div>
         <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
-          {record.date} · {gradeLabel} {record.gender === 'female' ? '여' : '남'} · {fmtDur(record.durationSec)}
+          {record.date} · {gradeLabel} · {fmtDur(record.durationSec)}
           {record.mode === 'fixed'
             ? ` · 고정 ${record.lapSec}초${record.restSec > 0 ? `+쉼${record.restSec}` : ''}`
             : (record.finalLevel ? ` · L${record.finalLevel}` : '')}
@@ -480,13 +482,6 @@ function MeasureView({ onBack }) {
             </div>
           </Section>
 
-          <Section label="성별">
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setGender('male')} style={pillStyle(gender === 'male')}>👦 남자</button>
-              <button onClick={() => setGender('female')} style={pillStyle(gender === 'female')}>👧 여자</button>
-            </div>
-          </Section>
-
           <Section label="측정 모드">
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setMode('paps')}
@@ -551,14 +546,15 @@ function MeasureView({ onBack }) {
             · 신호음마다 반대편 선에 도착해야 해요 (1회 = 편도 15m)<br/>
             {mode === 'paps' ? (
               <>
-                · <b>PAPS 표준</b>: 첫 단계 9초/회 → 단계가 오르면서 점점 빨라짐, 쉬는 시간 없음<br/>
+                · <b>PAPS 표준</b>: 첫 단계 9초/회 → 단계가 오르면서 점점 빨라짐<br/>
+                · 별도 쉬는 시간 없음 (먼저 도착하면 신호 울릴 때까지 선에서 대기)<br/>
               </>
             ) : (
               <>
                 · <b>고정 페이스</b>: {lapSec}초/회로 일정하게{restSec > 0 ? `, 회마다 ${restSec}초 쉬어요` : ', 쉬는 시간 없이 계속'}<br/>
               </>
             )}
-            · 신호음 안에 도착 못 하면 빨간 <b>멈춤</b> 버튼을 눌러요<br/>
+            · 신호음 안에 도착 못 하면 <b>멈춤</b> 버튼을 눌러요<br/>
             · 화면 깜빡 + 진동으로도 신호를 보여줘요
           </div>
 
@@ -606,7 +602,7 @@ function MeasureView({ onBack }) {
     return (
       <div className="fade-in" style={{
         minHeight: '100vh',
-        background: flash ? ACCENT_SOFT : PAGE_BG,
+        background: flash ? ACCENT : PAGE_BG,
         transition: 'background 0.1s',
         display: 'flex', flexDirection: 'column', padding: '1rem',
       }}>
@@ -616,7 +612,6 @@ function MeasureView({ onBack }) {
           const resting = nextEventType === 'go'
           const urgent = !resting && secondsToNext > 0 && secondsToNext < 1.5
           const displaySec = Math.max(0, Math.ceil(secondsToNext))
-          const restColor = '#3498DB'
           return (
             <>
               <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', textAlign: 'center', marginTop: 8 }}>
@@ -637,21 +632,21 @@ function MeasureView({ onBack }) {
 
                 <div style={{
                   marginTop: 20, padding: '16px 28px', borderRadius: 20,
-                  background: flash ? '#FFF' : (urgent ? '#FFF3F3' : (resting ? '#EBF5FB' : '#FFF')),
-                  border: `3px solid ${urgent ? ACCENT : (resting ? restColor : '#E8E0E0')}`,
+                  background: flash ? '#FFF' : (urgent ? '#FFF4E6' : (resting ? '#E8F8F4' : '#FFF')),
+                  border: `3px solid ${urgent ? URGENT : (resting ? REST_COLOR : ACCENT_SOFT)}`,
                   textAlign: 'center', minWidth: 220,
                   transition: 'border-color 0.15s, background 0.15s',
                 }}>
                   <div style={{
                     fontSize: 13, fontWeight: 800, marginBottom: 4,
-                    color: urgent ? ACCENT : (resting ? restColor : '#888'),
+                    color: urgent ? URGENT : (resting ? REST_COLOR : ACCENT),
                     letterSpacing: 0.5,
                   }}>
                     {resting ? '😮‍💨 쉬어요 · 출발까지' : '다음 신호까지'}
                   </div>
                   <div style={{
                     fontSize: 96, fontWeight: 900, lineHeight: 1,
-                    color: urgent ? ACCENT : (resting ? restColor : '#2C3E50'),
+                    color: urgent ? URGENT : (resting ? REST_COLOR : '#1B4F72'),
                   }}>
                     {displaySec}<span style={{ fontSize: 28, color: '#888', marginLeft: 6 }}>초</span>
                   </div>
@@ -708,7 +703,7 @@ function MeasureView({ onBack }) {
               color: '#FFF',
             }}>
               <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
-                {GRADE_OPTIONS.find(o => o.key === gradeKey)?.label} {gender === 'female' ? '여' : '남'}
+                {GRADE_OPTIONS.find(o => o.key === gradeKey)?.label} 남자 기준
               </div>
               <div style={{ fontSize: 28, fontWeight: 900, marginTop: 2 }}>
                 {grade.grade}등급
@@ -757,15 +752,15 @@ function MeasureView({ onBack }) {
 // ========== 등급표 화면 ==========
 function TableView({ onBack }) {
   const [gradeKey, setGradeKey] = useState('E5')
-  const [gender, setGender] = useState('male')
+  const gender = 'male'
 
   const table = GRADE_TABLE[gradeKey]?.[gender] || []
   const estimated = GRADE_TABLE[gradeKey]?.estimated
 
-  // 해당 학년·성별의 최고 기록 위치
+  // 해당 학년 최고 기록 위치
   const records = loadRecords()
   const best = records
-    .filter(r => r.gradeKey === gradeKey && r.gender === gender)
+    .filter(r => r.gradeKey === gradeKey)
     .reduce((m, r) => (!m || r.laps > m.laps ? r : m), null)
 
   return (
@@ -773,7 +768,7 @@ function TableView({ onBack }) {
       <Header title="📋 PAPS 등급표" subtitle="초등 15m 왕복오래달리기" onBack={onBack} />
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-        <Section label="학년">
+        <Section label="학년 (남자 기준)">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {GRADE_OPTIONS.map(opt => (
               <button key={opt.key} onClick={() => setGradeKey(opt.key)}
@@ -784,13 +779,6 @@ function TableView({ onBack }) {
                 )}
               </button>
             ))}
-          </div>
-        </Section>
-
-        <Section label="성별">
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setGender('male')} style={pillStyle(gender === 'male')}>👦 남자</button>
-            <button onClick={() => setGender('female')} style={pillStyle(gender === 'female')}>👧 여자</button>
           </div>
         </Section>
 
