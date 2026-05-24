@@ -717,6 +717,9 @@ function MeasureView({ onBack }) {
         {(() => {
           const levelInfo = LEVELS.find(l => l.level === currentLevel)
           const lapSecCurrent = mode === 'fixed' ? lapSec : levelInfo?.sec
+          const speedCurrent = mode === 'fixed'
+            ? (15 / lapSec) * 3.6
+            : levelInfo?.speedKmh
           const resting = nextEventType === 'go'
           const urgent = !resting && secondsToNext > 0 && secondsToNext < 1.5
           const displaySec = Math.max(0, Math.ceil(secondsToNext))
@@ -725,6 +728,7 @@ function MeasureView({ onBack }) {
               <div style={{ fontSize: 14, color: flash ? '#FFF' : '#888', textAlign: 'center', marginTop: 8 }}>
                 {user} · {mode === 'fixed' ? `고정 ${lapSec}초` : `Level ${currentLevel}`}
                 {lapSecCurrent && ` · ${lapSecCurrent.toFixed(1)}초/회`}
+                {speedCurrent && ` · ${speedCurrent.toFixed(1)} km/h`}
                 {mode === 'fixed' && restSec > 0 && ` · 쉼 ${restSec}초`}
               </div>
 
@@ -801,7 +805,16 @@ function MeasureView({ onBack }) {
             {finalLaps}<span style={{ fontSize: 28, color: '#888' }}> 회</span>
           </div>
           <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>
-            Level {finalLevel} · {fmtDur(duration)}
+            {(() => {
+              const li = LEVELS.find(l => l.level === finalLevel)
+              return (
+                <>
+                  Level {finalLevel}
+                  {li && ` · ${li.speedKmh.toFixed(1)} km/h 도달`}
+                  {' · '}{fmtDur(duration)}
+                </>
+              )
+            })()}
           </div>
 
           {goal > 0 && (
