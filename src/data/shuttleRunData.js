@@ -2,39 +2,44 @@
 // 학교에서 받은 정확한 등급표가 있으면 GRADE_TABLE의 해당 항목을 그대로 교체하세요.
 
 // === 측정 단계별 신호음 간격 ===
-// 초등 15m 기준. PAPS 공식 음원의 정확한 초/회 표는 외부 공개 자료가 부족해서,
-// 1단계=9.0초, 단계당 약 1분 유지, 0.5초씩 단축되는 표준 다단계 셔틀런(MSFT) 패턴으로 근사.
+// 초등 15m PAPS / 다단계 셔틀런(MSFT) 표준 — Level 1=6 km/h(9초/회), 단계마다 0.5 km/h 증가.
+// 각 단계는 약 1분(±수 초) 유지. shuttles는 그 단계에서 진행할 회수 (= round(60 / sec)).
 // 학교 공식 음원을 받으면 LEVELS 배열만 교체하면 됨.
+//
+// 누적 회수 → 단계 환산:
+//   L1=7 / L2=14 / L3=22 / L4=30 / L5=39 / L6=48 / L7=58 / L8=69 / L9=80 / L10=92
+//   L11=104 / L12=117 / L13=130 / ... / L21=258
+// 초5 1등급 컷(100회)은 Level 11 도달 직전(약 11분 소요)에 해당.
 export const LEVELS = [
-  { level: 1,  sec: 9.0 },
-  { level: 2,  sec: 8.0 },
-  { level: 3,  sec: 7.5 },
-  { level: 4,  sec: 7.2 },
-  { level: 5,  sec: 6.9 },
-  { level: 6,  sec: 6.6 },
-  { level: 7,  sec: 6.3 },
-  { level: 8,  sec: 6.0 },
-  { level: 9,  sec: 5.8 },
-  { level: 10, sec: 5.6 },
-  { level: 11, sec: 5.4 },
-  { level: 12, sec: 5.2 },
-  { level: 13, sec: 5.0 },
-  { level: 14, sec: 4.8 },
-  { level: 15, sec: 4.6 },
-  { level: 16, sec: 4.4 },
-  { level: 17, sec: 4.2 },
-  { level: 18, sec: 4.0 },
+  { level: 1,  speedKmh: 6.0,  sec: 9.00, shuttles: 7 },
+  { level: 2,  speedKmh: 6.5,  sec: 8.31, shuttles: 7 },
+  { level: 3,  speedKmh: 7.0,  sec: 7.71, shuttles: 8 },
+  { level: 4,  speedKmh: 7.5,  sec: 7.20, shuttles: 8 },
+  { level: 5,  speedKmh: 8.0,  sec: 6.75, shuttles: 9 },
+  { level: 6,  speedKmh: 8.5,  sec: 6.35, shuttles: 9 },
+  { level: 7,  speedKmh: 9.0,  sec: 6.00, shuttles: 10 },
+  { level: 8,  speedKmh: 9.5,  sec: 5.68, shuttles: 11 },
+  { level: 9,  speedKmh: 10.0, sec: 5.40, shuttles: 11 },
+  { level: 10, speedKmh: 10.5, sec: 5.14, shuttles: 12 },
+  { level: 11, speedKmh: 11.0, sec: 4.91, shuttles: 12 },
+  { level: 12, speedKmh: 11.5, sec: 4.70, shuttles: 13 },
+  { level: 13, speedKmh: 12.0, sec: 4.50, shuttles: 13 },
+  { level: 14, speedKmh: 12.5, sec: 4.32, shuttles: 14 },
+  { level: 15, speedKmh: 13.0, sec: 4.15, shuttles: 14 },
+  { level: 16, speedKmh: 13.5, sec: 4.00, shuttles: 15 },
+  { level: 17, speedKmh: 14.0, sec: 3.86, shuttles: 16 },
+  { level: 18, speedKmh: 14.5, sec: 3.72, shuttles: 16 },
+  { level: 19, speedKmh: 15.0, sec: 3.60, shuttles: 17 },
+  { level: 20, speedKmh: 15.5, sec: 3.48, shuttles: 17 },
+  { level: 21, speedKmh: 16.0, sec: 3.38, shuttles: 18 },
 ]
-
-const LEVEL_DURATION_SEC = 60 // 각 단계 약 1분 유지
 
 /** 누적 회수가 N일 때 현재 단계 번호 (1부터) 반환 */
 export function levelForLap(lap) {
   if (lap <= 0) return 1
   let cum = 0
-  for (const { level, sec } of LEVELS) {
-    const lapsInLevel = Math.max(1, Math.floor(LEVEL_DURATION_SEC / sec))
-    cum += lapsInLevel
+  for (const { level, shuttles } of LEVELS) {
+    cum += shuttles
     if (lap <= cum) return level
   }
   return LEVELS[LEVELS.length - 1].level
@@ -51,9 +56,8 @@ export function buildBeepTimeline(maxLevels = LEVELS.length) {
   let cumMs = 0
   let lap = 0
   for (let i = 0; i < Math.min(maxLevels, LEVELS.length); i++) {
-    const { level, sec } = LEVELS[i]
-    const lapsInLevel = Math.max(1, Math.floor(LEVEL_DURATION_SEC / sec))
-    for (let j = 0; j < lapsInLevel; j++) {
+    const { level, sec, shuttles } = LEVELS[i]
+    for (let j = 0; j < shuttles; j++) {
       lap += 1
       cumMs += sec * 1000
       beeps.push({ type: 'lap', lap, level, timeMs: cumMs, isLevelStart: j === 0 })
