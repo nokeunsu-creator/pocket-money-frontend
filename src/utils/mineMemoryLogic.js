@@ -183,16 +183,16 @@ export function serializeForWire(state) {
 
 export function deserializeFromWire(wire) {
   if (!wire) return initialGameState()
-  // Firebase 객체 키는 문자열이므로 숫자로 변환
+  // Firebase는 null 값을 가진 키를 자동 삭제한다. 미획득 보물칸(=null)은
+  // 와이어에서 사라지므로, 항상 3개 자리를 null로 시드한 뒤 와이어에 남아
+  // 있는 획득 정보로만 덮어쓴다. 그렇지 않으면 한 명이 보물을 획득한 직후
+  // 다른 보물칸들이 화면에서 사라진다.
   const treasures = {}
+  for (const [r, c] of TREASURES) treasures[key(r, c)] = null
   if (wire.treasures) {
     for (const k of Object.keys(wire.treasures)) {
       treasures[Number(k)] = wire.treasures[k]
     }
-  } else {
-    treasures[key(0, 0)] = null
-    treasures[key(5, 5)] = null
-    treasures[key(10, 10)] = null
   }
   return {
     pieces: wire.pieces || { 1: key(0, 10), 2: key(10, 0) },
