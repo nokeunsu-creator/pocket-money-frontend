@@ -51,6 +51,7 @@ import QuickMemo from './components/QuickMemo'
 import StudyMain from './components/StudyMain'
 import FamilyHub from './components/FamilyHub'
 import DiaryHub from './components/DiaryHub'
+import Dictation from './components/Dictation'
 import InlineSkate from './components/InlineSkate'
 import ShuttleRun from './components/ShuttleRun'
 import BudgetMain from './components/BudgetMain'
@@ -91,7 +92,6 @@ import BlokusDuo from './components/BlokusDuo'
 import Quarto from './components/Quarto'
 import ConnectFour from './components/ConnectFour'
 import Checkers from './components/Checkers'
-import Yutnori from './components/Yutnori'
 import Gonu from './components/Gonu'
 import Magic from './components/Magic'
 
@@ -356,7 +356,7 @@ export default function App() {
         <FamilyHub
           onBack={goBack}
           onSelect={(key) => {
-            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo', magic: 'magic', diary: 'diary', inline: 'inline', shuttle: 'shuttle' }
+            const pageMap = { familyTree: 'family', todo: 'todo', timer: 'timer', study: 'study', memo: 'memo', growth: 'growth', dojo: 'dojo', magic: 'magic', diary: 'diary', inline: 'inline', shuttle: 'shuttle', dictation: 'dictation' }
             const nextPage = pageMap[key]
             if (nextPage) {
               setCurrentPage(nextPage)
@@ -370,6 +370,9 @@ export default function App() {
       )}
       {currentPage === 'diary' && (
         <DiaryHub onBack={goBack} />
+      )}
+      {currentPage === 'dictation' && (
+        <Dictation onBack={goBack} />
       )}
       {currentPage === 'inline' && (
         <InlineSkate onBack={goBack} />
@@ -631,9 +634,6 @@ export default function App() {
       )}
       {currentPage === 'game-checkers' && (
         <Checkers onBack={goBack} />
-      )}
-      {currentPage === 'game-yutnori' && (
-        <Yutnori onBack={goBack} />
       )}
       {currentPage === 'game-gonu' && (
         <Gonu onBack={goBack} />
