@@ -12,3 +12,9 @@ CLAUDE.md
 
 # KataGo 회귀 테스트용 로컬 모델 캐시 (12MB)
 test/.kata-model/
+
+# 로컬 백업 (PC별 보관, 저장소에 넣지 않음)
+.vercel.frontend_backup/
+public/diary/scenes_v1_backup/
+public/diary/scenes_v2_backup/
+public/diary/scenes_v3_backup/

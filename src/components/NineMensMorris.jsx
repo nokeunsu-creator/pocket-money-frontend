@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useGameRoom } from '../utils/useGameRoom'
 
-// 24 교차점, 좌표는 (row, col) 격자 7x7 중 일부
-// idx 0~23, 각 점의 시각적 위치(x,y) 0~6 그리드 기준
+// 24 교차점
 const POINTS = [
   [0, 0], [3, 0], [6, 0],
   [1, 1], [3, 1], [5, 1],
@@ -12,35 +12,17 @@ const POINTS = [
   [0, 6], [3, 6], [6, 6],
 ]
 
-// 인접 점 그래프
 const ADJ = [
-  [1, 9],          // 0
-  [0, 2, 4],       // 1
-  [1, 14],         // 2
-  [4, 10],         // 3
-  [1, 3, 5, 7],    // 4
-  [4, 13],         // 5
-  [7, 11],         // 6
-  [4, 6, 8],       // 7
-  [7, 12],         // 8
-  [0, 10, 21],     // 9
-  [3, 9, 11, 18],  // 10
-  [6, 10, 15],     // 11
-  [8, 13, 17],     // 12
-  [5, 12, 14, 20], // 13
-  [2, 13, 23],     // 14
-  [11, 16],        // 15
-  [15, 17, 19],    // 16
-  [12, 16],        // 17
-  [10, 19],        // 18
-  [16, 18, 20, 22],// 19
-  [13, 19],        // 20
-  [9, 22],         // 21
-  [19, 21, 23],    // 22
-  [14, 22],        // 23
+  [1, 9], [0, 2, 4], [1, 14],
+  [4, 10], [1, 3, 5, 7], [4, 13],
+  [7, 11], [4, 6, 8], [7, 12],
+  [0, 10, 21], [3, 9, 11, 18], [6, 10, 15],
+  [8, 13, 17], [5, 12, 14, 20], [2, 13, 23],
+  [11, 16], [15, 17, 19], [12, 16],
+  [10, 19], [16, 18, 20, 22], [13, 19],
+  [9, 22], [19, 21, 23], [14, 22],
 ]
 
-// 3개 직선(밀) 패턴
 const MILLS = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],
   [9, 10, 11], [12, 13, 14],
@@ -50,33 +32,24 @@ const MILLS = [
   [8, 12, 17], [5, 13, 20], [2, 14, 23],
 ]
 
-function millsAt(point) {
-  return MILLS.filter(m => m.includes(point))
-}
-
+function millsAt(point) { return MILLS.filter(m => m.includes(point)) }
 function inMill(board, point, player) {
   if (board[point] !== player) return false
   return millsAt(point).some(m => m.every(p => board[p] === player))
 }
-
 function allPiecesInMills(board, player) {
   const own = []
   for (let i = 0; i < 24; i++) if (board[i] === player) own.push(i)
   return own.every(p => inMill(board, p, player))
 }
-
 function countPieces(board, player) {
   let n = 0
   for (let i = 0; i < 24; i++) if (board[i] === player) n++
   return n
 }
-
-function canMove(board, player, phase, placed) {
-  // phase 'place'에선 항상 가능
-  if (phase === 'place') return true
-  if (placed < 9) return true
+function canMove(board, player) {
   const cnt = countPieces(board, player)
-  if (cnt <= 3) return true // 날기 가능
+  if (cnt <= 3) return true
   for (let i = 0; i < 24; i++) {
     if (board[i] !== player) continue
     for (const j of ADJ[i]) if (board[j] === null) return true
@@ -86,7 +59,14 @@ function canMove(board, player, phase, placed) {
 
 function opp(p) { return p === 'black' ? 'white' : 'black' }
 
-// AI: 단순 휴리스틱 + 1수 룩어헤드
+function boardToFlat(board) {
+  return board.map(c => c ? c[0] : '.').join('')
+}
+function flatToBoard(flat) {
+  if (!flat) return Array(24).fill(null)
+  return flat.split('').map(ch => ch === 'b' ? 'black' : ch === 'w' ? 'white' : null)
+}
+
 function aiPickPlace(board, player) {
   let best = -1, bestScore = -Infinity
   for (let i = 0; i < 24; i++) {
@@ -94,11 +74,9 @@ function aiPickPlace(board, player) {
     const nb = [...board]; nb[i] = player
     let score = 0
     if (millsAt(i).some(m => m.every(p => nb[p] === player))) score += 50
-    // 상대 밀 차단
     nb[i] = opp(player)
     if (millsAt(i).some(m => m.every(p => nb[p] === opp(player)))) score += 40
     nb[i] = player
-    // 인접 자유도
     score += ADJ[i].length * 2
     if (score > bestScore) { bestScore = score; best = i }
   }
@@ -106,7 +84,6 @@ function aiPickPlace(board, player) {
 }
 
 function aiPickMove(board, player, canFly) {
-  // moves: { from, to, makesMill }
   const moves = []
   for (let i = 0; i < 24; i++) {
     if (board[i] !== player) continue
@@ -115,10 +92,6 @@ function aiPickMove(board, player, canFly) {
       const nb = [...board]; nb[i] = null; nb[j] = player
       const mill = millsAt(j).some(m => m.every(p => nb[p] === player))
       let score = (mill ? 50 : 0) + ADJ[j].length * 2
-      // 상대 밀 차단 가능성
-      const nb2 = [...board]; nb2[i] = null
-      // 상대가 j로 못 두게 막는 효과: j에 상대가 두면 밀 만드는지
-      if (millsAt(j).some(m => m.every(p => p === j ? true : nb2[p] === opp(player)))) score += 30
       moves.push({ from: i, to: j, score, makesMill: mill })
     }
   }
@@ -127,221 +100,390 @@ function aiPickMove(board, player, canFly) {
   return moves[0]
 }
 
-// 제거할 상대 돌 고르기: 밀 아닌 것 우선, 가치 높은 것 우선
 function aiPickRemove(board, target) {
   const candidates = []
   for (let i = 0; i < 24; i++) {
     if (board[i] !== target) continue
     candidates.push({ idx: i, inMill: inMill(board, i, target) })
   }
-  // 룰: 가능하면 밀 안에 있지 않은 돌만 제거
   const allInMill = candidates.every(c => c.inMill)
   const pool = allInMill ? candidates : candidates.filter(c => !c.inMill)
-  // 인접도 높은 것 우선 제거 (공격력 큰 돌)
   pool.sort((a, b) => ADJ[b.idx].length - ADJ[a.idx].length)
   return pool[0]?.idx
 }
 
 export default function NineMensMorris({ onBack }) {
+  const [mode, setMode] = useState(null) // null | 'local' | 'ai' | 'online'
   const [board, setBoard] = useState(() => Array(24).fill(null))
-  const [turn, setTurn] = useState('black') // 'black' = 사람
+  const [turn, setTurn] = useState('black')
   const [placed, setPlaced] = useState({ black: 0, white: 0 })
-  const [selected, setSelected] = useState(null) // 이동 단계에서 선택한 from
-  const [removing, setRemoving] = useState(null) // 밀 만든 후 제거 단계: 'black'|'white'
+  const [selected, setSelected] = useState(null)
+  const [removing, setRemoving] = useState(null)
   const [winner, setWinner] = useState(null)
   const [status, setStatus] = useState('')
+  const [joinCode, setJoinCode] = useState('')
+  const aiBusyRef = useRef(false)
 
-  const myPlaced = placed.black
-  const aiPlaced = placed.white
-  const myPhase = myPlaced < 9 ? 'place' : (countPieces(board, 'black') <= 3 ? 'fly' : 'move')
-  const aiPhase = aiPlaced < 9 ? 'place' : (countPieces(board, 'white') <= 3 ? 'fly' : 'move')
+  const room = useGameRoom('morris')
 
-  // 사람 클릭 처리
+  useEffect(() => {
+    if (mode !== 'online' || !room.gameState) return
+    const s = room.gameState
+    setBoard(flatToBoard(s.board))
+    setTurn(s.turn || 'black')
+    setPlaced(s.placed || { black: 0, white: 0 })
+    setRemoving(s.removing || null)
+    setWinner(s.winner || null)
+    setSelected(null)
+  }, [room.gameState, mode])
+
+  const myColor = mode === 'local' ? turn
+    : mode === 'ai' ? 'black'
+    : mode === 'online' ? room.myColor : null
+
+  const phaseFor = (color) => {
+    const p = color === 'black' ? placed.black : placed.white
+    return p < 9 ? 'place' : (countPieces(board, color) <= 3 ? 'fly' : 'move')
+  }
+
+  const isMyTurn = !winner && (
+    mode === 'local'
+    || (mode === 'ai' && turn === 'black' && removing !== 'black')
+    || (mode === 'online' && room.connected && turn === room.myColor)
+  )
+
+  const syncState = (next) => {
+    if (mode === 'online') {
+      room.updateState({
+        board: boardToFlat(next.board),
+        turn: next.turn,
+        placed: next.placed,
+        removing: next.removing || null,
+        winner: next.winner || '',
+      })
+    }
+    setBoard(next.board)
+    setTurn(next.turn)
+    setPlaced(next.placed)
+    setRemoving(next.removing || null)
+    if (next.winner) setWinner(next.winner)
+  }
+
+  const finishMoveTurn = (nb, moverColor, newPlaced) => {
+    const enemy = opp(moverColor)
+    const enemyPlacedAll = (enemy === 'black' ? newPlaced.black : newPlaced.white) >= 9
+    if (enemyPlacedAll && countPieces(nb, enemy) < 3) {
+      syncState({ board: nb, turn: enemy, placed: newPlaced, removing: null, winner: moverColor })
+      return
+    }
+    if (enemyPlacedAll && !canMove(nb, enemy)) {
+      syncState({ board: nb, turn: enemy, placed: newPlaced, removing: null, winner: moverColor })
+      return
+    }
+    syncState({ board: nb, turn: enemy, placed: newPlaced, removing: null })
+    setStatus('')
+  }
+
+  // 클릭 처리 (사람 차례)
   const handleClick = (i) => {
-    if (winner) return
-    if (removing === 'black') {
-      // AI가 밀 만든 후 내 돌 제거하는 단계는 AI가 자동 처리
-      return
-    }
-    if (turn !== 'black') return
+    if (!isMyTurn) return
+    const color = mode === 'local' ? turn : myColor
 
-    // 제거 단계 (내가 밀을 만든 직후)
-    if (removing === 'white') {
-      if (board[i] !== 'white') return
-      const allMill = allPiecesInMills(board, 'white')
-      if (!allMill && inMill(board, i, 'white')) return
+    if (removing === color) return // 내 돌이 제거당하는 단계는 클릭 불가 (상대 액션)
+
+    // 제거 단계 (내가 밀을 만들었음 → 상대 돌 제거)
+    if (removing && removing === opp(color)) {
+      if (board[i] !== opp(color)) return
+      const allMill = allPiecesInMills(board, opp(color))
+      if (!allMill && inMill(board, i, opp(color))) return
       const nb = [...board]; nb[i] = null
-      setBoard(nb)
-      setRemoving(null)
-      finishTurnAfter(nb, 'black')
+      finishMoveTurn(nb, color, placed)
       return
     }
 
-    // 놓기 단계
-    if (myPhase === 'place') {
+    const phase = phaseFor(color)
+    if (phase === 'place') {
       if (board[i] !== null) return
-      const nb = [...board]; nb[i] = 'black'
-      const newPlaced = { ...placed, black: placed.black + 1 }
-      setBoard(nb)
-      setPlaced(newPlaced)
-      // 밀 만들었는지
-      if (millsAt(i).some(m => m.every(p => nb[p] === 'black'))) {
-        // 제거 가능한 상대 돌 있는지 확인
-        const removable = [...Array(24).keys()].filter(k => nb[k] === 'white')
+      const nb = [...board]; nb[i] = color
+      const newPlaced = { ...placed, [color]: placed[color] + 1 }
+      if (millsAt(i).some(m => m.every(p => nb[p] === color))) {
+        const removable = [...Array(24).keys()].filter(k => nb[k] === opp(color))
         if (removable.length > 0) {
-          setRemoving('white')
+          // 밀 → 제거 단계
+          syncState({ board: nb, turn, placed: newPlaced, removing: opp(color) })
           setStatus('상대 돌을 제거하세요')
           return
         }
       }
-      finishTurnAfter(nb, 'black', newPlaced)
+      finishMoveTurn(nb, color, newPlaced)
       return
     }
 
-    // 이동/날기 단계
+    // 이동/날기
     if (selected === null) {
-      if (board[i] !== 'black') return
+      if (board[i] !== color) return
       setSelected(i)
       return
     }
     if (i === selected) { setSelected(null); return }
-    if (board[i] !== null) {
-      // 다른 자기 돌 선택 변경
-      if (board[i] === 'black') { setSelected(i); return }
-      return
-    }
-    const canFly = countPieces(board, 'black') <= 3
+    if (board[i] === color) { setSelected(i); return }
+    if (board[i] !== null) return
+    const canFly = countPieces(board, color) <= 3
     if (!canFly && !ADJ[selected].includes(i)) return
-    const nb = [...board]; nb[selected] = null; nb[i] = 'black'
-    setBoard(nb)
+    const nb = [...board]; nb[selected] = null; nb[i] = color
     setSelected(null)
-    if (millsAt(i).some(m => m.every(p => nb[p] === 'black'))) {
-      const removable = [...Array(24).keys()].filter(k => nb[k] === 'white')
+    if (millsAt(i).some(m => m.every(p => nb[p] === color))) {
+      const removable = [...Array(24).keys()].filter(k => nb[k] === opp(color))
       if (removable.length > 0) {
-        setRemoving('white')
+        syncState({ board: nb, turn, placed, removing: opp(color) })
         setStatus('상대 돌을 제거하세요')
         return
       }
     }
-    finishTurnAfter(nb, 'black')
+    finishMoveTurn(nb, color, placed)
   }
 
-  const finishTurnAfter = (nb, mover, newPlaced = placed) => {
-    // 상대 패배 조건 체크 (놓기 단계 끝난 후만)
-    const enemy = opp(mover)
-    const enemyPlacedAll = (enemy === 'black' ? newPlaced.black : newPlaced.white) >= 9
-    if (enemyPlacedAll && countPieces(nb, enemy) < 3) {
-      setWinner(mover); setStatus(''); return
-    }
-    if (enemyPlacedAll && !canMove(nb, enemy, 'move', enemy === 'black' ? newPlaced.black : newPlaced.white)) {
-      setWinner(mover); setStatus(''); return
-    }
-    setStatus('')
-    setTurn(enemy)
-  }
-
-  // AI 턴
+  // AI 차례 처리
   useEffect(() => {
-    if (turn !== 'white' || winner) return
-    if (removing === 'black') return // 사람 돌 제거 단계: 아래 별도 effect
+    if (mode !== 'ai' || winner) return
+    if (turn !== 'white' && removing !== 'black') return
+    if (aiBusyRef.current) return
+    aiBusyRef.current = true
     const t = setTimeout(() => {
-      let nb, last
-      if (aiPhase === 'place') {
-        last = aiPickPlace(board, 'white')
-        nb = [...board]; nb[last] = 'white'
-        setPlaced(p => ({ ...p, white: p.white + 1 }))
-      } else {
-        const mv = aiPickMove(board, 'white', aiPhase === 'fly')
-        if (!mv) { setWinner('black'); return }
-        nb = [...board]; nb[mv.from] = null; nb[mv.to] = 'white'
-        last = mv.to
+      // AI 제거 단계
+      if (removing === 'black') {
+        const idx = aiPickRemove(board, 'black')
+        if (idx === undefined) { aiBusyRef.current = false; return }
+        const nb = [...board]; nb[idx] = null
+        finishMoveTurn(nb, 'white', placed)
+        aiBusyRef.current = false
+        return
       }
-      setBoard(nb)
+      if (turn !== 'white') { aiBusyRef.current = false; return }
+      const ph = phaseFor('white')
+      let nb, last
+      if (ph === 'place') {
+        last = aiPickPlace(board, 'white')
+        if (last < 0) { aiBusyRef.current = false; return }
+        nb = [...board]; nb[last] = 'white'
+        const newPlaced = { ...placed, white: placed.white + 1 }
+        if (millsAt(last).some(m => m.every(p => nb[p] === 'white'))) {
+          const removable = [...Array(24).keys()].filter(k => nb[k] === 'black')
+          if (removable.length > 0) {
+            setBoard(nb)
+            setPlaced(newPlaced)
+            setRemoving('black')
+            setStatus('AI가 내 돌을 가져갑니다...')
+            aiBusyRef.current = false
+            return
+          }
+        }
+        finishMoveTurn(nb, 'white', newPlaced)
+        aiBusyRef.current = false
+        return
+      }
+      // move/fly
+      const mv = aiPickMove(board, 'white', ph === 'fly')
+      if (!mv) {
+        // 이동 불가 → 흑 승
+        syncState({ board, turn: 'white', placed, removing: null, winner: 'black' })
+        aiBusyRef.current = false
+        return
+      }
+      nb = [...board]; nb[mv.from] = null; nb[mv.to] = 'white'
+      last = mv.to
       if (millsAt(last).some(m => m.every(p => nb[p] === 'white'))) {
         const removable = [...Array(24).keys()].filter(k => nb[k] === 'black')
         if (removable.length > 0) {
+          setBoard(nb)
           setRemoving('black')
           setStatus('AI가 내 돌을 가져갑니다...')
+          aiBusyRef.current = false
           return
         }
       }
-      const newPlaced = { ...placed, white: (aiPhase === 'place' ? placed.white + 1 : placed.white) }
-      finishTurnAfter(nb, 'white', newPlaced)
+      finishMoveTurn(nb, 'white', placed)
+      aiBusyRef.current = false
     }, 600)
-    return () => clearTimeout(t)
-  }, [turn, board, winner, removing, aiPhase, placed])
-
-  // AI 제거 단계 (사람 돌 제거)
-  useEffect(() => {
-    if (removing !== 'black' || winner) return
-    const t = setTimeout(() => {
-      const idx = aiPickRemove(board, 'black')
-      if (idx === undefined) { setRemoving(null); return }
-      const nb = [...board]; nb[idx] = null
-      setBoard(nb)
-      setRemoving(null)
-      const newPlaced = { ...placed }
-      finishTurnAfter(nb, 'white', newPlaced)
-    }, 700)
-    return () => clearTimeout(t)
-  }, [removing, board, winner, placed])
+    return () => { clearTimeout(t); aiBusyRef.current = false }
+  }, [turn, board, winner, removing, mode, placed])
 
   const reset = () => {
-    setBoard(Array(24).fill(null))
-    setTurn('black')
-    setPlaced({ black: 0, white: 0 })
-    setSelected(null)
+    const next = { board: Array(24).fill(null), turn: 'black', placed: { black: 0, white: 0 }, removing: null, winner: null }
+    if (mode === 'online') {
+      room.updateState({
+        board: boardToFlat(next.board),
+        turn: 'black',
+        placed: next.placed,
+        removing: null,
+        winner: '',
+      })
+    }
+    setBoard(next.board)
+    setTurn(next.turn)
+    setPlaced(next.placed)
     setRemoving(null)
+    setSelected(null)
     setWinner(null)
     setStatus('')
+    aiBusyRef.current = false
   }
 
-  const BOARD_PX = Math.min(360, window.innerWidth - 40)
+  const handleBack = () => {
+    if (mode === 'online') room.leaveRoom()
+    if (mode) {
+      setMode(null)
+      reset()
+      return
+    }
+    onBack()
+  }
+
+  const createOnline = async () => {
+    await room.createRoom({
+      board: boardToFlat(Array(24).fill(null)),
+      turn: 'black',
+      placed: { black: 0, white: 0 },
+      removing: null,
+      winner: '',
+    })
+    setMode('online')
+  }
+  const joinOnline = async () => {
+    if (joinCode.length !== 2) { room.setError('2자리 코드를 입력하세요'); return }
+    const ok = await room.joinRoom(joinCode)
+    if (ok) setMode('online')
+  }
+
+  if (!mode) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: '#888', cursor: 'pointer', marginBottom: 16 }}>
+          ← 돌아가기
+        </button>
+        <div style={{ fontSize: 64, marginBottom: 12 }}>🔵</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>9목 모리스</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
+          <button onClick={() => setMode('local')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #5D4037, #8B6F2A)' }}>
+            📱 같은 기기에서 (2인)
+          </button>
+          <button onClick={() => setMode('ai')}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #E67E22, #D35400)' }}>
+            🤖 vs 컴퓨터
+          </button>
+          <button onClick={createOnline}
+            style={{ padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, color: '#FFF', background: 'linear-gradient(135deg, #4895EF, #3A7BD5)' }}>
+            🌐 온라인 방 만들기
+          </button>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>또는 코드로 참가</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={2}
+              placeholder="방 코드 2자리"
+              inputMode="numeric"
+              style={{
+                flex: 1, minWidth: 0, boxSizing: 'border-box',
+                padding: '12px', borderRadius: 10, border: '2px solid #DDD',
+                fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 4,
+                fontFamily: 'monospace',
+              }}
+            />
+            <button onClick={joinOnline}
+              style={{ padding: '0 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#4895EF', color: '#FFF', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', minWidth: 52, flexShrink: 0 }}>
+              참가
+            </button>
+          </div>
+          {room.error && <div style={{ color: '#E74C3C', fontSize: 13 }}>{room.error}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  if (mode === 'online' && !room.connected) {
+    return (
+      <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem', textAlign: 'center' }}>
+        <button onClick={handleBack}
+          style={{ background: 'none', border: 'none', fontSize: 15, color: '#888', cursor: 'pointer', marginBottom: 24 }}>
+          ← 취소
+        </button>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>상대를 기다리는 중...</h3>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>상대방에게 아래 코드를 알려주세요</p>
+        <div style={{
+          fontSize: 36, fontWeight: 700, letterSpacing: 8,
+          padding: '16px 24px', background: '#F7F6F3', borderRadius: 14,
+          display: 'inline-block', fontFamily: 'monospace',
+        }}>{room.roomCode}</div>
+        <p style={{ fontSize: 12, color: '#AAA', marginTop: 16 }}>나는 ⚫ 흑 (선공)</p>
+      </div>
+    )
+  }
+
+  const BOARD_PX = Math.min(360, (typeof window !== 'undefined' ? window.innerWidth : 360) - 40)
   const cell = BOARD_PX / 6
   const PAD = 20
-
-  // 선 그리기용 좌표 변환
   const toXY = (i) => {
     const [gx, gy] = POINTS[i]
     return { x: PAD + gx * cell, y: PAD + gy * cell }
   }
-
-  // 인접 선 (중복 제거)
   const lines = []
   const seen = new Set()
   for (let i = 0; i < 24; i++) {
     for (const j of ADJ[i]) {
       const key = i < j ? `${i}-${j}` : `${j}-${i}`
       if (seen.has(key)) continue
-      seen.add(key)
-      lines.push([i, j])
+      seen.add(key); lines.push([i, j])
     }
   }
 
+  const myPhase = myColor ? phaseFor(myColor) : 'place'
+
   const turnText = () => {
-    if (winner) return winner === 'black' ? '🎉 승리!' : '😵 패배'
+    if (winner) {
+      if (mode === 'online') return winner === room.myColor ? '🎉 승리!' : '😵 패배'
+      if (mode === 'ai') return winner === 'black' ? '🎉 승리!' : '😵 패배'
+      return winner === 'black' ? '⚫ 흑 승리!' : '⚪ 백 승리!'
+    }
     if (status) return status
-    if (turn === 'black') {
-      if (myPhase === 'place') return `놓기 ${myPlaced + 1}/9`
-      if (myPhase === 'fly') return '내 차례 (날기 가능)'
+    if (isMyTurn) {
+      if (removing) return removing === opp(myColor) ? '상대 돌을 제거하세요' : '...'
+      if (myPhase === 'place') return `놓기 ${(placed[myColor] || 0) + 1}/9`
+      if (myPhase === 'fly') return selected === null ? '내 차례 (날기 가능)' : '날 곳을 선택'
       return selected === null ? '돌을 선택' : '이동할 곳 선택'
     }
-    return 'AI 생각 중...'
+    if (mode === 'ai') return 'AI 생각 중...'
+    if (mode === 'online') return '상대 차례'
+    return (turn === 'black' ? '⚫' : '⚪') + ' 차례'
   }
+
+  const blackLeft = 9 - placed.black
+  const whiteLeft = 9 - placed.white
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: '0 auto', padding: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <button onClick={onBack}
+        <button onClick={handleBack}
           style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#555' }}>←</button>
-        <h2 style={{ fontSize: 15, fontWeight: 700 }}>🔵 9목 모리스</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 700 }}>
+          🔵 9목 모리스 {mode === 'online' ? '(온라인)' : mode === 'ai' ? '(vs AI)' : '(2인)'}
+        </h2>
         <button onClick={reset}
           style={{ background: '#F0F0F0', border: 'none', borderRadius: 12, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>리셋</button>
       </div>
 
+      {mode === 'online' && (
+        <div style={{ textAlign: 'center', padding: '4px', fontSize: 11, color: '#888', background: '#F0F0F0', borderRadius: 6, marginBottom: 6 }}>
+          방 코드: <strong>{room.roomCode}</strong> · 나는 {room.myColor === 'black' ? '⚫ 흑' : '⚪ 백'}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 6, fontSize: 13, fontWeight: 700 }}>
-        <div>⚫ 나 (남은 {9 - placed.black} · 판 {countPieces(board, 'black')})</div>
-        <div>⚪ AI (남은 {9 - placed.white} · 판 {countPieces(board, 'white')})</div>
+        <div>⚫ (남은 {blackLeft} · 판 {countPieces(board, 'black')})</div>
+        <div>⚪ (남은 {whiteLeft} · 판 {countPieces(board, 'white')})</div>
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 13, fontWeight: 700, minHeight: 18 }}>
@@ -359,15 +501,15 @@ export default function NineMensMorris({ onBack }) {
           {POINTS.map((_, i) => {
             const { x, y } = toXY(i)
             const sel = selected === i
-            const target = !winner && turn === 'black' && removing === 'white' && board[i] === 'white'
-              && (allPiecesInMills(board, 'white') || !inMill(board, i, 'white'))
-            const placeable = !winner && turn === 'black' && myPhase === 'place' && board[i] === null
-            const moveTarget = !winner && turn === 'black' && selected !== null && board[i] === null
-              && (countPieces(board, 'black') <= 3 || ADJ[selected].includes(i))
+            const targetEnemy = !winner && isMyTurn && removing === opp(myColor) && board[i] === opp(myColor)
+              && (allPiecesInMills(board, opp(myColor)) || !inMill(board, i, opp(myColor)))
+            const placeable = !winner && isMyTurn && !removing && myPhase === 'place' && board[i] === null
+            const moveTarget = !winner && isMyTurn && !removing && selected !== null && board[i] === null
+              && (countPieces(board, myColor) <= 3 || ADJ[selected].includes(i))
             return (
               <g key={i} onClick={() => handleClick(i)} style={{ cursor: 'pointer' }}>
                 <circle cx={x} cy={y} r={14} fill="transparent" />
-                {target && <circle cx={x} cy={y} r={16} fill="none" stroke="#E53935" strokeWidth="2" strokeDasharray="3 2" />}
+                {targetEnemy && <circle cx={x} cy={y} r={16} fill="none" stroke="#E53935" strokeWidth="2" strokeDasharray="3 2" />}
                 {(placeable || moveTarget) && (
                   <circle cx={x} cy={y} r={5} fill="rgba(0,0,0,0.25)" />
                 )}
