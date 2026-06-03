@@ -418,50 +418,202 @@ function DiaryViewer({ diary, onEdit }) {
   )
 }
 
-function Panel({ index, panel }) {
+// 9방향 위치 → 절대좌표 스타일
+function posStyle(position = 'bottom-left') {
+  const [v, h] = position.split('-')
+  const s = {}
+  if (v === 'top') s.top = '6%'
+  else if (v === 'middle') { s.top = '46%'; s.transform = 'translateY(-50%)' }
+  else s.bottom = '6%'
+  if (h === 'left') s.left = '5%'
+  else if (h === 'right') s.right = '5%'
+  else { s.left = '50%'; s.transform = (s.transform ? s.transform + ' ' : '') + 'translateX(-50%)' }
+  return s
+}
+
+// 말풍선 (speech / thought / shout)
+function Bubble({ bubble }) {
+  const { text, position = 'bottom-left', type = 'speech', tail = 'down-left', color } = bubble
+  const accentColor = color || '#1a1a1a'
+  const isShout = type === 'shout'
+  const isThought = type === 'thought'
+  const isNarration = type === 'narration'
+
+  const base = {
+    position: 'absolute',
+    ...posStyle(position),
+    maxWidth: '70%',
+    background: isNarration ? '#FFF9E0' : '#FFF',
+    padding: isNarration ? '8px 14px' : '10px 14px',
+    border: `${isShout ? 3 : 2.5}px solid ${accentColor}`,
+    borderRadius: isThought ? 28 : isShout ? 8 : 18,
+    fontSize: isShout ? 16 : 14,
+    color: accentColor,
+    fontWeight: isShout ? 900 : 700,
+    lineHeight: 1.35,
+    boxShadow: `3px 3px 0 ${accentColor}`,
+    fontFamily: '"Nanum Gothic", "Malgun Gothic", sans-serif',
+    zIndex: 5,
+  }
+
+  // 꼬리 방향
+  const tailDir = tail || (position.startsWith('top') ? 'up-left' : 'down-left')
+  const tailStyle = bubbleTail(tailDir, accentColor)
+
+  return (
+    <div style={base}>
+      {text}
+      {!isNarration && <span style={tailStyle.outer} />}
+      {!isNarration && <span style={tailStyle.inner} />}
+    </div>
+  )
+}
+
+function bubbleTail(dir, color) {
+  // 4 방향 + 대각선 4 방향 (총 8가지 꼬리 위치)
+  const tails = {
+    'down-left':   { outerEdge: 'borderTop', innerEdge: 'borderTop',
+                    outer: { bottom: -14, left: 18 }, inner: { bottom: -9, left: 22 } },
+    'down-right':  { outerEdge: 'borderTop', innerEdge: 'borderTop',
+                    outer: { bottom: -14, right: 18 }, inner: { bottom: -9, right: 22 } },
+    'up-left':     { outerEdge: 'borderBottom', innerEdge: 'borderBottom',
+                    outer: { top: -14, left: 18 }, inner: { top: -9, left: 22 } },
+    'up-right':    { outerEdge: 'borderBottom', innerEdge: 'borderBottom',
+                    outer: { top: -14, right: 18 }, inner: { top: -9, right: 22 } },
+    'left':        { outerEdge: 'borderRight', innerEdge: 'borderRight',
+                    outer: { top: '40%', left: -14 }, inner: { top: 'calc(40% + 4px)', left: -9 } },
+    'right':       { outerEdge: 'borderLeft', innerEdge: 'borderLeft',
+                    outer: { top: '40%', right: -14 }, inner: { top: 'calc(40% + 4px)', right: -9 } },
+  }
+  const t = tails[dir] || tails['down-left']
+  const triangleBase = { position: 'absolute', width: 0, height: 0 }
+  // 화살표 모양 만들기 (위/아래 꼬리)
+  if (dir.startsWith('down')) {
+    return {
+      outer: { ...triangleBase, ...t.outer,
+        borderLeft: '11px solid transparent', borderRight: '11px solid transparent',
+        borderTop: `15px solid ${color}` },
+      inner: { ...triangleBase, ...t.inner,
+        borderLeft: '7px solid transparent', borderRight: '7px solid transparent',
+        borderTop: '11px solid #FFF' },
+    }
+  } else if (dir.startsWith('up')) {
+    return {
+      outer: { ...triangleBase, ...t.outer,
+        borderLeft: '11px solid transparent', borderRight: '11px solid transparent',
+        borderBottom: `15px solid ${color}` },
+      inner: { ...triangleBase, ...t.inner,
+        borderLeft: '7px solid transparent', borderRight: '7px solid transparent',
+        borderBottom: '11px solid #FFF' },
+    }
+  } else if (dir === 'left') {
+    return {
+      outer: { ...triangleBase, ...t.outer,
+        borderTop: '11px solid transparent', borderBottom: '11px solid transparent',
+        borderRight: `15px solid ${color}` },
+      inner: { ...triangleBase, ...t.inner,
+        borderTop: '7px solid transparent', borderBottom: '7px solid transparent',
+        borderRight: '11px solid #FFF' },
+    }
+  } else {
+    return {
+      outer: { ...triangleBase, ...t.outer,
+        borderTop: '11px solid transparent', borderBottom: '11px solid transparent',
+        borderLeft: `15px solid ${color}` },
+      inner: { ...triangleBase, ...t.inner,
+        borderTop: '7px solid transparent', borderBottom: '7px solid transparent',
+        borderLeft: '11px solid #FFF' },
+    }
+  }
+}
+
+// 효과음 텍스트 (큰 글씨, 회전, 외곽선)
+function Sfx({ sfx }) {
+  const { text, position = 'middle-right', color = '#E63946', rotation = -8 } = sfx
   return (
     <div style={{
-      borderRadius: 16, overflow: 'hidden',
-      background: '#FFF', border: `1px solid ${SOFT_LINE}`,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+      position: 'absolute',
+      ...posStyle(position),
+      fontSize: 38,
+      fontWeight: 900,
+      color: '#FFF',
+      WebkitTextStroke: `3px ${color}`,
+      textShadow: `4px 4px 0 ${color}, 0 0 12px rgba(0,0,0,0.3)`,
+      transform: (posStyle(position).transform || '') + ` rotate(${rotation}deg)`,
+      fontFamily: '"Black Han Sans", "Jua", "Nanum Gothic", sans-serif',
+      pointerEvents: 'none',
+      letterSpacing: '-1px',
+      zIndex: 6,
     }}>
+      {text}
+    </div>
+  )
+}
+
+function Panel({ index, panel }) {
+  // 새 구조 — bubbles[] (여러 말풍선) / narration (상단 띠) / sfx (효과음)
+  // 기존 구조 — dialog (한 줄) 도 호환
+  const bubbles = panel.bubbles ||
+    (panel.dialog ? [{ text: panel.dialog, position: 'bottom-left', type: 'speech' }] : [])
+
+  return (
+    <div style={{
+      borderRadius: 4,
+      overflow: 'hidden',
+      background: '#FFF',
+      border: '3px solid #1a1a1a',
+      boxShadow: '6px 6px 0 #1a1a1a',
+    }}>
+      {/* 상단 내레이션 박스 (있을 때) */}
+      {panel.narration && (
+        <div style={{
+          background: '#FFF6CC',
+          borderBottom: '2.5px solid #1a1a1a',
+          padding: '8px 12px',
+          fontSize: 13, fontWeight: 700, color: '#5a3e00',
+          lineHeight: 1.4,
+          fontFamily: '"Nanum Gothic", "Malgun Gothic", sans-serif',
+        }}>
+          {panel.narration}
+        </div>
+      )}
+
       <div style={{ position: 'relative', background: '#F8F4EB' }}>
         <img
           src={panel.image}
           alt={panel.scene}
           onError={e => {
-            // 장면별 이미지 아직 안 만들어졌으면 캐릭터 이미지로 fallback
-            if (panel._fallback && e.currentTarget.src !== window.location.origin + panel._fallback) {
+            if (panel._fallback && !e.currentTarget.dataset.fb) {
+              e.currentTarget.dataset.fb = '1'
               e.currentTarget.src = panel._fallback
             }
           }}
-          style={{ width: '100%', display: 'block', aspectRatio: '1 / 1', objectFit: 'cover' }}
+          style={{ width: '100%', display: 'block', aspectRatio: '4 / 5', objectFit: 'cover' }}
         />
+        {/* 컷 번호 */}
         <div style={{
           position: 'absolute', top: 8, left: 8,
-          background: 'rgba(0,0,0,0.65)', color: '#FFF',
-          padding: '3px 10px', borderRadius: 99,
-          fontSize: 11, fontWeight: 700,
+          background: '#1a1a1a', color: '#FFF',
+          padding: '3px 12px', border: '2px solid #FFF',
+          fontSize: 11, fontWeight: 800,
+          zIndex: 7,
         }}>
-          {index}컷
+          {index}
         </div>
-        {panel.dialog && (
-          <div style={{
-            position: 'absolute', bottom: 12, left: 12, right: 12,
-            background: 'rgba(255,255,255,0.95)',
-            padding: '10px 14px', borderRadius: 14,
-            fontSize: 14, color: '#2C3E50', fontWeight: 600,
-            lineHeight: 1.4,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          }}>
-            "{panel.dialog}"
-          </div>
-        )}
+
+        {/* 말풍선들 */}
+        {bubbles.map((b, i) => <Bubble key={i} bubble={b} />)}
+
+        {/* 효과음 */}
+        {panel.sfx && <Sfx sfx={panel.sfx} />}
       </div>
+
+      {/* 장면 설명 (캡션) */}
       {panel.scene && (
         <div style={{
-          padding: '10px 14px', fontSize: 12, color: '#7E6B4D',
-          borderTop: `1px solid ${SOFT_LINE}`, background: '#FFFCF4',
+          padding: '8px 14px', fontSize: 12, color: '#5a5a5a',
+          borderTop: '2.5px solid #1a1a1a', background: '#FFFCF4',
+          fontStyle: 'italic',
         }}>
           {panel.scene}
         </div>
