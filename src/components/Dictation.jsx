@@ -37,15 +37,22 @@ function ttsSupported() {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
-// 채점용 정규화: 앞뒤 공백 제거 + 연속 공백 1칸으로
+// 채점용 정규화: 유니코드 NFC 통일 + 앞뒤 공백 제거 + 연속 공백 1칸으로
+// (NFC 통일이 핵심 — iOS/맥 IME가 분해형(NFD)으로 입력하면 같은 글자도 ===가 false가 됨)
 function normalize(s) {
-  return (s || '').trim().replace(/\s+/g, ' ')
+  return (s || '').normalize('NFC').trim().replace(/\s+/g, ' ')
 }
-// 글자 단위 비교 (위치별)
+// 글자 단위 비교 (위치별) — 정답 길이까지 비교해 '빠뜨린 글자'도 보이게 함
 function diffChars(input, answer) {
-  const g = [...(input || '')]
-  const a = [...(answer || '')]
-  return g.map((ch, i) => ({ ch, ok: ch === a[i] }))
+  const g = [...(input || '').normalize('NFC')]
+  const a = [...(answer || '').normalize('NFC')]
+  const len = Math.max(g.length, a.length)
+  return Array.from({ length: len }, (_, i) => ({
+    ch: g[i],           // 입력 글자 (undefined = 빠뜨림)
+    expected: a[i],     // 정답 글자
+    ok: g[i] === a[i],
+    missing: g[i] === undefined,
+  }))
 }
 
 const SUPPORTED = ttsSupported()
@@ -67,15 +74,18 @@ export default function Dictation({ onBack }) {
 
   useEffect(() => {
     updateStreak()
-    // 보이스 미리 로드
-    if (SUPPORTED) {
-      pickKoVoice()
-      window.speechSynthesis.onvoiceschanged = () => { cachedKoVoice = null; pickKoVoice() }
+    if (!SUPPORTED) return
+    // 보이스 미리 로드 — 전역 onvoiceschanged를 덮어쓰면 다른 컴포넌트(셔틀런 등) TTS와 충돌하므로
+    // addEventListener로 등록하고 unmount 시 해제
+    pickKoVoice()
+    const onVoices = () => { cachedKoVoice = null; pickKoVoice() }
+    window.speechSynthesis.addEventListener('voiceschanged', onVoices)
+    return () => {
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoices)
     }
-    return () => { if (SUPPORTED) window.speechSynthesis.cancel() }
   }, [])
 
-  const data = getData()
   const sentences = getRound(grade, round)
   const current = sentences[qIdx] || ''
 
@@ -259,13 +269,9 @@ export default function Dictation({ onBack }) {
               </div>
               {!last?.correct && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, color: '#999' }}>내가 쓴 답</div>
-                  <div style={{ fontSize: 17, fontWeight: 600 }}>
-                    {diffChars(last.input, last.answer).map((c, i) => (
-                      <span key={i} style={{ color: c.ok ? '#2ECC71' : '#E74C3C', background: c.ok ? 'transparent' : '#FDEDEC' }}>
-                        {c.ch === ' ' ? ' ' : c.ch}
-                      </span>
-                    ))}
+                  <div style={{ fontSize: 12, color: '#999' }}>내가 쓴 답 <span style={{ color: '#E67E22' }}>(주황 밑줄 = 빠뜨린 글자)</span></div>
+                  <div style={{ fontSize: 17, fontWeight: 600, whiteSpace: 'pre-wrap' }}>
+                    {diffChars(last.input, last.answer).map((c, i) => <DiffChar key={i} c={c} />)}
                   </div>
                 </div>
               )}
@@ -282,6 +288,8 @@ export default function Dictation({ onBack }) {
   }
 
   // ── 화면: 홈 (학년/회차 선택) ──
+  // getData()는 첫 호출 시 localStorage에 쓰므로 렌더 부수효과를 피하려 홈 화면에서만 읽음
+  const data = getData()
   const wrongCount = data.wrongNotes.length
   return (
     <Shell onBack={onBack} title="✏️ 받아쓰기" color="#5B8DEF"
@@ -333,6 +341,23 @@ export default function Dictation({ onBack }) {
         })}
       </div>
     </Shell>
+  )
+}
+
+// 채점 결과 글자 1개 표시 — 맞음(초록)/틀림(빨강·배경)/빠뜨림(주황 밑줄). 공백은 보이게 ␣ 처리
+function DiffChar({ c }) {
+  if (c.missing) {
+    return (
+      <span style={{ color: '#E67E22', background: '#FDF2E2', textDecoration: 'underline' }}>
+        {c.expected === ' ' ? '␣' : c.expected}
+      </span>
+    )
+  }
+  const isSpace = c.ch === ' '
+  return (
+    <span style={{ color: c.ok ? '#2ECC71' : '#E74C3C', background: c.ok ? 'transparent' : '#FDEDEC' }}>
+      {isSpace ? (c.ok ? ' ' : '␣') : c.ch}
+    </span>
   )
 }
 

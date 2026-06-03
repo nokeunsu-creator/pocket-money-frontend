@@ -12,6 +12,13 @@ const DEFAULT_DATA = {
 
 const MAX_WRONG_NOTES = 120
 
+// 사용자의 '로컬' 달력 날짜(YYYY-MM-DD). toISOString()은 UTC라 KST 새벽(0~9시)이면
+// 전날로 찍혀 연속출석이 안 오르는 버그가 생김 → 타임존 보정한 로컬 날짜 사용.
+function localToday() {
+  const d = new Date()
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
 export function getData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -43,7 +50,7 @@ export function saveData(data) {
 // 하루 1회 출석 → 연속일 갱신 (mathStorage와 동일한 규칙)
 export function updateStreak() {
   const data = getData()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   if (data.lastPlayDate === today) return data
 
   if (data.lastPlayDate) {
@@ -75,8 +82,8 @@ export function recordRound(grade, round, correct, total) {
   const key = roundKey(grade, round)
   const prev = data.rounds[key] || { best: 0, cleared: false }
   const best = Math.max(prev.best || 0, correct)
-  const cleared = prev.cleared || correct === total
-  if (correct === total && !prev.cleared) data.totalCleared += 1
+  const cleared = prev.cleared || (total > 0 && correct === total)
+  if (total > 0 && correct === total && !prev.cleared) data.totalCleared += 1
   data.rounds[key] = { best, cleared }
   saveData(data)
   return data
@@ -87,7 +94,7 @@ export function addWrongNote({ grade, round, idx, answer, input }) {
   const data = getData()
   const id = `${grade}-${round}-${idx}`
   const filtered = data.wrongNotes.filter(w => w.id !== id)
-  filtered.unshift({ id, grade, round, idx, answer, input, date: new Date().toISOString().slice(0, 10) })
+  filtered.unshift({ id, grade, round, idx, answer, input, date: localToday() })
   data.wrongNotes = filtered.slice(0, MAX_WRONG_NOTES)
   saveData(data)
   return data
