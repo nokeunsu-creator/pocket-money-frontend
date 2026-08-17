@@ -897,6 +897,152 @@ TV N 유퀴즈를 보다가 샤워하고 그로우 샷 키 크는 약을 먹으�
           ] }),
     ],
   },
+  // ═══════════════════════════════════════════════════════════════
+  // EP24 — 건우의 상상 소설 (창작) "다시 열린 마법의 문" 28컷 대서사
+  // ═══════════════════════════════════════════════════════════════
+  {
+    id: 'sample_20260530', author: CHILD1, date: '2026-05-30', title: '다시 열린 마법의 문',
+    subtitle: '주인공의 이후 이야기',
+    isStory: true,
+    body: `※ 이건 일기가 아니라 내가 지어낸 소설이다. 제목은 "주인공의 이후 이야기".
+
+[1막 — 자본가가 된 주인공]
+주인공이 면접에 합격을 해서 일을 잘 해서 인턴에서 빛의 속도로 팀장까지 승급을 해서 월급을 1억을 받아서 잘 먹고 잘 살고 있다가 전 재산이 1조 원(10000억)쯤을 벌었다. 그래서 전 재산의 1/10을 써서 1000억이 남았으나, 그 돈으로 77층짜리 회사를 세워서 자본가가 되었다.
+그 회사로 매월 평균 1억을 벌어서 자신이 원래 있던 회사까지 흡수를 하고, 그 지역에서 거의 1등이 되었고, 전국 TOP 3 정도까지 가고, 전 세계 TOP 10까지 가서 세계적인 회사가 되었다. 애플, 삼성, LG 등 대기업과 어깨를 나란히 할 만한 수준이 되었고 전보다 더 잘 먹고 잘 살고 있었다.
+그런데 보물 10위 안에 들어 있던 그 돌을 뚫어지게 보고 있다가 진짜로 뚫어져서 당황했다. 그래서 돌 고치는 로봇을 소환해서 고쳐 보려다가 못 고쳐서 로봇을 발로 쳤다가 그 로봇이 날아가고, 돌은 유리 상자 속에 넣어 놨는데 그 유리도 깨졌다. 화가 나서 로봇을 77층에서 던져 버리려고 하다가 돌도 잘못해서 차 버렸으나, 그래서 다시 한번 마법의 문이 열려서 로봇은 대충 처리한 뒤에 주인공은 다시 마법의 문으로 뛰었다.
+
+[2막 — 다시 시작된 모험]
+이번에 주인공이 이동한 곳은 시간으로 따지면 몇 년 전(우리 기준 현재, 주인공 기준 과거)이었다. 단 연도만 조금 움직인 것이지, 이번에는 위치가 다른 행성의 무인도였다. 그 섬은 사람만 없지 공룡, 파충류, 로봇, 어류, (사람만 빼고) 포유류, 조류, 양서류, 집, 곤충, 유령 등 사람만 빼면 지구의 복사본이었다. 그러나 완전 복사는 아니고, 섬이니까 생물·무생물만 퍼져 있는 것이다.
+주인공이 섬을 탐험하려다가 종이를 하나 발견했는데, 그 종이는 지도처럼 보였다. 섬의 모습은 물론 섬의 면적, 섬에 있는 동물의 수, 기상 예보, 섬의 탈출법까지 다 있었다. 지도를 보니까 탈출할 수 있는 방법은 바로 들어온 곳으로 나가는 것, 즉 마법의 문이 다시 열려야 하는 것이었다.
+주인공은 전에 공룡을 잡아 본 경험으로 공룡 고기를 얻은 다음, 지구의 돈도 있고 그 로봇들도 다행히 한국의 로봇이라서 언어가 통했다. 돈으로 조종할 수 있었지만 1회밖에 못 쓸 돈이었고, 게다가 그 로봇들은 방전이 나 있었다. 그래서 주인공은 고민 끝에 공룡 뼈를 가지고 와서 어어어어어어어어어어엄청 비벼서 전기를 만들고 그걸 로봇에게 주입을 했다. 로봇이 진짜로 1회 아무 소원이나 들어주겠다고 해서, 대기업 사장답게 "돈을 찾아 달라"고 했더니 1000만 원을 벌어오고 다시 방전이 났다.
+주인공이 1000만 원 탕진과 자신의 체력을 다 써서 섬에 있는 로봇 중 1/10을 제어할 수 있게 되었고, 그 로봇들로 다시 1/5를 제어할 수 있게 되어서 로봇들이 거의 시중을 들어주었다. 첫 집은 공룡 뼛속이었으나, 로봇들이 몸 안의 장비들로 인턴 시절 집을 지어 주었다.
+그러다 1년에 한 번 있는 번개가 치는 날이 왔다. 이전 번개 자국을 바탕으로 계산해 보니 번개 넓이가 섬 전체의 1/2이라, 그만큼의 로봇을 다 살릴 수 있었다. 사실 처음 살려 준 로봇도 방전이 아니라, 배터리가 30이어야 움직이는데 원래 10이었던 것을 번개가 19%, 주인공이 1%를 채워 준 것이었다. 그래서 번개 치기 10일 전부터 움직이는 로봇들을 이용해 1/2만큼의 로봇을 살릴 계획을 세웠고 성공을 하였다.
+그러나 단점이 생겼으니, 섬에 묻혀 있는 돈이 점점 바닥난다는 것이었다. 로봇을 움직이게 하려면 섬의 돈을 조금씩 써야 했기 때문이다. 그런데 때마침 마법의 문이 다시 열려서… (다음 편에 계속!)`,
+    panels: [
+      // ── 1막 ──
+      p({ scene: '면접 합격! 인턴 첫 출근',
+          narration: '주인공의 이후 이야기 — 그 면접에 합격하다!',
+          bubbles: [
+            { text: '합격입니다! 출근하세요!', position: 'top-left', type: 'speech', tail: 'down-left', color: COL.dad },
+            { text: '해냈다!!', position: 'bottom-right', type: 'shout', tail: 'up-right', color: COL.blue },
+          ],
+          sfx: { text: '두근두근', position: 'middle-right', color: COL.red, rotation: -6 } }),
+      p({ scene: '인턴 → 팀장, 빛의 속도 승진',
+          narration: '일을 너무 잘해서… 빛의 속도로 승급!',
+          bubbles: [{ text: '인턴이 벌써 팀장?!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.red }],
+          sfx: { text: '슈슈슝!', position: 'bottom-right', color: COL.yellow, rotation: -10 } }),
+      p({ scene: '월급 1억 — 통장 클로즈업',
+          bubbles: [{ text: '월급이… 1억?!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '반짝✨', position: 'top-right', color: COL.yellow, rotation: -8 } }),
+      p({ scene: '전 재산 1조 — 돈더미 위에서',
+          narration: '어느새 전 재산 1조 원(10000억)!',
+          bubbles: [{ text: '내가… 부자가 됐어!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '와르르', position: 'middle-right', color: COL.yellow, rotation: 6 } }),
+      p({ scene: '77층 회사 완공 — 거대한 마천루',
+          narration: '재산의 1/10(1000억)을 써서 77층 회사 설립!',
+          bubbles: [{ text: '이제 나는 자본가다!', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '두둥', position: 'top-right', color: COL.red, rotation: -5 } }),
+      p({ scene: '원래 회사까지 흡수 합병',
+          narration: '매월 1억씩 벌어… 원래 다니던 회사를 흡수!',
+          bubbles: [
+            { text: '계약 성립입니다.', position: 'top-left', type: 'speech', tail: 'down-left', color: COL.blue },
+            { text: '제, 제가 졌습니다…', position: 'bottom-right', type: 'speech', tail: 'up-right', color: COL.me },
+          ] }),
+      p({ scene: '지역 1등 → 전국 TOP3 → 세계 TOP10',
+          narration: '지역 1등 → 전국 TOP 3 → 세계 TOP 10!',
+          bubbles: [{ text: '계속 올라간다!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.green }],
+          sfx: { text: '↑↑↑', position: 'middle-right', color: COL.red, rotation: 0 } }),
+      p({ scene: '애플·삼성·LG와 어깨를 나란히',
+          narration: '세계적인 대기업들과 어깨를 나란히!',
+          bubbles: [{ text: '세계 정상에 섰다!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '번쩍', position: 'top-right', color: COL.yellow, rotation: -10 } }),
+      p({ scene: '펜트하우스 — 잘 먹고 잘 산다',
+          narration: '전보다 더 잘 먹고 잘 살았다.',
+          bubbles: [{ text: '이게 인생이지~', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }] }),
+      p({ scene: '보물 10위 그 돌을 뚫어지게 본다',
+          narration: '그런데… 보물 10위 안의 그 돌을',
+          bubbles: [{ text: '저 돌… 자꾸 신경 쓰이네…', position: 'bottom-left', type: 'thought', tail: 'up-left', color: COL.blue }],
+          sfx: { text: '뚫어져라…', position: 'top-right', color: COL.me, rotation: -4 } }),
+      p({ scene: '진짜로 돌에 구멍이 뚫림!',
+          bubbles: [{ text: '진짜로 뚫렸어?!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.red }],
+          sfx: { text: '뽕!', position: 'middle-center', color: COL.red, rotation: -12 } }),
+      p({ scene: '돌 고치는 로봇 소환',
+          narration: '당황한 주인공, 돌 고치는 로봇을 소환!',
+          bubbles: [{ text: '로봇아, 이 돌 좀 고쳐줘!', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '삐빅', position: 'top-right', color: COL.green, rotation: -5 } }),
+      p({ scene: '못 고침 → 발로 참 → 로봇 날아감',
+          bubbles: [
+            { text: '수리… 불가능…', position: 'top-left', type: 'speech', tail: 'down-left', color: COL.green },
+            { text: '에잇! 쓸모없어!', position: 'bottom-right', type: 'shout', tail: 'up-right', color: COL.red },
+          ],
+          sfx: { text: '퍽!', position: 'middle-center', color: COL.red, rotation: -14 } }),
+      p({ scene: '유리상자도 깨짐 — 77층 대혼란',
+          narration: '유리도 깨지고, 돌도 잘못 차고… 대혼란!',
+          bubbles: [{ text: '로봇 던져버릴 거야!!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.red }],
+          sfx: { text: '쨍그랑!', position: 'bottom-right', color: COL.blue, rotation: -8 } }),
+      p({ scene: '다시 열린 마법의 문으로 점프!',
+          narration: '그 순간, 다시 한번 마법의 문이 열렸다!',
+          bubbles: [{ text: '간다아아!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '화아악', position: 'top-right', color: COL.yellow, rotation: -6 } }),
+      // ── 2막 ──
+      p({ scene: '다른 행성 무인도에 불시착',
+          narration: '2막 — 다시 시작된 모험',
+          bubbles: [{ text: '여긴… 어디지?!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '쿵!', position: 'top-right', color: COL.red, rotation: -10 } }),
+      p({ scene: '사람만 없는 지구 복사본 섬',
+          narration: '공룡·로봇·동물… 사람만 빼면 지구의 복사본!',
+          bubbles: [{ text: '공룡에… 로봇까지?!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.red }],
+          sfx: { text: '우와…', position: 'bottom-right', color: COL.me, rotation: -4 } }),
+      p({ scene: '신비한 지도 발견 — 디테일',
+          narration: '면적·동물 수·기상예보·탈출법이 다 적힌 지도!',
+          bubbles: [{ text: '이건… 지도잖아?', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '스윽', position: 'top-right', color: COL.yellow, rotation: -6 } }),
+      p({ scene: '탈출법 = 들어온 곳 = 마법의 문',
+          bubbles: [{ text: '탈출은… 마법의 문이 다시 열려야 해!', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '!!', position: 'top-right', color: COL.red, rotation: -8 } }),
+      p({ scene: '공룡 사냥 — 공룡 고기 획득',
+          narration: '전에 공룡 잡아본 경험으로…',
+          bubbles: [{ text: '공룡 고기 확보!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '크오오', position: 'bottom-right', color: COL.red, rotation: 6 } }),
+      p({ scene: '방전된 한국제 로봇 발견',
+          narration: '다행히 한국 로봇이라 말이 통한다. 근데 방전…',
+          bubbles: [{ text: '배터리가 다 됐네…', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '치직…', position: 'top-right', color: COL.green, rotation: -5 } }),
+      p({ scene: '공룡 뼈를 엄청 비벼 전기 만들기',
+          narration: '공룡 뼈를 어어어엄청 비벼서 전기 발전!',
+          bubbles: [{ text: '비비고… 비비고…!', position: 'top-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '치지직!', position: 'middle-right', color: COL.yellow, rotation: -12 } }),
+      p({ scene: '로봇 소원 1회 → 1000만원 → 다시 방전',
+          narration: '대기업 사장답게 "돈을 찾아 달라!"',
+          bubbles: [
+            { text: '소원 1회… 돈을 찾아라!', position: 'top-left', type: 'speech', tail: 'down-left', color: COL.blue },
+            { text: '1000만원 확보 후 방전…', position: 'bottom-right', type: 'speech', tail: 'up-right', color: COL.green },
+          ],
+          sfx: { text: '철컥', position: 'middle-right', color: COL.green, rotation: -5 } }),
+      p({ scene: '로봇 군단의 주인이 되다',
+          narration: '먼저 1/10 제어 → 그 로봇으로 1/5 더! 로봇들이 시중을 든다',
+          bubbles: [{ text: '이제 너희가 내 부하다!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '삐빅삐빅', position: 'top-right', color: COL.green, rotation: -6 } }),
+      p({ scene: '공룡 뼛속 집 → 로봇이 지어준 새 집',
+          bubbles: [{ text: '드디어 진짜 집이다~', position: 'bottom-left', type: 'speech', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '뚝딱뚝딱', position: 'top-right', color: COL.yellow, rotation: -5 } }),
+      p({ scene: '1년에 한 번, 번개의 날',
+          narration: '번개 넓이가 섬의 1/2! 그만큼 로봇을 살릴 수 있다',
+          bubbles: [{ text: '드디어… 번개의 날이다!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.blue }],
+          sfx: { text: '콰릉!', position: 'top-right', color: COL.yellow, rotation: -10 } }),
+      p({ scene: '번개로 로봇들 충전 — 계획 성공!',
+          narration: '첫 로봇은 10%였다가 번개 19%+내가 1% = 30%로 가동!',
+          bubbles: [{ text: '10일 전부터 짠 계획… 성공!', position: 'bottom-left', type: 'shout', tail: 'down-left', color: COL.green }],
+          sfx: { text: '번쩍번쩍', position: 'top-right', color: COL.yellow, rotation: -8 } }),
+      p({ scene: '섬의 돈이 바닥 → 또 열린 마법의 문!',
+          narration: '단점: 섬에 묻힌 돈이 바닥… 그런데 때마침!',
+          bubbles: [
+            { text: '돈이 다 떨어져 가는데…', position: 'top-left', type: 'thought', tail: 'down-left', color: COL.blue },
+            { text: '문이 또 열렸다! (다음 편에 계속)', position: 'bottom-right', type: 'shout', tail: 'up-right', color: COL.red },
+          ],
+          sfx: { text: '화아아악', position: 'middle-right', color: COL.yellow, rotation: -6 } }),
+    ],
+  },
 ]
 
 // 각 panel.image를 자동으로 장면별 이미지 경로로 매핑
@@ -914,7 +1060,19 @@ export const DIARY_STORAGE_KEY = 'pocket-money-diaries-v4'
 export function loadDiaries() {
   try {
     const raw = localStorage.getItem(DIARY_STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const stored = JSON.parse(raw)
+      // 기존 사용자에게도 새로 추가된 샘플(예: 소설 EP24)을 합쳐서 보여준다.
+      // 사용자가 직접 쓰거나 수정한 일기는 건드리지 않고, id가 없는 샘플만 날짜순으로 끼워 넣는다.
+      const ids = new Set(stored.map(d => d.id))
+      const missing = SAMPLE_DIARIES.filter(d => !ids.has(d.id))
+      if (missing.length) {
+        const merged = [...stored, ...missing].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+        localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(merged))
+        return merged
+      }
+      return stored
+    }
   } catch (e) { /* ignore */ }
   localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(SAMPLE_DIARIES))
   return [...SAMPLE_DIARIES]

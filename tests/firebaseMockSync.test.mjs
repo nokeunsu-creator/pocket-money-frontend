@@ -53,8 +53,18 @@ class MockDB {
   onValue(path, cb) {
     if (!this.listeners.has(path)) this.listeners.set(path, new Set())
     this.listeners.get(path).add(cb)
-    // 즉시 초기값 전달
-    if (this.data.has(path)) cb(this.data.get(path))
+    // 즉시 초기값 전달 — 실제 Firebase는 중첩 경로를 읽으므로,
+    // 정확한 키가 없으면 상위(조상) 키를 traverse해 중첩 초기값을 찾아 전달한다.
+    if (this.data.has(path)) {
+      cb(this.data.get(path))
+    } else {
+      for (const [dp, dv] of this.data) {
+        if (path.startsWith(dp + '/')) {
+          const v = this._traverse(dv, path.slice(dp.length + 1).split('/'))
+          if (v != null) { cb(v); break }
+        }
+      }
+    }
     return () => this.listeners.get(path)?.delete(cb)
   }
   remove(path) {
@@ -275,14 +285,14 @@ function testCheckersSync() {
   const init = { board: flat(createBoard()), turn: 'red', winner: '' }
   const { host, guest } = setupHostGuest('checkers', init)
 
-  // host red moves (5,1) → (4,0)
+  // host red moves (5,0) → (4,1)  [실제 빨강 말이 있는 칸: (r+c)%2===1 다크 스퀘어]
   let b = unflat(host.gameState.board)
-  b[4][0] = b[5][1]
-  b[5][1] = null
+  b[4][1] = b[5][0]
+  b[5][0] = null
   host.updateState({ board: flat(b), turn: 'black', winner: '' })
 
   const gb = unflat(guest.gameState.board)
-  ok(gb[5][1] === null && gb[4][0]?.color === 'red', 'Checkers: guest sees red move')
+  ok(gb[5][0] === null && gb[4][1]?.color === 'red', 'Checkers: guest sees red move')
 
   // king 승급 시뮬레이션 — red가 (0, x)에 도달
   b = unflat(host.gameState.board)

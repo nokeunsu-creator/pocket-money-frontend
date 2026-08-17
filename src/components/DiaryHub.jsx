@@ -175,6 +175,7 @@ function DiaryCard({ diary, onClick }) {
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, color: ACCENT, fontWeight: 700, marginBottom: 2 }}>
+          {diary.isStory && <span style={{ marginRight: 4 }}>🪄 소설 ·</span>}
           {formatDate(diary.date)} · {diary.author}
         </div>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50',
@@ -360,8 +361,16 @@ function DiaryViewer({ diary, onEdit }) {
         background: `linear-gradient(135deg, ${ACCENT}, #FFBF69)`,
         color: '#FFF',
       }}>
-        <div style={{ fontSize: 13, opacity: 0.9 }}>{formatDate(diary.date)} · {diary.author}</div>
+        <div style={{ fontSize: 13, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {diary.isStory && (
+            <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 6, padding: '1px 7px', fontWeight: 800, fontSize: 11 }}>🪄 소설</span>
+          )}
+          {formatDate(diary.date)} · {diary.author}
+        </div>
         <div style={{ fontSize: 20, fontWeight: 800, marginTop: 4 }}>{diary.title}</div>
+        {diary.subtitle && (
+          <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.92, marginTop: 2 }}>— {diary.subtitle}</div>
+        )}
       </div>
 
       {/* 웹툰 컷 */}
@@ -389,7 +398,9 @@ function DiaryViewer({ diary, onEdit }) {
           cursor: 'pointer', textAlign: 'left',
         }}
       >
-        {showBody ? '▼ 원본 일기 닫기' : '▶ 원본 일기 보기'}
+        {diary.isStory
+          ? (showBody ? '▼ 원작 소설 닫기' : '▶ 원작 소설 보기')
+          : (showBody ? '▼ 원본 일기 닫기' : '▶ 원본 일기 보기')}
       </button>
       {showBody && (
         <div style={{
