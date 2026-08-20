@@ -75,23 +75,11 @@ import EnglishChampionship from './components/EnglishChampionship'
 import FamilyTree from './components/FamilyTree'
 import GrowthTracker from './components/GrowthTracker'
 import RedLightGreenLight from './components/RedLightGreenLight'
-import Dalgona from './components/Dalgona'
 import GlassBridge from './components/GlassBridge'
-import Marbles from './components/Marbles'
-import Ddakji from './components/Ddakji'
-import Gonggi from './components/Gonggi'
 import SixInRow from './components/SixInRow'
-import IndianPoker from './components/IndianPoker'
-import ECard from './components/ECard'
-import PrimeMonopoly from './components/PrimeMonopoly'
 import Dojo from './components/Dojo'
 import Othello from './components/Othello'
-import NineMensMorris from './components/NineMensMorris'
-import Hex from './components/Hex'
-import BlokusDuo from './components/BlokusDuo'
-import Quarto from './components/Quarto'
 import ConnectFour from './components/ConnectFour'
-import Checkers from './components/Checkers'
 import Gonu from './components/Gonu'
 import Magic from './components/Magic'
 
@@ -581,32 +569,11 @@ export default function App() {
       {currentPage === 'game-rlgl' && (
         <RedLightGreenLight onBack={goBack} />
       )}
-      {currentPage === 'game-dalgona' && (
-        <Dalgona onBack={goBack} />
-      )}
       {currentPage === 'game-glassbridge' && (
         <GlassBridge onBack={goBack} />
       )}
-      {currentPage === 'game-marbles' && (
-        <Marbles onBack={goBack} />
-      )}
-      {currentPage === 'game-ddakji' && (
-        <Ddakji onBack={goBack} />
-      )}
-      {currentPage === 'game-gonggi' && (
-        <Gonggi onBack={goBack} />
-      )}
       {currentPage === 'game-sixrow' && (
         <SixInRow onBack={goBack} />
-      )}
-      {currentPage === 'game-indianpoker' && (
-        <IndianPoker onBack={goBack} />
-      )}
-      {currentPage === 'game-ecard' && (
-        <ECard onBack={goBack} />
-      )}
-      {currentPage === 'game-primegame' && (
-        <PrimeMonopoly onBack={goBack} />
       )}
       {currentPage === 'dojo' && (
         <Dojo onBack={goBack} />
@@ -617,23 +584,8 @@ export default function App() {
       {currentPage === 'game-othello' && (
         <Othello onBack={goBack} />
       )}
-      {currentPage === 'game-morris' && (
-        <NineMensMorris onBack={goBack} />
-      )}
-      {currentPage === 'game-hex' && (
-        <Hex onBack={goBack} />
-      )}
-      {currentPage === 'game-blokus' && (
-        <BlokusDuo onBack={goBack} />
-      )}
-      {currentPage === 'game-quarto' && (
-        <Quarto onBack={goBack} />
-      )}
       {currentPage === 'game-connect4' && (
         <ConnectFour onBack={goBack} />
-      )}
-      {currentPage === 'game-checkers' && (
-        <Checkers onBack={goBack} />
       )}
       {currentPage === 'game-gonu' && (
         <Gonu onBack={goBack} />

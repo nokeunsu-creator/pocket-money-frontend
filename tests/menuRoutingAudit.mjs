@@ -38,7 +38,7 @@ function keysInBlock(source, startMarker, endMarker) {
 // ── 1. GameHub → game-<key> ──
 const gameHub = read('components/GameHub.jsx')
 const gameKeys = keysInBlock(gameHub, 'const categories = [', 'return (')
-ok(gameKeys.length > 50, `GameHub 게임 키 추출 (${gameKeys.length}개)`)
+ok(gameKeys.length > 40, `GameHub 게임 키 추출 (${gameKeys.length}개)`)
 ok(new Set(gameKeys).size === gameKeys.length,
   `GameHub 키 중복 없음 (중복: ${gameKeys.filter((k, i) => gameKeys.indexOf(k) !== i).join(', ') || '없음'})`)
 for (const k of gameKeys) {

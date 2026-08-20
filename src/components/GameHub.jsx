@@ -23,12 +23,7 @@ export default function GameHub({ onBack, onSelectGame }) {
         { key: 'chess', icon: '♟️', title: '체스', desc: 'AI · 2인 · 온라인', color: '#5D4037' },
         { key: 'janggi', icon: '將', title: '장기', desc: 'AI 10단계 · 2인 · 온라인', color: '#8B0000' },
         { key: 'othello', icon: '⚫', title: '오델로', desc: '8×8 · AI · 2인 · 온라인', color: '#1B5E20' },
-        { key: 'morris', icon: '🔵', title: '9목 모리스', desc: '24교차점 · AI · 2인 · 온라인', color: '#5D4037' },
-        { key: 'hex', icon: '⬡', title: '헥스', desc: '11×11 · AI · 2인 · 온라인', color: '#455A64' },
-        { key: 'blokus', icon: '🟦', title: '블로커스 듀오', desc: '14×14 · AI · 2인 · 온라인', color: '#1976D2' },
-        { key: 'quarto', icon: '🔲', title: '퀀토', desc: '4×4 · AI · 2인 · 온라인', color: '#6D4C41' },
         { key: 'connect4', icon: '🔴', title: '커넥트 포 (사목)', desc: '7×6 · AI · 2인 · 온라인', color: '#1565C0' },
-        { key: 'checkers', icon: '⛳', title: '체커', desc: '8×8 · AI · 2인 · 온라인', color: '#8D6E63' },
         { key: 'gonu', icon: '🟫', title: '줄고누', desc: '한국 전통 3×3 · AI · 온라인', color: '#8B6F2A' },
       ],
     },
@@ -76,15 +71,8 @@ export default function GameHub({ onBack, onSelectGame }) {
     {
       label: '🦑 서바이벌 게임', games: [
         { key: 'rlgl', icon: '🌸', title: '무궁화 꽃이 피었습니다', desc: '영희가 돌아볼 때 멈춰!', color: '#E63946' },
-        { key: 'dalgona', icon: '🍯', title: '달고나 뽑기', desc: '모양 따라 살살 떼기', color: '#FF9F1C' },
         { key: 'glassbridge', icon: '🟦', title: '징검다리', desc: '강화유리 vs 일반유리', color: '#118AB2' },
-        { key: 'marbles', icon: '🔴', title: '구슬치기 (짝홀)', desc: '주머니 구슬 짝/홀 맞추기', color: '#06A77D' },
-        { key: 'ddakji', icon: '🟫', title: '딱지치기', desc: '타이밍으로 뒤집기', color: '#8B4513' },
-        { key: 'gonggi', icon: '🟢', title: '공기놀이', desc: '4단계 타이밍 게임', color: '#2D6A4F' },
         { key: 'sixrow', icon: '⚫', title: '6목 (육목)', desc: '한 턴에 2수 · AI · 온라인', color: '#34495E' },
-        { key: 'indianpoker', icon: '🎴', title: '인디언 포커', desc: 'AI 4인 · 온라인 2~6인', color: '#7E3F8F' },
-        { key: 'ecard', icon: '👑', title: 'E카드', desc: '황제·시민·노예 · AI · 온라인 2인', color: '#B91D47' },
-        { key: 'primegame', icon: '🔢', title: '소수 독점', desc: '5명 중 유일한 소수면 점수!', color: '#1F77B4' },
       ],
     },
     {
