@@ -11,7 +11,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import {
-  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar,
+  decomposeWord, slotsToWord, shuffle, evaluateGuess, jamoKind, composeChar, autoPlaceTarget,
 } from '../utils/hangulJamo'
 import { pickRandomWord } from '../data/languagePieceWords'
 import { playClick, playPlace, playSuccess, playFail, playWin, playLose, playError } from '../utils/sounds'
@@ -62,7 +62,8 @@ export default function LanguagePieceLocal({ onBack }) {
   })
   // 현재 플레이어 ('turn' 페이즈에서)
   const [currentPlayer, setCurrentPlayer] = useState(1)
-  const [selectedTile, setSelectedTile] = useState(null) // 풀에서 고른 타일 id
+  // 지정 배치용: 빈 칸을 먼저 누르면 다음 타일이 자동 배치 대신 그 칸으로 들어간다
+  const [pendingSlot, setPendingSlot] = useState(null) // { charIdx, kind } | null
 
   // ── 라운드 시작 ──────────────────────────────
   const startRound = useCallback((rIdx, fp, exclude) => {
@@ -92,44 +93,68 @@ export default function LanguagePieceLocal({ onBack }) {
   }, [startRound])
 
   // ── 타일 클릭 (풀 → 선택) ──────────────────────────────
-  const pickTile = useCallback((tileId) => {
-    setSelectedTile(prev => (prev === tileId ? null : tileId))
-  }, [])
-
-  // ── 슬롯 클릭 ──────────────────────────────
-  // - 비어있고 선택된 타일이 있으면 → 타일 배치 (kind에 맞는 자리에)
-  // - 채워져 있으면 → 타일 풀로 되돌림
-  const placeOrRemove = useCallback((charIdx, kind) => {
+  // ── 타일 탭 = 자동 배치 ──────────────────────────────
+  // 기본: 한글 입력기처럼 앞에서부터 차례대로(초성→중성→받침→다음 글자) 채운다.
+  // 빈 칸을 먼저 눌러 pendingSlot이 있으면 그 칸에 넣는다.
+  const tapTile = useCallback((tileId) => {
     if (!roundData) return
     const cp = currentPlayer
     setAttempt(prev => {
       const a = prev[cp]
-      const slots = a.slots.map(s => ({ ...s }))
+      if (!a?.slots) return prev
       const pool = a.tilePool.map(t => ({ ...t }))
-      const slot = slots[charIdx]
-      const currentTileId = slot[kind] // slot[kind] = tile id 또는 null (실제 자모 X)
-      if (currentTileId != null) {
-        // 슬롯에 있던 타일 제거 → 풀로 복귀
-        pool.find(t => t.id === currentTileId).used = false
-        slot[kind] = null
-        setSelectedTile(null)
-        playClick()
-        return { ...prev, [cp]: { ...a, slots, tilePool: pool } }
-      }
-      // 빈 슬롯 + 선택 타일 → 배치 (kind 맞아야)
-      if (selectedTile == null) return prev
-      const tile = pool.find(t => t.id === selectedTile)
+      const tile = pool.find(t => t.id === tileId)
       if (!tile || tile.used) return prev
-      // kind 매칭: 모음 → 'jung'만 / 자음 → 'cho' or 'jong'만
-      if (tile.kind === 'vowel' && kind !== 'jung') { playError(); return prev }
-      if (tile.kind === 'consonant' && kind === 'jung') { playError(); return prev }
+      const slots = a.slots.map(s => ({ ...s }))
+
+      let target = null
+      if (pendingSlot) {
+        const { charIdx, kind } = pendingSlot
+        const kindOk = tile.kind === 'vowel' ? kind === 'jung' : kind !== 'jung'
+        if (kindOk && slots[charIdx]?.[kind] == null) target = { charIdx, kind }
+        else { playError(); return prev }
+      } else {
+        target = autoPlaceTarget(slots, tile.kind)
+      }
+      if (!target) { playError(); return prev }
+
+      if (target.pullJongFrom != null) {
+        slots[target.charIdx].cho = slots[target.pullJongFrom].jong
+        slots[target.pullJongFrom].jong = null
+      }
       tile.used = true
-      slot[kind] = tile.id
-      setSelectedTile(null)
+      slots[target.charIdx][target.kind] = tile.id
+      setPendingSlot(null)
       playPlace()
       return { ...prev, [cp]: { ...a, slots, tilePool: pool } }
     })
-  }, [currentPlayer, roundData, selectedTile])
+  }, [currentPlayer, roundData, pendingSlot])
+
+  // ── 슬롯 클릭 ──────────────────────────────
+  // - 채워져 있으면 → 타일 풀로 되돌림
+  // - 비어 있으면 → 그 칸을 '지정 배치' 대기로 표시 (다시 누르면 해제)
+  const tapSlot = useCallback((charIdx, kind) => {
+    if (!roundData) return
+    const cp = currentPlayer
+    let removed = false
+    setAttempt(prev => {
+      const a = prev[cp]
+      if (!a?.slots) return prev
+      const currentTileId = a.slots[charIdx]?.[kind]
+      if (currentTileId == null) return prev
+      const slots = a.slots.map(s => ({ ...s }))
+      const pool = a.tilePool.map(t => ({ ...t }))
+      pool.find(t => t.id === currentTileId).used = false
+      slots[charIdx][kind] = null
+      removed = true
+      return { ...prev, [cp]: { ...a, slots, tilePool: pool } }
+    })
+    if (removed) { setPendingSlot(null); playClick(); return }
+    setPendingSlot(prev =>
+      prev && prev.charIdx === charIdx && prev.kind === kind ? null : { charIdx, kind }
+    )
+    playClick()
+  }, [currentPlayer, roundData])
 
   // 슬롯에서 실제 자모 가져오기
   const tileJamoOfSlot = useCallback((player, charIdx, kind) => {
@@ -255,10 +280,10 @@ export default function LanguagePieceLocal({ onBack }) {
       currentPlayer={currentPlayer}
       attempt={attempt[currentPlayer]}
       roundData={roundData}
-      selectedTile={selectedTile}
+      pendingSlot={pendingSlot}
       tileJamoOfSlot={tileJamoOfSlot}
-      onPickTile={pickTile}
-      onPlaceSlot={placeOrRemove}
+      onTapTile={tapTile}
+      onTapSlot={tapSlot}
       onSubmit={submit}
       onBack={onBack}
     />
@@ -356,8 +381,8 @@ function RoundIntro({ round, len, firstPlayer, scores, onNext }) {
 
 // ────────────────────────────────────────────────────────────
 function TurnScreen({
-  round, currentPlayer, attempt, roundData, selectedTile,
-  tileJamoOfSlot, onPickTile, onPlaceSlot, onSubmit, onBack,
+  round, currentPlayer, attempt, roundData, pendingSlot,
+  tileJamoOfSlot, onTapTile, onTapSlot, onSubmit, onBack,
 }) {
   const color = currentPlayer === 1 ? COLOR_P1 : COLOR_P2
   const [secondsLeft, setSecondsLeft] = useState(TURN_SECONDS)
@@ -399,7 +424,8 @@ function TurnScreen({
             slot={slot}
             charIdx={i}
             jamoOf={(kind) => tileJamoOfSlot(currentPlayer, i, kind)}
-            onSlotTap={(kind) => onPlaceSlot(i, kind)}
+            pendingKind={pendingSlot && pendingSlot.charIdx === i ? pendingSlot.kind : null}
+            onSlotTap={(kind) => onTapSlot(i, kind)}
           />
         ))}
       </div>
@@ -421,14 +447,20 @@ function TurnScreen({
 
       {/* 타일 풀 */}
       <div style={{ background: '#F8F4FF', padding: 10, borderRadius: 12, marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>자모 타일 (탭해서 선택 → 슬롯에 배치)</div>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+          자모 타일 (탭하면 차례대로 자동 입력)
+          {pendingSlot && (
+            <b style={{ color: ACCENT, marginLeft: 6 }}>
+              · {pendingSlot.charIdx + 1}번 글자 {SLOT_LABEL[pendingSlot.kind]} 칸에 넣기
+            </b>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
           {attempt.tilePool.map(t => (
             <Tile
               key={t.id}
               tile={t}
-              selected={selectedTile === t.id && !t.used}
-              onClick={() => !t.used && onPickTile(t.id)}
+              onClick={() => !t.used && onTapTile(t.id)}
             />
           ))}
         </div>
@@ -443,24 +475,30 @@ function TurnScreen({
       </button>
 
       <div style={{ fontSize: 11, color: '#888', marginTop: 8, lineHeight: 1.6 }}>
-        ※ 한 글자 = 초성(자음) + 중성(모음) + 받침(자음·옵션). 예: <b>강</b> = ㄱ + ㅏ + ㅇ<br/>
-        ※ 받침 없는 글자는 받침 칸을 비워두세요. 예: <b>아</b> = ㅇ + ㅏ
+        ※ 아래 타일을 누르면 위 칸에 <b>차례대로 자동</b>으로 들어갑니다(초성→중성→받침→다음 글자).<br/>
+        ※ 받침에 들어간 자음 뒤에 모음을 누르면, 그 자음이 다음 글자 초성으로 넘어갑니다.<br/>
+        ※ 채워진 칸을 누르면 빼고, 빈 칸을 먼저 누르면 그 칸에 지정해서 넣습니다.<br/>
+        ※ 한 글자 = 초성(자음) + 중성(모음) + 받침(자음·옵션). 예: <b>강</b> = ㄱ + ㅏ + ㅇ / <b>아</b> = ㅇ + ㅏ
       </div>
     </div>
   )
 }
 
-function SyllableSlot({ slot, charIdx, jamoOf, onSlotTap }) {
+const SLOT_LABEL = { cho: '초성', jung: '중성', jong: '받침' }
+
+function SyllableSlot({ slot, charIdx, jamoOf, pendingKind, onSlotTap }) {
   const cho = jamoOf('cho')
   const jung = jamoOf('jung')
   const jong = jamoOf('jong')
   const preview = composeChar(cho, jung, jong) || (cho && jung ? null : (cho || jung))
-  const slotStyle = (filled, accent) => ({
+  const slotStyle = (filled, accent, pending) => ({
     width: 36, height: 32, boxSizing: 'border-box',
-    border: `2px ${filled ? 'solid' : 'dashed'} ${filled ? accent : '#DDD'}`,
+    border: `2px ${filled ? 'solid' : 'dashed'} ${pending ? ACCENT : filled ? accent : '#DDD'}`,
     borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 18, fontWeight: 800, cursor: 'pointer', userSelect: 'none',
-    background: filled ? '#FFF' : '#FAFAFA', color: filled ? '#222' : '#BBB',
+    background: pending ? ACCENT + '22' : filled ? '#FFF' : '#FAFAFA',
+    color: filled ? '#222' : '#BBB',
+    boxShadow: pending ? `0 0 0 2px ${ACCENT}44` : 'none',
   })
   const labelStyle = { fontSize: 9, color: '#888', textAlign: 'center', width: 36 }
   return (
@@ -470,16 +508,16 @@ function SyllableSlot({ slot, charIdx, jamoOf, onSlotTap }) {
         {preview || '?'}
       </div>
       <div style={labelStyle}>초성</div>
-      <div onClick={() => onSlotTap('cho')} style={slotStyle(cho, '#0D47A1')}>{cho || ''}</div>
+      <div onClick={() => onSlotTap('cho')} style={slotStyle(cho, '#0D47A1', pendingKind === 'cho')}>{cho || ''}</div>
       <div style={{ ...labelStyle, marginTop: 3 }}>중성</div>
-      <div onClick={() => onSlotTap('jung')} style={slotStyle(jung, '#E65100')}>{jung || ''}</div>
+      <div onClick={() => onSlotTap('jung')} style={slotStyle(jung, '#E65100', pendingKind === 'jung')}>{jung || ''}</div>
       <div style={{ ...labelStyle, marginTop: 3 }}>받침</div>
-      <div onClick={() => onSlotTap('jong')} style={slotStyle(jong, '#0D47A1')}>{jong || ''}</div>
+      <div onClick={() => onSlotTap('jong')} style={slotStyle(jong, '#0D47A1', pendingKind === 'jong')}>{jong || ''}</div>
     </div>
   )
 }
 
-function Tile({ tile, selected, onClick }) {
+function Tile({ tile, onClick }) {
   const isVowel = tile.kind === 'vowel'
   return (
     <button
@@ -487,11 +525,10 @@ function Tile({ tile, selected, onClick }) {
       disabled={tile.used}
       style={{
         width: 38, height: 42, borderRadius: 8,
-        background: tile.used ? '#EEE' : selected ? (isVowel ? '#FFE082' : '#BBDEFB') : '#FFF',
-        border: selected ? '2px solid #1976D2' : '2px solid #DDD',
+        background: tile.used ? '#EEE' : isVowel ? '#FFF8E1' : '#E3F2FD',
+        border: `2px solid ${tile.used ? '#DDD' : isVowel ? '#FFCC80' : '#90CAF9'}`,
         fontSize: 20, fontWeight: 800, color: tile.used ? '#BBB' : (isVowel ? '#E65100' : '#0D47A1'),
         cursor: tile.used ? 'default' : 'pointer',
-        boxShadow: selected ? '0 2px 6px #1976D266' : 'none',
         transition: 'all 0.1s',
       }}
     >

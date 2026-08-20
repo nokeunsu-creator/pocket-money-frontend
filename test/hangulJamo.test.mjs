@@ -2,8 +2,9 @@
 import {
   CHO, JUNG, JONG,
   decomposeChar, decomposeWord, composeChar, slotsToWord,
-  wordToJamoList, evaluateGuess, jamoKind, shuffle,
+  wordToJamoList, evaluateGuess, jamoKind, shuffle, autoPlaceTarget,
 } from '../src/utils/hangulJamo.js'
+import { WORDS_3, WORDS_4, WORDS_5 } from '../src/data/languagePieceWords.js'
 
 let pass = 0, fail = 0
 function assert(name, cond, detail = '') {
@@ -126,5 +127,92 @@ console.log('\n[Test 9] shuffle 결정성/길이')
   assert('shuffle 같은 원소 집합', sh.sort().join(',') === '1,2,3,4,5')
 }
 
+
+// ────────────────────────────────────────────────────────────
+// 언어의 조각 — 타일 탭 자동 배치 (autoPlaceTarget)
+// 슬롯이 비어 있는 상태에서 정답 자모를 순서대로 누르면
+// 항상 정답 단어가 조립되어야 한다.
+console.log('\n[Test 10] 자모 타일 자동 배치')
+{
+  // 빈 슬롯에 자모 시퀀스를 순서대로 눌러넣는 시뮬레이터
+  function typeJamos(charCount, jamos) {
+    const slots = Array.from({ length: charCount }, () => ({ cho: null, jung: null, jong: null }))
+    for (const j of jamos) {
+      const t = autoPlaceTarget(slots, jamoKind(j))
+      if (!t) return { failed: '넣을 자리 없음: ' + j, slots }
+      if (t.pullJongFrom != null) {
+        slots[t.charIdx].cho = slots[t.pullJongFrom].jong
+        slots[t.pullJongFrom].jong = null
+      }
+      if (slots[t.charIdx][t.kind] != null) return { failed: '이미 찬 칸에 배치: ' + j, slots }
+      slots[t.charIdx][t.kind] = j
+    }
+    return { word: slotsToWord(slots), slots }
+  }
+
+  // 대표 케이스 — 받침 유무 조합
+  const cases = [
+    '강아지',   // 받침 → 무받침 → 무받침
+    '사랑',     // 마지막 글자에 받침
+    '아기',     // 첫 글자 무받침
+    '학교',     // 첫 글자 받침
+    '손잡이',   // 받침 두 번
+    '값진말',   // 겹받침
+    '아이오',   // 받침 전혀 없음
+    '강강강',   // 모든 글자 받침
+  ]
+  for (const w of cases) {
+    const r = typeJamos([...w].length, wordToJamoList(w))
+    assert('순서대로 눌러 "' + w + '" 조립', r.word === w, r.failed || ('결과=' + r.word))
+  }
+
+  // 게임 단어 풀 전체 — 정답 자모를 순서대로 누르면 100% 정답이 나와야 한다
+  const allWords = [...WORDS_3, ...WORDS_4, ...WORDS_5]
+  const bad = []
+  for (const w of allWords) {
+    const r = typeJamos([...w].length, wordToJamoList(w))
+    if (r.word !== w) bad.push(w + '→' + (r.word || r.failed))
+  }
+  assert(
+    '단어 풀 ' + allWords.length + '개 전부 자동 배치로 정답 조립',
+    bad.length === 0,
+    '실패 ' + bad.length + '건: ' + bad.slice(0, 8).join(', ')
+  )
+
+  // 모음을 먼저 눌러도 그 글자의 초성 구멍을 먼저 메운다
+  {
+    const slots = [{ cho: null, jung: 'ㅏ', jong: null }, { cho: null, jung: null, jong: null }]
+    const t = autoPlaceTarget(slots, 'consonant')
+    assert('모음 선입력 시 자음은 그 글자 초성으로', t && t.charIdx === 0 && t.kind === 'cho',
+      JSON.stringify(t))
+  }
+
+  // 받침에 넣은 자음은 다음 모음 입력 때 다음 글자 초성으로 당겨진다
+  {
+    const slots = [{ cho: 'ㅅ', jung: 'ㅏ', jong: 'ㄹ' }, { cho: null, jung: null, jong: null }]
+    const t = autoPlaceTarget(slots, 'vowel')
+    assert('받침 뒤 모음 → 받침을 다음 글자 초성으로 당김',
+      t && t.charIdx === 1 && t.kind === 'jung' && t.pullJongFrom === 0, JSON.stringify(t))
+  }
+
+  // 다음 글자 초성이 이미 있으면 당기지 않는다 (진짜 받침)
+  {
+    const slots = [{ cho: 'ㄱ', jung: 'ㅏ', jong: 'ㅇ' }, { cho: 'ㅈ', jung: null, jong: null }]
+    const t = autoPlaceTarget(slots, 'vowel')
+    assert('다음 글자 초성이 있으면 받침 유지',
+      t && t.charIdx === 1 && t.kind === 'jung' && t.pullJongFrom === undefined, JSON.stringify(t))
+  }
+
+  // 꽉 찬 슬롯에는 더 넣을 자리가 없다
+  {
+    const full = [{ cho: 'ㄱ', jung: 'ㅏ', jong: 'ㅇ' }]
+    assert('모두 찬 슬롯 → 자음 자리 없음', autoPlaceTarget(full, 'consonant') === null)
+    assert('모두 찬 슬롯 → 모음 자리 없음', autoPlaceTarget(full, 'vowel') === null)
+  }
+
+  // 방어적 입력
+  assert('빈 배열 → null', autoPlaceTarget([], 'vowel') === null)
+  assert('배열 아님 → null', autoPlaceTarget(null, 'vowel') === null)
+}
 console.log(`\n결과: ${pass} 통과 / ${fail} 실패`)
 process.exit(fail === 0 ? 0 : 1)
