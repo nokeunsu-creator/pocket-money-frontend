@@ -246,13 +246,17 @@ export default function NumberBaseball({ onBack }) {
 
   const resetOnline = () => {
     const gs = room.gameState
+    // 상태를 못 읽은 채로 다시 시작하면 digits가 4로 덮어써져서
+    // 3자리로 하던 게임이 조용히 4자리로 바뀐다. 그럴 땐 아무것도 하지 않는다.
+    if (!gs) return
+    const keptDigits = [3, 4, 5].includes(Number(gs.digits)) ? Number(gs.digits) : 4
     room.updateState({
       hostSecret: '',
       guestSecret: '',
       hostHistory: '[]',
       guestHistory: '[]',
       turn: 'host',
-      digits: Number(gs?.digits) || 4,
+      digits: keptDigits,
       winner: '',
       phase: 'setup',
     })
@@ -289,31 +293,43 @@ export default function NumberBaseball({ onBack }) {
             혼자 하기
           </button>
 
-          {/* Online digit picker */}
-          <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>온라인 자릿수 선택</div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            {[3, 4, 5].map(d => (
-              <button key={d} onClick={() => setOnlineDigits(d)}
-                style={{
-                  padding: '8px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  fontSize: 14, fontWeight: 700,
-                  color: onlineDigits === d ? '#FFF' : '#666',
-                  background: onlineDigits === d ? '#4895EF' : '#F0F0F0',
-                }}>
-                {d}자리
-              </button>
-            ))}
+          {/* 방 만들기 묶음 — 자릿수는 방장만 정한다.
+              예전에는 자릿수 버튼이 '방 만들기'와 '코드로 참가' 사이에 떠 있어서,
+              참가하는 쪽이 3자리를 골라도 방장이 정한 자릿수를 따라가는 게 안 보였다. */}
+          <div style={{
+            border: '1.5px solid #E3EDFB', borderRadius: 14, padding: '14px 12px',
+            marginTop: 8, background: '#F7FAFF',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#3A7BD5', marginBottom: 8 }}>
+              방 만들기 (방장이 자릿수를 정해요)
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+              {[3, 4, 5].map(d => (
+                <button key={d} onClick={() => setOnlineDigits(d)}
+                  style={{
+                    padding: '8px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 700,
+                    color: onlineDigits === d ? '#FFF' : '#666',
+                    background: onlineDigits === d ? '#4895EF' : '#EAEFF5',
+                  }}>
+                  {d}자리
+                </button>
+              ))}
+            </div>
+            <button onClick={createOnline}
+              style={{
+                width: '100%', padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
+                fontSize: 16, fontWeight: 700, color: '#FFF',
+                background: 'linear-gradient(135deg, #4895EF, #3A7BD5)',
+              }}>
+              {onlineDigits}자리로 온라인 방 만들기
+            </button>
           </div>
 
-          <button onClick={createOnline}
-            style={{
-              padding: '16px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
-              fontSize: 16, fontWeight: 700, color: '#FFF',
-              background: 'linear-gradient(135deg, #4895EF, #3A7BD5)',
-            }}>
-            온라인 방 만들기
-          </button>
           <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>또는 코드로 참가</div>
+          <div style={{ fontSize: 11, color: '#AAA', marginTop: -6, marginBottom: 2 }}>
+            참가할 때는 방장이 정한 자릿수로 해요
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               value={joinCode}
