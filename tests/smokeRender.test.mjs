@@ -30,6 +30,8 @@ const NON_GAME = new Set([
   'QuizLeaderboard', 'SavingsGoals', 'StudyMain', 'StudyTimer', 'TodoAdd', 'TodoList',
   'TripDetail', 'TripEdit', 'TripList', 'EnglishHub', 'MathHub', 'Dojo',
   'InlineSkate', 'ShuttleRun', 'BadukClassroom', 'Magic', 'MagicSvg',
+  // 화면이 아니라 다른 컴포넌트 안에서 쓰이는 조각. prop 없이 렌더하면 null이 맞다
+  'ChessPieces',
 ])
 
 // 데이터를 prop으로 받아야 하는 컴포넌트 → App.jsx가 넘기는 것과 같은 데이터를 준다

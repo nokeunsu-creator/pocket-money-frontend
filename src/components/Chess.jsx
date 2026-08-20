@@ -2,11 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useGameRoom } from '../utils/useGameRoom'
 import { unlock } from '../utils/achievements'
 import { playPlace, playWin, playLose } from '../utils/sounds'
-
-const PIECES = {
-  K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
-  k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
-}
+import ChessPiece from './ChessPieces'
 
 const INIT_BOARD = [
   ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
@@ -909,7 +905,9 @@ export default function Chess({ onBack }) {
           style={{ background: 'none', border: 'none', fontSize: 15, color: 'var(--gray)', cursor: 'pointer', marginBottom: 16 }}>
           ← 돌아가기
         </button>
-        <div style={{ fontSize: 64, marginBottom: 12 }}>♟</div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginBottom: 12 }}>
+          {['k', 'q', 'K', 'Q'].map(p => <ChessPiece key={p} piece={p} size={56} />)}
+        </div>
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>체스</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 260, margin: '0 auto' }}>
           <button onClick={() => setMode('local')}
@@ -981,7 +979,7 @@ export default function Chess({ onBack }) {
 
   const renderPiece = (p) => {
     if (!p) return null
-    return <span style={{ fontSize: cellSize * 0.65, lineHeight: 1 }}>{PIECES[p]}</span>
+    return <ChessPiece piece={p} size={cellSize * 0.94} />
   }
 
   return (
@@ -1021,7 +1019,10 @@ export default function Chess({ onBack }) {
         padding: '8px 16px', background: '#F7F6F3', fontSize: 13,
       }}>
         <div>
-          ⚪ 백 잡은말: {captured.white.map((p, i) => <span key={i} style={{ fontSize: 16 }}>{PIECES[p]}</span>)}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, verticalAlign: 'middle' }}>
+            ⚪ 백 잡은말:
+            {captured.white.map((p, i) => <ChessPiece key={i} piece={p} size={18} />)}
+          </span>
         </div>
         <div style={{
           padding: '2px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600,
@@ -1045,7 +1046,10 @@ export default function Chess({ onBack }) {
           }
         </div>
         <div>
-          ⚫ 흑 잡은말: {captured.black.map((p, i) => <span key={i} style={{ fontSize: 16 }}>{PIECES[p]}</span>)}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, verticalAlign: 'middle' }}>
+            ⚫ 흑 잡은말:
+            {captured.black.map((p, i) => <ChessPiece key={i} piece={p} size={18} />)}
+          </span>
         </div>
       </div>
 
@@ -1134,9 +1138,10 @@ export default function Chess({ onBack }) {
             <button key={p} onClick={() => promote(p)}
               style={{
                 width: 48, height: 48, borderRadius: 10, border: '2px solid #DDD',
-                background: '#FFF', fontSize: 30, cursor: 'pointer',
+                background: '#FFF', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
               }}>
-              {PIECES[turn === 'white' ? p : p.toLowerCase()]}
+              <ChessPiece piece={turn === 'white' ? p : p.toLowerCase()} size={42} />
             </button>
           ))}
         </div>
