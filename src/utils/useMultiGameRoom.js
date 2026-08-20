@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { db, ref, set, onValue, remove, get, update } from './firebase'
+import { db, ref, set, onValue, remove, get, update, runTransaction } from './firebase'
+import { pickFreeCode, expiredRoomCodes, findFreeSlot } from './roomCodes'
 
 // 다인용 (2~6인) 게임 룸. 슬롯 기반.
 // Firebase 구조:
@@ -14,24 +15,21 @@ import { db, ref, set, onValue, remove, get, update } from './firebase'
 // player ID(slotId)는 0..maxPlayers-1.
 // 호스트는 slot 0. 게스트는 빈 슬롯을 찾아 할당.
 
-function generateCode() {
-  return String(Math.floor(10 + Math.random() * 90))
-}
-
+// 1시간 지난 방을 지우고, 아직 살아있는 방 코드 목록을 돌려준다.
 async function cleanOldRooms(gameType) {
   try {
     const roomsRef = ref(db, `rooms/${gameType}`)
     const snap = await get(roomsRef)
-    if (!snap.exists()) return
+    if (!snap.exists()) return []
     const rooms = snap.val()
-    const now = Date.now()
-    const ONE_HOUR = 60 * 60 * 1000
-    for (const code of Object.keys(rooms)) {
-      if (rooms[code].createdAt && now - rooms[code].createdAt > ONE_HOUR) {
-        await remove(ref(db, `rooms/${gameType}/${code}`))
-      }
+    const expired = expiredRoomCodes(rooms, Date.now())
+    for (const code of expired) {
+      await remove(ref(db, `rooms/${gameType}/${code}`))
     }
-  } catch (e) {}
+    return Object.keys(rooms).filter(c => !expired.includes(c))
+  } catch (e) {
+    return []
+  }
 }
 
 export function useMultiGameRoom(gameType) {
@@ -43,8 +41,12 @@ export function useMultiGameRoom(gameType) {
 
   // 방 만들기
   const createRoom = useCallback(async (maxPlayers, myName, initialState = null) => {
-    await cleanOldRooms(gameType)
-    const code = generateCode()
+    const takenCodes = await cleanOldRooms(gameType)
+    const code = pickFreeCode(takenCodes)
+    if (!code) {
+      setError('지금은 방이 다 찼어요. 잠시 뒤에 다시 만들어 주세요')
+      return null
+    }
     const roomRef = ref(db, `rooms/${gameType}/${code}`)
     await set(roomRef, {
       host: 0,
@@ -79,21 +81,24 @@ export function useMultiGameRoom(gameType) {
       setError('이미 시작된 방이에요')
       return false
     }
-    const players = data.players || {}
-    const max = data.maxPlayers || 6
-    // 빈 슬롯 찾기
-    let slot = -1
-    for (let i = 0; i < max; i++) {
-      if (!players[i]) { slot = i; break }
-    }
+    const slot = findFreeSlot(data.players, data.maxPlayers || 6)
     if (slot < 0) {
       setError('방이 가득 찼어요')
       return false
     }
-    await set(ref(db, `rooms/${gameType}/${code}/players/${slot}`), {
-      name: myName || `플레이어${slot + 1}`,
-      joinedAt: Date.now(),
-    })
+    // 슬롯은 트랜잭션으로 선점한다. 그냥 set하면 동시에 들어온 두 사람이
+    // 같은 슬롯을 잡아 한 명이 조용히 덮어써진다.
+    const claim = await runTransaction(
+      ref(db, `rooms/${gameType}/${code}/players/${slot}`),
+      (current) => {
+        if (current) return undefined // 이미 누가 앉았음 → 트랜잭션 취소
+        return { name: myName || `플레이어${slot + 1}`, joinedAt: Date.now() }
+      }
+    )
+    if (!claim.committed) {
+      setError('자리를 놓쳤어요. 다시 참가해 주세요')
+      return false
+    }
 
     setRoomCode(code)
     setMySlot(slot)

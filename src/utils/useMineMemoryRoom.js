@@ -3,28 +3,26 @@
 // state 구조: serializeForWire가 반환하는 객체 + phase/dice/event/eventSeq
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { db, ref, set, onValue, remove, get, update } from './firebase'
+import { db, ref, set, onValue, remove, get, update, runTransaction } from './firebase'
+import { pickFreeCode, expiredRoomCodes, nextMineRole, nextEventSeq } from './roomCodes'
 
 const GAME_TYPE = 'mine-memory'
 
-function generateCode() {
-  return String(Math.floor(10 + Math.random() * 90))
-}
-
+// 1시간 지난 방을 지우고, 아직 살아있는 방 코드 목록을 돌려준다.
 async function cleanOldRooms() {
   try {
     const roomsRef = ref(db, `rooms/${GAME_TYPE}`)
     const snap = await get(roomsRef)
-    if (!snap.exists()) return
+    if (!snap.exists()) return []
     const rooms = snap.val()
-    const now = Date.now()
-    const ONE_HOUR = 60 * 60 * 1000
-    for (const code of Object.keys(rooms)) {
-      if (rooms[code].createdAt && now - rooms[code].createdAt > ONE_HOUR) {
-        await remove(ref(db, `rooms/${GAME_TYPE}/${code}`))
-      }
+    const expired = expiredRoomCodes(rooms, Date.now())
+    for (const code of expired) {
+      await remove(ref(db, `rooms/${GAME_TYPE}/${code}`))
     }
-  } catch (e) {}
+    return Object.keys(rooms).filter(c => !expired.includes(c))
+  } catch (e) {
+    return []
+  }
 }
 
 export function useMineMemoryRoom() {
@@ -33,6 +31,7 @@ export function useMineMemoryRoom() {
   const [room, setRoom] = useState(null) // 전체 방 데이터
   const [error, setError] = useState('')
   const unsubRef = useRef(null)
+  const seqRef = useRef(0) // 내가 발행한 eventSeq. room 상태가 늦게 와도 중복되지 않게 한다
 
   const subscribe = useCallback((code) => {
     if (unsubRef.current) unsubRef.current()
@@ -46,8 +45,13 @@ export function useMineMemoryRoom() {
 
   // 딜러: 방 만들기
   const createAsDealer = useCallback(async (initialState) => {
-    await cleanOldRooms()
-    const code = generateCode()
+    const takenCodes = await cleanOldRooms()
+    const code = pickFreeCode(takenCodes)
+    if (!code) {
+      setError('지금은 방이 다 찼어요. 잠시 뒤에 다시 만들어 주세요')
+      return null
+    }
+    seqRef.current = 0
     const roomRef = ref(db, `rooms/${GAME_TYPE}/${code}`)
     await set(roomRef, {
       state: initialState,
@@ -75,19 +79,21 @@ export function useMineMemoryRoom() {
       setError('방을 찾을 수 없어요')
       return null
     }
-    const data = snap.val()
-    if (!data.dealer) {
-      setError('딜러가 없는 방입니다')
+    const { role: myRole, error: roleError } = nextMineRole(snap.val())
+    if (!myRole) {
+      setError(roleError)
       return null
     }
-    let myRole = null
-    if (!data.p1) myRole = 'p1'
-    else if (!data.p2) myRole = 'p2'
-    else {
-      setError('방이 꽉 찼어요 (이미 2명 참가중)')
+    // 자리는 트랜잭션으로 선점한다. 두 명이 동시에 들어오면 둘 다 p1이 되어버린다.
+    const claim = await runTransaction(
+      ref(db, `rooms/${GAME_TYPE}/${code}/${myRole}`),
+      (current) => (current === true ? undefined : true)
+    )
+    if (!claim.committed) {
+      setError('자리를 놓쳤어요. 다시 참가해 주세요')
       return null
     }
-    await update(ref(db, `rooms/${GAME_TYPE}/${code}`), { [myRole]: true })
+    seqRef.current = 0
     setRoomCode(code)
     setRole(myRole)
     setError('')
@@ -110,10 +116,13 @@ export function useMineMemoryRoom() {
   // 이벤트 발행 (시퀀스 자동 증가)
   const publishEvent = useCallback(async (event) => {
     if (!roomCode) return
-    const currentSeq = room?.eventSeq || 0
+    // room 상태는 Firebase 리스너로 들어오므로 연속 발행 시 아직 옛 seq일 수 있다.
+    // 로컬 카운터와 원격 값 중 큰 쪽 +1을 써서 seq가 절대 같은 값으로 두 번 쓰이지 않게 한다.
+    const seq = nextEventSeq(seqRef.current, room?.eventSeq)
+    seqRef.current = seq
     await update(ref(db, `rooms/${GAME_TYPE}/${roomCode}`), {
       event,
-      eventSeq: currentSeq + 1,
+      eventSeq: seq,
     })
   }, [roomCode, room])
 
