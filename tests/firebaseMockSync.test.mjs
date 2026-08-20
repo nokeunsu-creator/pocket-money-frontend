@@ -261,7 +261,188 @@ function testConnectFourSync() {
   ok(unflat(host.gameState.board)[4][3] === 'yellow', 'Connect4: host sees guest drop')
 }
 
-// ─── 4. SixInRow 동기화 (한 턴에 2수) ───
+// ─── 4. Checkers 동기화 (king 포함) ───
+function testCheckersSync() {
+  const SIZE = 8
+  function cellToCh(p) {
+    if (!p) return '.'
+    if (p.color==='red') return p.king?'R':'r'
+    return p.king?'B':'b'
+  }
+  function chToCell(ch) {
+    if (ch==='.') return null
+    return {r:{color:'red',king:false},R:{color:'red',king:true},b:{color:'black',king:false},B:{color:'black',king:true}}[ch]
+  }
+  function flat(b) { return b.map(r=>r.map(cellToCh).join('')).join('|') }
+  function unflat(s) { return s.split('|').map(r=>r.split('').map(chToCell)) }
+  function createBoard() {
+    const b = Array.from({length:SIZE},()=>Array(SIZE).fill(null))
+    for(let r=0;r<3;r++)for(let c=0;c<SIZE;c++)if((r+c)%2===1)b[r][c]={color:'black',king:false}
+    for(let r=5;r<8;r++)for(let c=0;c<SIZE;c++)if((r+c)%2===1)b[r][c]={color:'red',king:false}
+    return b
+  }
+
+  const init = { board: flat(createBoard()), turn: 'red', winner: '' }
+  const { host, guest } = setupHostGuest('checkers', init)
+
+  // host red moves (5,0) → (4,1)  [실제 빨강 말이 있는 칸: (r+c)%2===1 다크 스퀘어]
+  let b = unflat(host.gameState.board)
+  b[4][1] = b[5][0]
+  b[5][0] = null
+  host.updateState({ board: flat(b), turn: 'black', winner: '' })
+
+  const gb = unflat(guest.gameState.board)
+  ok(gb[5][0] === null && gb[4][1]?.color === 'red', 'Checkers: guest sees red move')
+
+  // king 승급 시뮬레이션 — red가 (0, x)에 도달
+  b = unflat(host.gameState.board)
+  b[0][1] = { color: 'red', king: true } // 인위적 승급
+  host.updateState({ board: flat(b), turn: 'black', winner: '' })
+  ok(unflat(guest.gameState.board)[0][1]?.king === true, 'Checkers: guest sees king promotion (king field synced)')
+}
+
+// ─── 5. Hex 동기화 ───
+function testHexSync() {
+  const SIZE = 11
+  function createBoard() { return Array.from({length:SIZE},()=>Array(SIZE).fill(null)) }
+  function flat(b) { return b.map(r=>r.map(c=>c?c[0]:'.').join('')).join('|') }
+  function unflat(s) { return s.split('|').map(r=>r.split('').map(c=>c==='b'?'black':c==='w'?'white':null)) }
+
+  const init = { board: flat(createBoard()), turn: 'black', winner: '' }
+  const { host, guest } = setupHostGuest('hex', init)
+
+  let b = unflat(host.gameState.board)
+  b[5][5] = 'black' // 중앙
+  host.updateState({ board: flat(b), turn: 'white', winner: '' })
+  ok(unflat(guest.gameState.board)[5][5] === 'black', 'Hex: guest sees center stone')
+
+  b = unflat(guest.gameState.board)
+  b[5][6] = 'white'
+  guest.updateState({ board: flat(b), turn: 'black', winner: '' })
+  ok(unflat(host.gameState.board)[5][6] === 'white', 'Hex: host sees guest move')
+}
+
+// ─── 6. NineMensMorris 동기화 (복잡한 state: placed, removing) ───
+function testMorrisSync() {
+  function flat(b) { return b.map(c => c ? c[0] : '.').join('') }
+  function unflat(s) { return s.split('').map(ch => ch === 'b' ? 'black' : ch === 'w' ? 'white' : null) }
+
+  const init = {
+    board: flat(Array(24).fill(null)),
+    turn: 'black',
+    placed: { black: 0, white: 0 },
+    removing: null,
+    winner: '',
+  }
+  const { host, guest } = setupHostGuest('morris', init)
+
+  // black places at 0
+  let b = unflat(host.gameState.board)
+  b[0] = 'black'
+  host.updateState({ board: flat(b), turn: 'white', placed: { black: 1, white: 0 }, removing: null, winner: '' })
+
+  expectEq(guest.gameState.placed, { black: 1, white: 0 }, 'Morris: guest sees placed count')
+  ok(guest.gameState.turn === 'white', 'Morris: turn synced')
+
+  // white places at 1 (자기 차례 가정)
+  b = unflat(guest.gameState.board)
+  b[1] = 'white'
+  guest.updateState({ board: flat(b), turn: 'black', placed: { black: 1, white: 1 }, removing: null, winner: '' })
+  expectEq(host.gameState.placed, { black: 1, white: 1 }, 'Morris: host sees white placement')
+
+  // 밀 만들고 제거 단계 진입
+  // black이 0,1,2 채우려고 함. 1에 white가 있으므로 인위적으로 다른 상태로 점프
+  // 실제 게임에선 mill을 만든 사람이 removing 페이즈로 들어감
+  b = unflat(host.gameState.board)
+  b[2] = 'black'; b[1] = null  // 인위적
+  host.updateState({
+    board: flat(b),
+    turn: 'black',
+    placed: { black: 2, white: 1 },
+    removing: 'white',
+    winner: '',
+  })
+  ok(guest.gameState.removing === 'white', 'Morris: guest sees removing=white (mill 상태 sync)')
+}
+
+// ─── 7. Quarto 동기화 (직렬화 수정 후) ───
+function testQuartoSync() {
+  function boardToFlat(b) { return b.map(c => c === null ? '' : String(c)).join(',') }
+  function flatToBoard(f) { return f.split(',').map(s => s === '' ? null : parseInt(s, 10)) }
+  function availToFlat(a) { return a.join(',') }
+  function flatToAvail(f) { return f === '' ? [] : f.split(',').map(Number) }
+
+  const init = {
+    board: boardToFlat(Array(16).fill(null)),
+    available: availToFlat(Array.from({length:16},(_,i)=>i)),
+    phase: 'give', currentPiece: '',
+    placer: 'black', giver: 'white',
+    winner: '', winLine: '',
+  }
+  const { host, guest } = setupHostGuest('quarto', init)
+
+  // 모든 null인 보드가 직렬화 후에도 살아있는지 (Firebase 버그 대응)
+  expectEq(flatToBoard(host.gameState.board), Array(16).fill(null), 'Quarto: host board all-null preserved')
+  expectEq(flatToBoard(guest.gameState.board), Array(16).fill(null), 'Quarto: guest board all-null preserved')
+
+  // host=giver(white)가 처음에 piece 5 줌
+  host.updateState({
+    ...host.gameState,
+    available: availToFlat(Array.from({length:16},(_,i)=>i).filter(p => p !== 5)),
+    phase: 'place', currentPiece: 5,
+    placer: 'black', giver: 'white',
+  })
+  ok(guest.gameState.currentPiece === 5, 'Quarto: guest sees currentPiece')
+  ok(guest.gameState.phase === 'place', 'Quarto: phase synced')
+
+  // black(placer)이 보드 0에 놓음
+  const b = flatToBoard(guest.gameState.board)
+  b[0] = 5
+  guest.updateState({
+    ...guest.gameState,
+    board: boardToFlat(b),
+    phase: 'give', currentPiece: '',
+    placer: 'white', giver: 'black',
+  })
+  expectEq(flatToBoard(host.gameState.board)[0], 5, 'Quarto: host sees piece at 0')
+  ok(host.gameState.phase === 'give', 'Quarto: phase back to give')
+}
+
+// ─── 8. BlokusDuo 동기화 ───
+function testBlokusSync() {
+  const SIZE = 14
+  function flat(b) { return b.map(r=>r.map(c=>c?c[0]:'.').join('')).join('|') }
+
+  const init = {
+    board: flat(Array.from({length:SIZE},()=>Array(SIZE).fill(null))),
+    turn: 'black',
+    blackPieces: Array.from({length:21},(_,i)=>i),
+    whitePieces: Array.from({length:21},(_,i)=>i),
+    passes: { black: false, white: false },
+    winner: '',
+  }
+  const { host, guest } = setupHostGuest('blokus', init)
+
+  // host black이 piece 0을 사용
+  host.updateState({
+    ...host.gameState,
+    blackPieces: host.gameState.blackPieces.filter(p => p !== 0),
+    turn: 'white',
+  })
+  ok(guest.gameState.blackPieces.length === 20, 'Blokus: guest sees piece removed')
+  ok(!guest.gameState.blackPieces.includes(0), 'Blokus: piece 0 removed correctly')
+  ok(guest.gameState.turn === 'white', 'Blokus: turn synced')
+
+  // passes 동기화
+  guest.updateState({
+    ...guest.gameState,
+    passes: { black: false, white: true },
+    turn: 'black',
+  })
+  expectEq(host.gameState.passes, { black: false, white: true }, 'Blokus: passes synced')
+}
+
+// ─── 9. SixInRow 동기화 (한 턴에 2수) ───
 function testSixSync() {
   const SIZE = 13
   function flat(b) { return b.map(r => r.map(c => c||'').join(',')).join('|') }
@@ -288,7 +469,7 @@ function testSixSync() {
   ok(host.gameState.turn === 'black', 'SixRow: 2nd move complete, turn flips')
 }
 
-// ─── 5. Race Condition: 동시 업데이트 ───
+// ─── 10. Race Condition: 동시 업데이트 ───
 function testRaceCondition() {
   const init = { board: 'init', turn: 'black', value: 0 }
   const { host, guest } = setupHostGuest('test', init)
@@ -305,7 +486,7 @@ function testRaceCondition() {
   expectEq(host.gameState, guest.gameState, 'Race: both clients converge')
 }
 
-// ─── 6. 게스트 입장 전 호스트만의 상태 ───
+// ─── 11. 게스트 입장 전 호스트만의 상태 ───
 function testHostBeforeGuest() {
   const db = new MockDB()
   const host = createMockRoom(db, 'test', '99', 'host')
@@ -322,7 +503,7 @@ function testHostBeforeGuest() {
   ok(guest.gameState.value === 1, 'BeforeGuest: guest receives state on join')
 }
 
-// ─── 7. 잘못된 코드 입장 ───
+// ─── 12. 잘못된 코드 입장 ───
 function testInvalidJoin() {
   const db = new MockDB()
   const host = createMockRoom(db, 'test', '11', 'host')
@@ -334,7 +515,7 @@ function testInvalidJoin() {
   ok(guest.error.length > 0, 'InvalidJoin: error set')
 }
 
-// ─── 8. 방 나가기 (cleanup) ───
+// ─── 13. 방 나가기 (cleanup) ───
 function testLeaveRoom() {
   const db = new MockDB()
   const host = createMockRoom(db, 'test', '77', 'host')
@@ -349,6 +530,11 @@ function testLeaveRoom() {
 testGonuSync()
 testOthelloSync()
 testConnectFourSync()
+testCheckersSync()
+testHexSync()
+testMorrisSync()
+testQuartoSync()
+testBlokusSync()
 testSixSync()
 testRaceCondition()
 testHostBeforeGuest()

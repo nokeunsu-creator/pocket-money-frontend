@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const COMPONENTS = 'F:/workspace/pocket-money_260423/frontend/src/components'
-const TARGETS = ['Gonu.jsx', 'Othello.jsx', 'ConnectFour.jsx']
+const TARGETS = ['Gonu.jsx', 'Othello.jsx', 'NineMensMorris.jsx', 'Hex.jsx', 'BlokusDuo.jsx', 'Quarto.jsx', 'ConnectFour.jsx', 'Checkers.jsx']
 
 let pass = 0, fail = 0
 function check(name, cond, msg) {
@@ -28,7 +28,7 @@ for (const file of TARGETS) {
   check(file, /mode === 'online'/.test(src), `'online' 분기 없음`)
   check(file, /방을 (찾을 수 없|만들기)|방 코드/.test(src), `방 UI 텍스트 없음`)
   // 보드 게임: 직렬화 함수
-  if (/createBoard|Array\.from.*\(.*\)\s*=>\s*Array/.test(src) || file === 'Gonu.jsx') {
+  if (/createBoard|Array\.from.*\(.*\)\s*=>\s*Array/.test(src) || file === 'Gonu.jsx' || file === 'NineMensMorris.jsx') {
     check(file, /boardToFlat|piecesToFlat|board:\s*Array/.test(src), `직렬화 함수/패턴 없음`)
   }
 }

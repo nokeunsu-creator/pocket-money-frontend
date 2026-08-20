@@ -10,12 +10,12 @@ const COMPONENTS = 'F:/workspace/pocket-money_260423/frontend/src/components'
 
 // 온라인 모드가 있는 모든 게임 (WordChain/CollaborativeDrawing은 패스앤플레이 전용)
 const ONLINE_GAMES = [
-  'Gonu', 'Othello', 'ConnectFour', // 새로 추가
+  'Gonu', 'Othello', 'NineMensMorris', 'Hex', 'BlokusDuo', 'Quarto', 'ConnectFour', 'Checkers', // 새로 추가
   'Omok', 'Chess', 'Baduk', 'Janggi', // 기존 보드게임
   'OneCard', 'Hula', // 기존 카드
   'NumberBaseball', 'MultiplyChallenge', 'MathSpeedQuiz', // 두뇌
   'MineMemoryOnline', 'LanguagePieceOnline', // 분리된 Online 파일
-  'SixInRow', // 서바이벌
+  'SixInRow', 'IndianPoker', 'ECard', // 서바이벌
 ]
 
 let pass = 0, fail = 0, warn = 0
@@ -61,7 +61,7 @@ for (const game of ONLINE_GAMES) {
   check(game, windowDirect <= 2, `window.innerWidth 직접 참조 너무 많음 (${windowDirect}회)`, 'warn')
 
   // 6. 직렬화 함수 (보드 게임)
-  const isBoardGame = ['Gonu','Othello','ConnectFour','Omok','SixInRow','MineMemory'].includes(game)
+  const isBoardGame = ['Gonu','Othello','NineMensMorris','Hex','BlokusDuo','Quarto','ConnectFour','Checkers','Omok','SixInRow','MineMemory'].includes(game)
   if (isBoardGame) {
     check(game, /boardToFlat|piecesToFlat|board:\s*\[|boardToString/.test(src),
       '보드 게임인데 직렬화 함수가 없음 (online 동기화 깨질 수 있음)', 'warn')

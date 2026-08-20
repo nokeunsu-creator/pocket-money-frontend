@@ -302,6 +302,50 @@ function expect(actual, expected, msg) {
   expect(checkLines(full), 12, 'Bingo: full board = 12 lines (5+5+2)')
 }
 
+// ─── 인디언포커 패자 결정 ───
+{
+  function winnerCard(hands /* {slot: card} */, alive /* {slot:bool} */, folded) {
+    const active = Object.keys(hands).filter(s => alive[s] && !folded[s])
+    if (active.length === 0) return null
+    let maxCard = -1
+    active.forEach(s => { if (hands[s] > maxCard) maxCard = hands[s] })
+    return active.filter(s => hands[s] === maxCard)
+  }
+  expect(
+    winnerCard({0:5,1:8,2:3}, {0:true,1:true,2:true}, {0:false,1:false,2:false}),
+    ['1'],
+    'IndianPoker: card 8 wins'
+  )
+  expect(
+    winnerCard({0:5,1:5,2:3}, {0:true,1:true,2:true}, {0:false,1:false,2:false}),
+    ['0', '1'],
+    'IndianPoker: tie → split'
+  )
+  expect(
+    winnerCard({0:5,1:8,2:3}, {0:true,1:true,2:true}, {0:false,1:true,2:false}),
+    ['0'],
+    'IndianPoker: top folded, next best wins'
+  )
+}
+
+// ─── E카드 (가위바위보 변형) ───
+{
+  function beats(a, b) {
+    if (a === b) return 0
+    if (a === 'E' && b === 'C') return 1
+    if (a === 'C' && b === 'E') return -1
+    if (a === 'C' && b === 'S') return 1
+    if (a === 'S' && b === 'C') return -1
+    if (a === 'S' && b === 'E') return 1
+    if (a === 'E' && b === 'S') return -1
+    return 0
+  }
+  ok(beats('E','C') > 0, 'ECard: E > C')
+  ok(beats('C','S') > 0, 'ECard: C > S')
+  ok(beats('S','E') > 0, 'ECard: S > E (key rule)')
+  expect(beats('C','C'), 0, 'ECard: C=C draw')
+}
+
 console.log(`\n========= 엔진 심층 검증 결과 =========`)
 console.log(`✅ 통과: ${pass}`)
 console.log(`❌ 실패: ${fail}`)

@@ -327,14 +327,14 @@ function makeDuoClient(db, gameType) {
 // 7-4. 호스트가 나가면 게스트가 안다
 {
   const db = new MockDB()
-  const host = makeDuoClient(db, 'omok')
-  const guest = makeDuoClient(db, 'omok')
+  const host = makeDuoClient(db, 'hex')
+  const guest = makeDuoClient(db, 'hex')
   const code = host.createRoom({ board: 'init', turn: 'black' })
   guest.joinRoom(code)
 
   host.leaveRoom()
   expectEq(guest.connected, false, '호스트 이탈 시 게스트 connected=false (옛 버그: 화면 멈춤)')
-  expectEq(db.read(`rooms/omok/${code}`), null, '호스트가 나가면 방 삭제')
+  expectEq(db.read(`rooms/hex/${code}`), null, '호스트가 나가면 방 삭제')
 }
 
 // 7-5. 다인 방 — 동시 참가 시 슬롯이 겹치지 않는다
