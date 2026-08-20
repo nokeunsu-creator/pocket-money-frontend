@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { CHILD1, CHILD2, MOM } from '../config/names'
+import { CHILD1, CHILD2 } from '../config/names'
 import { getProfilePhotos, saveProfilePhoto } from '../api/api'
 
 const PASSWORDS = {
@@ -8,7 +8,6 @@ const PASSWORDS = {
 }
 
 const MENU_PASSWORDS = {
-  'budget': '12',
   'game': '54',
   'familyHub': '33',
 }
@@ -211,23 +210,6 @@ export default function ProfileSelect({ onSelect }) {
       </div>
       <div style={{ display: 'flex', gap: 12, marginTop: 12, padding: '0 20px', maxWidth: 320, width: '100%' }}>
         <button
-          onClick={() => handleMenuClick('budget')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            padding: '16px 0', borderRadius: 16,
-            background: 'linear-gradient(135deg, #2C3E50, #3498DB)',
-            color: '#FFF', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            transition: 'transform 0.1s',
-          }}
-          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onPointerUp={e => e.currentTarget.style.transform = ''}
-          onPointerLeave={e => e.currentTarget.style.transform = ''}
-        >
-          <span style={{ fontSize: 28 }}>💰</span>
-          <span>가계부 · {MOM}</span>
-        </button>
-        <button
           onClick={() => handleMenuClick('familyHub')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -264,7 +246,7 @@ export default function ProfileSelect({ onSelect }) {
               {photoChangeUser
                 ? photoChangeUser + ' 사진 변경 비밀번호를 입력하세요'
                 : selectedMenu
-                ? ({ budget: '가계부', game: '게임', familyHub: '우리 가족' }[selectedMenu] || '') + ' 비밀번호를 입력하세요'
+                ? ({ game: '게임', familyHub: '우리 가족' }[selectedMenu] || '') + ' 비밀번호를 입력하세요'
                 : selectedUser + '의 비밀번호를 입력하세요'}
             </h3>
             <input
